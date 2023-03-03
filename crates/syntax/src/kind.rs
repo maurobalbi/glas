@@ -74,166 +74,166 @@ def! {
     L_SQUARE = ["["] @SYMBOL_FIRST,
 
     #[token("]")]
-    R_SQUARE,
+    R_SQUARE = ["]"],
 
     #[token("{")]
-    L_BRACE,
+    L_BRACE = ["{"],
 
     #[token("}")]
-    R_BRACE,
+    R_BRACE = ["}"],
 
     #[token("(")]
-    L_PAREN,
+    L_PAREN = ["("],
 
     #[token(")")]
-    R_PAREN,
+    R_PAREN = [")"],
 
     #[token("+")]
-    PLUS,
+    PLUS = ["+"],
 
     #[token("-")]
-    MINUS,
+    MINUS = ["-"],
 
     #[token("*")]
-    STAR,
+    STAR = ["*"],
 
     #[token("/")]
-    SLASH,
+    SLASH = ["/"],
 
     #[token("<")]
-    LESS,
+    LESS = ["<"],
 
     #[token(">")]
-    GREATER,
+    GREATER = [">"],
 
     #[token("<=")]
-    LESS_EQ,
+    LESS_EQ = ["<="],
 
     #[token(">=")]
-    GREATER_EQ,
+    GREATER_EQ = [">="],
 
     #[token("+.")]
-    PLUS_DOT,
+    PLUS_DOT = ["+."],
 
     #[token("-.")]
-    MINUS_DOT,
+    MINUS_DOT = ["-."],
 
     #[token("*.")]
-    STAR_DOT,
+    STAR_DOT = ["*."],
 
     #[token("<.")]
-    LESS_DOT,
+    LESS_DOT = ["<."],
 
     #[token(">.")]
-    GREATER_DOT,
+    GREATER_DOT = [">."],
 
     #[token("<=.")]
-    LESS_EQ_DOT,
+    LESS_EQ_DOT = ["<=."],
 
     #[token(">=.")]
-    GREATER_EQ_DOT,
+    GREATER_EQ_DOT = [">=."],
 
     #[token("<>")]
-    LT_GT,
+    LT_GT = ["<>"],
 
     #[token(":")]
-    COLON,
+    COLON = [":"],
 
     #[token(",")]
-    COMMA,
+    COMMA = [","],
 
     #[token("#")]
-    HASH,
+    HASH = ["#"],
 
     #[token("!")]
-    BANG,
+    BANG = ["!"],
 
     #[token("=")]
-    EQ,
+    EQ = ["="],
 
     #[token("==")]
-    EQ_EQ,
+    EQ_EQ = ["=="],
 
     #[token("!=")]
-    NOT_EQ,
+    NOT_EQ = ["!="],
 
     #[token("|")]
-    VBAR,
+    VBAR = ["|"],
 
     #[token("||")]
-    VBAR_VBAR,
+    VBAR_VBAR = ["||"],
 
     #[token("&&")]
-    AMPER_AMPER,
+    AMPER_AMPER = ["&&"],
 
     #[token("<<")]
-    LT_LT,
+    LT_LT = ["<<"],
 
     #[token(">>")]
-    GT_GT,
+    GT_GT = [">>"],
 
     #[token("|>")]
-    PIPE,
+    PIPE = ["|>"],
 
     #[token(".")]
-    DOT,
+    DOT = ["."],
 
     #[token("->")]
-    R_ARROW,
+    R_ARROW = ["->"],
 
     #[token("<-")]
-    L_ARROW,
+    L_ARROW = ["<-"],
 
     #[token("..")]
-    DOT_DOT @SYMBOL_LAST,
+    DOT_DOT = [".."] @SYMBOL_LAST,
 
     #[token("as")]
-    AS_KW @KEYWORD_FIRST,
+    AS_KW = ["as"] @KEYWORD_FIRST,
 
     #[token("assert")]
-    ASSERT_KW,
+    ASSERT_KW = ["assert"],
 
     #[token("case")]
-    CASE_KW,
+    CASE_KW = ["case"],
 
     #[token("const")]
-    CONST_KW,
+    CONST_KW = ["const"],
 
     #[token("external")]
-    EXTERNAL_KW,
+    EXTERNAL_KW = ["external"],
 
     #[token("fn")]
-    FN_KW,
+    FN_KW = ["fn"],
 
     #[token("if")]
-    IF_KW,
+    IF_KW = ["if"],
 
     #[token("import")]
-    IMPORT_KW,
+    IMPORT_KW = ["import"],
 
     #[token("let")]
-    LET_KW,
+    LET_KW = ["let"],
 
     #[token("opaque")]
-    OPAQUE_KW,
+    OPAQUE_KW = ["opaque"],
 
     #[token("panic")]
-    PANIC_KW,
+    PANIC_KW = ["panic"],
 
     #[token("pub")]
-    PUB_KW,
+    PUB_KW = ["pub"],
 
     #[token("todo")]
-    TODO_KW,
+    TODO_KW = ["todo"],
 
     #[token("try")]
-    TRY_KW,
+    TRY_KW = ["try"],
 
     #[token("type")]
-    TYPE_KW,
+    TYPE_KW = ["type"],
 
     #[token("use")]
-    USE_KW @KEYWORD_LAST,
+    USE_KW = ["use"] @KEYWORD_LAST,
 
     #[error]
     ERROR,
