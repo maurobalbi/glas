@@ -1,0 +1,15 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/*"
+]
+
+[workspace.package]
+version = "0.0.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+rust-version = "1.67"
+
+[workspace.dependencies]
+# gleam = { path = "./crates/syntax", version="0.27.0" }
+gleam = { path = "../gleam/compiler-core", version = "0.27.0" }
