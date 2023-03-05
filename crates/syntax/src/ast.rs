@@ -224,8 +224,9 @@ mod tests {
 
     #[test]
     fn apply() {
-        let e = parse::<Module>("1 2");
-        println!("{:?}", e.syntax());
+        let e = parse::<Module>("if 2");
+        println!("{:#?}", e.syntax());
+        // println!("{:?}", e.statements().next().unwrap().syntax());
     }
 
     // #[test]

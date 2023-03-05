@@ -265,6 +265,7 @@ def! {
     // Nodes
     NAME,
     TARGET,
+    STATEMENTS,
     MODULE_CONSTANT,
     TARGET_GROUP,
     MODULE,
@@ -273,17 +274,17 @@ def! {
 impl SyntaxKind {
     #[inline(always)]
     pub fn is_whitespace(self) -> bool {
-        (Self::WHITESPACE_FIRST as u8..=Self::WHITESPACE_LAST as u8).contains(&(self as u8))
+        (Self::WHITESPACE_FIRST as u16..=Self::WHITESPACE_LAST as u16).contains(&(self as u16))
     }
 
     #[inline(always)]
     pub fn is_keyword(self) -> bool {
-        (Self::KEYWORD_FIRST as u8..=Self::KEYWORD_LAST as u8).contains(&(self as u8))
+        (Self::KEYWORD_FIRST as u16..=Self::KEYWORD_LAST as u16).contains(&(self as u16))
     }
 
     #[inline(always)]
     pub fn is_symbol(self) -> bool {
-        (Self::SYMBOL_FIRST as u8..=Self::SYMBOL_LAST as u8).contains(&(self as u8))
+        (Self::SYMBOL_FIRST as u16..=Self::SYMBOL_LAST as u16).contains(&(self as u16))
     }
 }
 

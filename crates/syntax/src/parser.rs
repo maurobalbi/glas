@@ -134,7 +134,11 @@ impl<'i> Parser<'i> {
         self.tokens.last().copied()
     }
 
-    /// Like `peek`, but only returns SyntaxKind.
+    fn at(&mut self, kind: SyntaxKind) -> bool {
+      self.peek().map(|k| k == kind).unwrap_or(false)
+    }
+
+    /// Like `peek_full, but only returns SyntaxKind.
     fn peek(&mut self) -> Option<SyntaxKind> {
         self.peek_full().map(|LexToken { kind, .. }| kind)
     }
@@ -178,6 +182,14 @@ impl<'i> Parser<'i> {
 
 fn parse_module(p: &mut Parser) {
     p.start_node(MODULE);
+    match p.peek_non_ws() {
+      Some(T!["if"]) => {
+        parse_target_group(p);
+      }
+      _ => {
+        parse_statements(p)
+      }
+    }
     // self.expr_function_opt();
     // while self.peek_non_ws().is_some() {
     //     // Tolerate multiple exprs and just emit errors.
@@ -191,4 +203,16 @@ fn parse_module(p: &mut Parser) {
     //     }
     // }
     p.finish_node();
+}
+
+fn parse_target_group(p: &mut Parser) {
+  assert!(p.at(T!["if"]));
+  p.start_node(TARGET_GROUP);
+  p.bump();
+  p.finish_node();
+}
+
+fn parse_statements(p: &mut Parser) {
+  p.start_node(STATEMENTS);
+  p.finish_node();
 }
