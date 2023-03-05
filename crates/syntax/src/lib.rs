@@ -8,6 +8,9 @@ pub mod ast;
 use core::fmt;
 use rowan::TokenAtOffset;
 
+#[cfg(test)]
+mod tests;
+
 pub use rowan::{self, NodeOrToken, TextRange, TextSize};
 
 pub type SyntaxNode = rowan::SyntaxNode<GleamLanguage>;
@@ -30,13 +33,14 @@ pub struct Error {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ErrorKind {
     NestTooDeep,
-
+    ExpectToken(SyntaxKind),
 }
 
 impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::NestTooDeep => "Nest too deep",
+            Self::ExpectToken(tok) => return write!(f, "Expecting {}", tok),
         }
         .fmt(f)
     }
@@ -70,16 +74,5 @@ impl rowan::Language for GleamLanguage {
     #[inline(always)]
     fn kind_to_raw(kind: SyntaxKind) -> rowan::SyntaxKind {
         kind.into()
-    }
-}
-
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        assert_eq!(4, 4);
     }
 }

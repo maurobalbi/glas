@@ -1,4 +1,5 @@
-use crate::ast::{AstNode, SourceFile};
+use crate::ast::{AstNode, Module};
+use crate::lexer::{GleamLexer, LexToken};
 use crate::SyntaxKind::{self, *};
 use crate::{lexer, Error, ErrorKind, SyntaxNode};
 use rowan::{Checkpoint, GreenNode, GreenNodeBuilder, TextRange, TextSize};
@@ -17,8 +18,8 @@ impl Parse {
         self.green.clone()
     }
 
-    pub fn root(&self) -> SourceFile {
-        SourceFile::cast(self.syntax_node()).unwrap()
+    pub fn root(&self) -> Module {
+        Module::cast(self.syntax_node()).unwrap()
     }
 
     pub fn syntax_node(&self) -> SyntaxNode {
@@ -32,21 +33,25 @@ impl Parse {
 
 pub fn parse_file(src: &str) -> Parse {
     assert!(src.len() < u32::MAX as usize);
-    let mut tokens = lexer::lex(src.as_bytes());
+    let mut tokens: Vec<_> = GleamLexer::new(src).collect();
     tokens.reverse();
-    Parser {
+    let mut p = Parser {
         tokens,
         builder: GreenNodeBuilder::default(),
         errors: Vec::new(),
         src,
         steps: 0,
         depth: 0,
+    };
+    parse_module(&mut p);
+    Parse {
+        green: p.builder.finish(),
+        errors: p.errors,
     }
-    .parse()
 }
 
 struct Parser<'i> {
-    tokens: lexer::LexTokens,
+    tokens: Vec<LexToken<'i>>,
     builder: GreenNodeBuilder<'static>,
     errors: Vec<Error>,
     src: &'i str,
@@ -57,19 +62,19 @@ struct Parser<'i> {
 impl<'i> Parser<'i> {
     /// Parse the whole source file.
     fn parse(mut self) -> Parse {
-        self.start_node(SOURCE_FILE);
-        self.expr_function_opt();
-        while self.peek_non_ws().is_some() {
-            // Tolerate multiple exprs and just emit errors.
-            self.error(ErrorKind::MultipleRoots);
+        self.start_node(MODULE);
+        // self.expr_function_opt();
+        // while self.peek_non_ws().is_some() {
+        //     // Tolerate multiple exprs and just emit errors.
+        //     self.error(ErrorKind::MultipleRoots);
 
-            let prev = self.tokens.len();
-            self.expr_function_opt();
-            // Don't stuck.
-            if self.tokens.len() == prev {
-                self.bump_error();
-            }
-        }
+        //     let prev = self.tokens.len();
+        //     self.expr_function_opt();
+        //     // Don't stuck.
+        //     if self.tokens.len() == prev {
+        //         self.bump_error();
+        //     }
+        // }
         self.finish_node();
 
         Parse {
@@ -82,7 +87,7 @@ impl<'i> Parser<'i> {
         let range = self
             .tokens
             .last()
-            .map(|&(_, range)| range)
+            .map(|&LexToken { range, .. }| range)
             .unwrap_or_else(|| TextRange::empty(TextSize::from(self.src.len() as u32)));
         self.errors.push(Error { range, kind });
     }
@@ -105,13 +110,13 @@ impl<'i> Parser<'i> {
 
     /// Consume the next token, including whitespaces. Panic if there is no more token.
     fn bump(&mut self) {
-        let (kind, range) = self.tokens.pop().unwrap();
+        let LexToken { kind, range, .. } = self.tokens.pop().unwrap();
         self.builder.token(kind.into(), &self.src[range]);
     }
 
     /// Same with `bump`, but override the kind.
     fn bump_with_kind(&mut self, kind: SyntaxKind) {
-        let (_, range) = self.tokens.pop().unwrap();
+        let LexToken { kind, range, .. } = self.tokens.pop().unwrap();
         self.builder.token(kind.into(), &self.src[range]);
     }
 
@@ -123,7 +128,7 @@ impl<'i> Parser<'i> {
     }
 
     /// Peek the next token, including whitespaces.
-    fn peek_full(&mut self) -> Option<(SyntaxKind, TextRange)> {
+    fn peek_full(&mut self) -> Option<LexToken> {
         self.steps += 1;
         assert!(self.steps < MAX_STEPS);
         self.tokens.last().copied()
@@ -131,7 +136,7 @@ impl<'i> Parser<'i> {
 
     /// Like `peek`, but only returns SyntaxKind.
     fn peek(&mut self) -> Option<SyntaxKind> {
-        self.peek_full().map(|(k, _)| k)
+        self.peek_full().map(|LexToken { kind, .. }| kind)
     }
 
     /// Consume all following whitespaces if any, and peek the next token.
@@ -147,7 +152,7 @@ impl<'i> Parser<'i> {
         self.tokens
             .iter()
             .rev()
-            .map(|&(k, _)| k)
+            .map(|&LexToken { kind, .. }| kind)
             .filter(|k| !k.is_whitespace())
     }
 
@@ -169,4 +174,21 @@ impl<'i> Parser<'i> {
             false
         }
     }
+}
+
+fn parse_module(p: &mut Parser) {
+    p.start_node(MODULE);
+    // self.expr_function_opt();
+    // while self.peek_non_ws().is_some() {
+    //     // Tolerate multiple exprs and just emit errors.
+    //     self.error(ErrorKind::MultipleRoots);
+
+    //     let prev = self.tokens.len();
+    //     self.expr_function_opt();
+    //     // Don't stuck.
+    //     if self.tokens.len() == prev {
+    //         self.bump_error();
+    //     }
+    // }
+    p.finish_node();
 }

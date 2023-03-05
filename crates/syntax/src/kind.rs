@@ -1,5 +1,6 @@
 use crate::lexer::lex_string;
 pub use logos::{Lexer, Logos};
+use std::fmt;
 
 macro_rules! def {
   (
@@ -29,14 +30,37 @@ macro_rules! def {
         $($(const $anchor: Self = Self::$variant;)?)*
     }
 
-    // impl fmt::Display for SyntaxKind {
-    //     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    //         match self {
-    //             $(Self::$variant => f.write_str(to_str!($variant, $($($tt)*)?)),)*
-    //         }
-    //     }
-    // }
+    impl fmt::Display for SyntaxKind {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            match self {
+                $(Self::$variant => f.write_str(to_str!($variant, $($($tt)*)?)),)*
+            }
+        }
+    }
   };
+}
+
+macro_rules! to_str {
+    // IDENT
+    ($variant:tt, ) => {
+        concat!('"', stringify!($variant), '"')
+    };
+    // Special case.
+    ($variant:tt, '"') => {
+        r#"'"'"#
+    };
+    // This breaks `literal` fragment.
+    ($variant:tt, -) => {
+        r#""-""#
+    };
+    // '['
+    ($variant:tt, $s:literal) => {
+        concat!('"', $s, '"')
+    };
+    // &&
+    ($variant:tt, $($tt:tt)+) => {
+        concat!('"', stringify!($($tt)+), '"')
+    };
 }
 
 def! {
@@ -238,7 +262,12 @@ def! {
     #[error]
     ERROR,
 
-    SOURCEFILE,
+    // Nodes
+    NAME,
+    TARGET,
+    MODULE_CONSTANT,
+    TARGET_GROUP,
+    MODULE,
 }
 
 impl SyntaxKind {
@@ -268,7 +297,7 @@ impl From<SyntaxKind> for rowan::SyntaxKind {
 impl From<rowan::SyntaxKind> for SyntaxKind {
     #[inline(always)]
     fn from(k: rowan::SyntaxKind) -> Self {
-        assert!(k.0 <= SyntaxKind::SOURCEFILE as u16);
+        assert!(k.0 <= SyntaxKind::MODULE as u16);
         // SAFETY: Guarded by the assert.
         unsafe { std::mem::transmute::<u16, SyntaxKind>(k.0 as u16) }
     }

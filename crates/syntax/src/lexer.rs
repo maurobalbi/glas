@@ -41,7 +41,7 @@ impl<'a> GleamLexer<'a> {
 }
 
 impl<'a> Iterator for GleamLexer<'a> {
-    type Item = Token<'a>;
+    type Item = LexToken<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let kind = self.inner.next()?;
@@ -59,8 +59,8 @@ impl<'a> Iterator for GleamLexer<'a> {
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub struct Token<'a> {
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct LexToken<'a> {
     pub kind: SyntaxKind,
     pub text: &'a str,
     pub range: TextRange,
@@ -75,7 +75,7 @@ mod tests {
         let toks = GleamLexer::new(src);
         let out = toks
             .into_iter()
-            .map(|Token { kind, text, .. }| format!("{:?} {:?}\n", kind, text))
+            .map(|LexToken { kind, text, .. }| format!("{:?} {:?}\n", kind, text))
             .collect::<Vec<_>>()
             .join("");
         expect.assert_eq(&out);
@@ -89,7 +89,7 @@ mod tests {
 
         println!(
             "{:?}",
-            lex.chain(std::iter::once(SyntaxKind::SOURCEFILE))
+            lex.chain(std::iter::once(SyntaxKind::MODULE))
                 .collect::<Vec<SyntaxKind>>()
         );
 
