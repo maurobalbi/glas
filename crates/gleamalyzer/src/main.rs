@@ -1,7 +1,5 @@
-
-//123123    
+//123123
 
 fn main() {
-
     println!("Hello, world!");
 }

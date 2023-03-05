@@ -1,6 +1,6 @@
-use crate::SyntaxKind::{self, *};
-use crate::{GleamLanguage, SyntaxElementChildren, SyntaxNode, SyntaxToken};
-use rowan::ast::support::{child, children, token};
+use crate::SyntaxKind::{self};
+use crate::{GleamLanguage, SyntaxNode, SyntaxToken};
+use rowan::ast::support::{child, children};
 use rowan::NodeOrToken;
 
 pub use rowan::ast::{AstChildren, AstNode};
@@ -226,7 +226,6 @@ mod tests {
     fn apply() {
         let e = parse::<Module>("1 2");
         println!("{:?}", e.syntax());
-
     }
 
     // #[test]
@@ -272,5 +271,4 @@ mod tests {
     //     iter.next().unwrap().syntax().should_eq("a = let { };");
     //     iter.next().unwrap().syntax().should_eq("b = rec { };");
     // }
-
 }

@@ -1,8 +1,7 @@
+use crate::kind::SyntaxKind;
 pub use logos::{Lexer, Logos};
 use rowan::{TextRange, TextSize};
 use std::ops::Range as StdRange;
-use crate::kind::SyntaxKind;
-
 
 pub fn lex_string(lex: &mut Lexer<SyntaxKind>) -> bool {
     let remainder: &str = lex.remainder();
@@ -83,9 +82,8 @@ mod tests {
 
     #[test]
     fn it_works() {
-        let blu = 0b1;
-        const input: &str = "Lexers.";
-        let mut lex = SyntaxKind::lexer(input);
+        const INPUT: &str = "Lexers.";
+        let lex = SyntaxKind::lexer(INPUT);
 
         println!(
             "{:?}",
@@ -96,7 +94,7 @@ mod tests {
         #[cfg(feature = "comparison")]
         {
             use gleam_core::parse::lexer::make_tokenizer;
-            println!("{:?}", make_tokenizer(input).collect::<Vec<_>>());
+            println!("{:?}", make_tokenizer(INPUT).collect::<Vec<_>>());
         }
     }
 

@@ -1,12 +1,11 @@
 #[macro_use]
 mod kind;
 
+pub mod ast;
 pub mod lexer;
 pub mod parser;
-pub mod ast;
 
 use core::fmt;
-use rowan::TokenAtOffset;
 
 #[cfg(test)]
 mod tests;

@@ -1,7 +1,7 @@
 use crate::ast::{AstNode, Module};
 use crate::lexer::{GleamLexer, LexToken};
 use crate::SyntaxKind::{self, *};
-use crate::{lexer, Error, ErrorKind, SyntaxNode};
+use crate::{Error, ErrorKind, SyntaxNode};
 use rowan::{Checkpoint, GreenNode, GreenNodeBuilder, TextRange, TextSize};
 
 const MAX_STEPS: usize = 100_000_000;
