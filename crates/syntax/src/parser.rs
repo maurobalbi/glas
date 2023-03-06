@@ -60,29 +60,6 @@ struct Parser<'i> {
 }
 
 impl<'i> Parser<'i> {
-    /// Parse the whole source file.
-    fn parse(mut self) -> Parse {
-        self.start_node(MODULE);
-        // self.expr_function_opt();
-        // while self.peek_non_ws().is_some() {
-        //     // Tolerate multiple exprs and just emit errors.
-        //     self.error(ErrorKind::MultipleRoots);
-
-        //     let prev = self.tokens.len();
-        //     self.expr_function_opt();
-        //     // Don't stuck.
-        //     if self.tokens.len() == prev {
-        //         self.bump_error();
-        //     }
-        // }
-        self.finish_node();
-
-        Parse {
-            green: self.builder.finish(),
-            errors: self.errors,
-        }
-    }
-
     fn error(&mut self, kind: ErrorKind) {
         let range = self
             .tokens
@@ -116,7 +93,7 @@ impl<'i> Parser<'i> {
 
     /// Same with `bump`, but override the kind.
     fn bump_with_kind(&mut self, kind: SyntaxKind) {
-        let LexToken { kind, range, .. } = self.tokens.pop().unwrap();
+        let LexToken { range, .. } = self.tokens.pop().unwrap();
         self.builder.token(kind.into(), &self.src[range]);
     }
 
@@ -134,11 +111,16 @@ impl<'i> Parser<'i> {
         self.tokens.last().copied()
     }
 
-    fn at(&mut self, kind: SyntaxKind) -> bool {
-      self.peek().map(|k| k == kind).unwrap_or(false)
+    fn peek_full_non_ws(&mut self) -> Option<LexToken> {
+        self.ws();
+        self.peek_full()
     }
 
-    /// Like `peek_full, but only returns SyntaxKind.
+    fn at(&mut self, kind: SyntaxKind) -> bool {
+        self.peek().map(|k| k == kind).unwrap_or(false)
+    }
+
+    /// Like `peek_full`, but only returns SyntaxKind.
     fn peek(&mut self) -> Option<SyntaxKind> {
         self.peek_full().map(|LexToken { kind, .. }| kind)
     }
@@ -183,12 +165,10 @@ impl<'i> Parser<'i> {
 fn parse_module(p: &mut Parser) {
     p.start_node(MODULE);
     match p.peek_non_ws() {
-      Some(T!["if"]) => {
-        parse_target_group(p);
-      }
-      _ => {
-        parse_statements(p)
-      }
+        Some(T!["if"]) => {
+            parse_target_group(p);
+        }
+        _ => parse_statements(p),
     }
     // self.expr_function_opt();
     // while self.peek_non_ws().is_some() {
@@ -205,14 +185,31 @@ fn parse_module(p: &mut Parser) {
     p.finish_node();
 }
 
+const VALID_TARGETS: [&str; 2] = ["javascript", "erlang"];
+
 fn parse_target_group(p: &mut Parser) {
-  assert!(p.at(T!["if"]));
-  p.start_node(TARGET_GROUP);
-  p.bump();
-  p.finish_node();
+    assert!(p.at(T!["if"]));
+    p.start_node(TARGET_GROUP);
+    p.bump(); //if
+    if let Some(LexToken { text, kind, ..}) = p.peek_full_non_ws() {
+      if !VALID_TARGETS.contains(&text) {
+        p.error(ErrorKind::ExpectedTarget);
+      }
+      if kind == IDENT {
+        p.bump();
+      }
+    }
+    if p.peek_non_ws() == Some(T!["{"]) {
+      p.bump();
+      parse_statements(p);
+      p.want(T!["}"]);
+    }
+
+    p.finish_node();
 }
 
 fn parse_statements(p: &mut Parser) {
-  p.start_node(STATEMENTS);
-  p.finish_node();
+    p.start_node(STATEMENTS);
+    
+    p.finish_node();
 }

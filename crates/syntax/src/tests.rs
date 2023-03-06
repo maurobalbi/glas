@@ -1,6 +1,6 @@
-use rowan::ast::AstNode;
+use rowan::{ast::AstNode};
 
-use crate::GleamLanguage;
+use crate::{GleamLanguage};
 
 #[track_caller]
 pub fn parse<N: AstNode<Language = GleamLanguage>>(src: &str) -> N {

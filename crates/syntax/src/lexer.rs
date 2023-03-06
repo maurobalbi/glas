@@ -1,7 +1,8 @@
-use crate::kind::SyntaxKind;
 pub use logos::{Lexer, Logos};
 use rowan::{TextRange, TextSize};
 use std::ops::Range as StdRange;
+use crate::kind::SyntaxKind;
+
 
 pub fn lex_string(lex: &mut Lexer<SyntaxKind>) -> bool {
     let remainder: &str = lex.remainder();
@@ -74,7 +75,7 @@ mod tests {
         let toks = GleamLexer::new(src);
         let out = toks
             .into_iter()
-            .map(|LexToken { kind, text, .. }| format!("{:?} {:?}\n", kind, text))
+            .map(|LexToken { kind, text, .. }| format!("{kind:?} {text:?}\n"))
             .collect::<Vec<_>>()
             .join("");
         expect.assert_eq(&out);
@@ -82,6 +83,7 @@ mod tests {
 
     #[test]
     fn it_works() {
+        let _blu = 0b1;
         const INPUT: &str = "Lexers.";
         let lex = SyntaxKind::lexer(INPUT);
 
@@ -94,7 +96,7 @@ mod tests {
         #[cfg(feature = "comparison")]
         {
             use gleam_core::parse::lexer::make_tokenizer;
-            println!("{:?}", make_tokenizer(INPUT).collect::<Vec<_>>());
+            println!("{:?}", make_tokenizer(input).collect::<Vec<_>>());
         }
     }
 

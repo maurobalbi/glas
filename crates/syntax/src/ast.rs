@@ -229,14 +229,12 @@ mod tests {
         // println!("{:?}", e.statements().next().unwrap().syntax());
     }
 
-    // #[test]
-    // fn assert() {
-    //     let e = parse::<Assert>("assert 1; 2");
-    //     e.assert_token().unwrap().should_eq("assert");
-    //     e.condition().unwrap().syntax().should_eq("1");
-    //     e.semicolon_token().unwrap().should_eq(";");
-    //     e.body().unwrap().syntax().should_eq("2");
-    // }
+    #[test]
+    fn assert() {
+        let e = crate::parse_file("if erlang {}");
+        println!("{:?}", e.errors());
+        println!("{:#?}", e.syntax_node())
+    }
 
     // #[test]
     // fn attr_path() {

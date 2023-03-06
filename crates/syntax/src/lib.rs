@@ -23,6 +23,10 @@ pub type SyntaxNodePtr = rowan::ast::SyntaxNodePtr<GleamLanguage>;
 pub use self::kind::SyntaxKind;
 pub use self::parser::{parse_file, Parse};
 
+pub fn whatever() {
+  println!("{}", Error{range:TextRange::new(1.into(),2.into()),  kind: ErrorKind::NestTooDeep})
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Error {
     pub range: TextRange,
@@ -33,6 +37,7 @@ pub struct Error {
 pub enum ErrorKind {
     NestTooDeep,
     ExpectToken(SyntaxKind),
+    ExpectedTarget
 }
 
 impl fmt::Display for ErrorKind {
@@ -40,6 +45,7 @@ impl fmt::Display for ErrorKind {
         match self {
             Self::NestTooDeep => "Nest too deep",
             Self::ExpectToken(tok) => return write!(f, "Expecting {}", tok),
+            Self::ExpectedTarget => "Expected target javascript or erlang"
         }
         .fmt(f)
     }
