@@ -36,16 +36,20 @@ pub struct Error {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ErrorKind {
     NestTooDeep,
+    UnexpectedEof,
     ExpectToken(SyntaxKind),
-    ExpectedTarget
+    ExpectedTarget,
+    ExpectedConstantExpression,
 }
 
 impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::NestTooDeep => "Nest too deep",
+            Self::UnexpectedEof => "Did not expect end of file.",
             Self::ExpectToken(tok) => return write!(f, "Expecting {}", tok),
-            Self::ExpectedTarget => "Expected target javascript or erlang"
+            Self::ExpectedTarget => "Expected target javascript or erlang",
+            Self::ExpectedConstantExpression => "Expected constant expression"
         }
         .fmt(f)
     }

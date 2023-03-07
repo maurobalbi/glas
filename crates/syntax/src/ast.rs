@@ -1,4 +1,4 @@
-use crate::SyntaxKind::{self};
+use crate::SyntaxKind::{self, *};
 use crate::{GleamLanguage, SyntaxNode, SyntaxToken};
 use rowan::ast::support::{child, children};
 use rowan::NodeOrToken;
@@ -37,9 +37,7 @@ pub enum UnaryOpKind {
 pub enum LiteralKind {
     Int,
     Float,
-    Uri,
-    Path,
-    SearchPath,
+    String,
 }
 
 trait NodeWrapper {
@@ -171,28 +169,59 @@ enums! {
     Statement {
       ModuleConstant,
     },
+    ConstantValue {
+      Literal,
+      Tuple,
+      List,
+    },
 }
 
 asts! {
+    ANNOTATION = Annotation {
+        type_: Name,
+    },
+    LIST = List {
+        elements: [ConstantValue],
+    },
+    LITERAL = Literal {
+        pub fn token(&self) -> Option<SyntaxToken> {
+            self.0.children_with_tokens().find_map(NodeOrToken::into_token)
+        }
+
+        pub fn kind(&self) -> Option<LiteralKind> {
+            Some(match self.token()?.kind() {
+                INTEGER => LiteralKind::Int,
+                FLOAT => LiteralKind::Float,
+                STRING => LiteralKind::String,
+                _ => return None,
+            })
+        }
+    },
     MODULE = Module {
         statements: [TargetGroup],
     },
-    TARGET_GROUP = TargetGroup {
-      target: Target,
-      statements: [Statement],
-    },
     MODULE_CONSTANT = ModuleConstant {
-
-    },
-    TARGET = Target {
-      name: Name,
+        name: Name,
+        value: ConstantValue,
+        pub fn is_public(&self) -> bool {
+          self.syntax().children_with_tokens().find(|it| it.kind() == T!["pub"]).is_some()
+        }
     },
     NAME = Name {
         pub fn token(&self) -> Option<SyntaxToken> {
             self.0.children_with_tokens().find_map(NodeOrToken::into_token)
         }
     },
-
+    TARGET = Target {
+      name: Name,
+    },
+    TARGET_GROUP = TargetGroup {
+        target: Target,
+        statements: [Statement],
+    },
+    TUPLE = Tuple {
+        elements: [ConstantValue],
+    },
 }
 
 #[cfg(test)]
@@ -231,32 +260,36 @@ mod tests {
 
     #[test]
     fn assert() {
-        let e = crate::parse_file("if erlang {}");
-        println!("{:?}", e.errors());
+        let e = crate::parse_file("pub const a = #(1,2)");
+        for error in e.errors() {
+            println!("{}", error);
+        }
         println!("{:#?}", e.syntax_node())
     }
 
-    // #[test]
-    // fn attr_path() {
-    //     let e = parse::<Attrpath>(r#"{ foo."bar".${baz} = 1; }"#);
-    //     let mut iter = e.attrs();
-    //     iter.next().unwrap().syntax().should_eq("foo");
-    //     iter.next().unwrap().syntax().should_eq(r#""bar""#);
-    //     iter.next().unwrap().syntax().should_eq("${baz}");
-    //     assert!(iter.next().is_none());
-    // }
+    #[test]
+    fn pub_const() {
+        let e = parse::<ModuleConstant>("pub const a = \"123\"");
+        e.name().unwrap().syntax().should_eq("a");
+        assert!(e.is_public());
+        // e.equal_token().unwrap().should_eq("=");
+        // e.value().unwrap().syntax().should_eq("1");
+        // e.semicolon_token().unwrap().should_eq(";");
+    }
+    
+    #[test]
+    fn const_tuple() {
+        let e = parse::<Tuple>("const a = #(#(2,3),2)");
+        let mut iter = e.elements();
+        // assert!(!// // // // // // // // );
+        iter.next().unwrap().syntax().should_eq("#(2,3)");
+        iter.next().unwrap().syntax().should_eq("2");
+        assert!(iter.next().is_none())
+        // e.equal_token().unwrap().should_eq("=");
+        // e.value().unwrap().syntax().should_eq("1");
+        // e.semicolon_token().unwrap().should_eq(";");
+    }
 
-    // #[test]
-    // fn attr_path_value() {
-    //     let e = parse::<AttrpathValue>(r#"{ foo."bar".${baz} = 1; }"#);
-    //     e.attrpath()
-    //         .unwrap()
-    //         .syntax()
-    //         .should_eq(r#"foo."bar".${baz}"#);
-    //     e.equal_token().unwrap().should_eq("=");
-    //     e.value().unwrap().syntax().should_eq("1");
-    //     e.semicolon_token().unwrap().should_eq(";");
-    // }
 
     // #[test]
     // fn plain_attrset() {

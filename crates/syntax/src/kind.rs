@@ -10,7 +10,7 @@ macro_rules! def {
     )*
   ) => {
     #[allow(bad_style)]
-    #[derive(Logos, Clone, Copy, Debug, PartialEq, PartialOrd, Eq, Ord, Hash)] // Ignore this regex pattern between tokens
+    #[derive(Logos, Clone, Copy, Debug, PartialEq, PartialOrd, Eq, Ord, Hash)]
     #[repr(u16)]
     pub enum SyntaxKind {
       $(
@@ -263,12 +263,20 @@ def! {
     ERROR,
 
     // Nodes
+    ANNOTATION,
+    LITERAL,
+    MODULE,
+    MODULE_CONSTANT,
     NAME,
     TARGET,
-    STATEMENTS,
-    MODULE_CONSTANT,
     TARGET_GROUP,
-    MODULE,
+    STATEMENTS,
+    TUPLE,
+    LIST,
+    RECORD,
+    BITSTRING,
+
+    __LAST,
 }
 
 impl SyntaxKind {
@@ -298,7 +306,7 @@ impl From<SyntaxKind> for rowan::SyntaxKind {
 impl From<rowan::SyntaxKind> for SyntaxKind {
     #[inline(always)]
     fn from(k: rowan::SyntaxKind) -> Self {
-        assert!(k.0 <= SyntaxKind::MODULE as u16);
+        assert!(k.0 <= SyntaxKind::__LAST as u16);
         // SAFETY: Guarded by the assert.
         unsafe { std::mem::transmute::<u16, SyntaxKind>(k.0 as u16) }
     }

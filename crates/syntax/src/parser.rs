@@ -116,6 +116,10 @@ impl<'i> Parser<'i> {
         self.peek_full()
     }
 
+    fn at_non_ws(&mut self, kind: SyntaxKind) -> bool {
+        self.peek_non_ws().map(|k| k == kind).unwrap_or(false)
+    }
+
     fn at(&mut self, kind: SyntaxKind) -> bool {
         self.peek().map(|k| k == kind).unwrap_or(false)
     }
@@ -191,18 +195,18 @@ fn parse_target_group(p: &mut Parser) {
     assert!(p.at(T!["if"]));
     p.start_node(TARGET_GROUP);
     p.bump(); //if
-    if let Some(LexToken { text, kind, ..}) = p.peek_full_non_ws() {
-      if !VALID_TARGETS.contains(&text) {
-        p.error(ErrorKind::ExpectedTarget);
-      }
-      if kind == IDENT {
-        p.bump();
-      }
+    if let Some(LexToken { text, kind, .. }) = p.peek_full_non_ws() {
+        if !VALID_TARGETS.contains(&text) {
+            p.error(ErrorKind::ExpectedTarget);
+        }
+        if kind == IDENT {
+            p.bump();
+        }
     }
     if p.peek_non_ws() == Some(T!["{"]) {
-      p.bump();
-      parse_statements(p);
-      p.want(T!["}"]);
+        p.bump();
+        parse_statements(p);
+        p.want(T!["}"]);
     }
 
     p.finish_node();
@@ -210,6 +214,111 @@ fn parse_target_group(p: &mut Parser) {
 
 fn parse_statements(p: &mut Parser) {
     p.start_node(STATEMENTS);
-    
+    parse_statement(p);
     p.finish_node();
+}
+
+fn parse_statement(p: &mut Parser) {
+    let cp = p.checkpoint();
+    let _ = opt_visibility(p);
+    match p.peek_non_ws() {
+        Some(T!["const"]) => parse_module_const(p, cp),
+        Some(_) => p.bump(),
+        None => p.error(ErrorKind::UnexpectedEof),
+    }
+}
+
+fn parse_module_const(p: &mut Parser, cp: Checkpoint) {
+    assert!(p.at(T!["const"]));
+    p.start_node_at(cp, MODULE_CONSTANT);
+    p.bump();
+    parse_name(p);
+    parse_type_annotation(p);
+    p.want(T!["="]);
+    parse_constant_value(p);
+    p.finish_node();
+}
+
+fn parse_constant_value(p: &mut Parser) {
+    match p.peek_non_ws() {
+        Some(INTEGER | STRING | FLOAT) => {
+            p.start_node(LITERAL);
+            p.bump();
+            p.finish_node()
+        }
+        Some(HASH) => parse_tuple(p),
+        _ => {
+            p.error(ErrorKind::ExpectedConstantExpression);
+            p.bump_error();
+        }
+    }
+}
+
+fn parse_tuple(p: &mut Parser) {
+    assert!(p.at(T!["#"]));
+    p.start_node(TUPLE);
+    p.bump();
+    p.want(T!["("]);
+    loop {
+        match p.peek_non_ws() {
+            Some(T![")"]) => {
+                p.bump();
+                break;
+            }
+            Some(k) if k.can_start_constant_expr() => {
+                parse_constant_value(p);
+                continue;
+            }
+            Some(T![","]) => {
+                p.bump();
+                continue;
+            }
+            Some(k) if !k.is_separator() => {
+                p.error(ErrorKind::ExpectedConstantExpression);
+                p.bump_error();
+            }
+            _ => {
+                p.error(ErrorKind::ExpectToken(T![")"]));
+                break;
+            }
+        }
+    }
+    p.finish_node()
+}
+
+fn opt_visibility(p: &mut Parser) -> bool {
+    if p.at_non_ws(T!["pub"]) {
+        p.bump();
+        return true;
+    }
+    false
+}
+
+fn parse_name(p: &mut Parser) {
+    p.ws();
+    p.start_node(NAME);
+    p.want(IDENT);
+    p.finish_node();
+}
+
+fn parse_type_annotation(p: &mut Parser) {
+    match p.peek_non_ws() {
+        Some(T![":"]) => {
+            p.bump();
+            p.start_node(ANNOTATION);
+            p.want(IDENT);
+            p.finish_node();
+        }
+        _ => {}
+    }
+}
+
+impl SyntaxKind {
+    fn can_start_constant_expr(self) -> bool {
+        matches!(self, IDENT | INTEGER | FLOAT | STRING | HASH | T!["["])
+    }
+
+    fn is_separator(self) -> bool {
+        matches!(self, T!["}"] | T!["]"] | T![")"] | T!["="] | T![","])
+    }
 }

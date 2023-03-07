@@ -101,35 +101,40 @@ mod tests {
     }
 
     #[test]
-    fn path() {
+    fn string() {
+      check_lex(
+        "\"abc 1",
+        expect![[r#"
+            ERROR "\""
+            IDENT "abc"
+            WHITESPACE " "
+            INTEGER "1"
+        "#]]
+      )
+    }
+
+    #[test]
+    fn target_group() {
         check_lex(
-            "<nixpkgs/pkgs> <nixpkgs/ > a/b a/ b a /b",
+            "if erlang { pub const a = \"123\" }",
             expect![[r#"
-                LESS "<"
-                IDENT "nixpkgs"
-                SLASH "/"
-                IDENT "pkgs"
-                GREATER ">"
+                IF_KW "if"
                 WHITESPACE " "
-                LESS "<"
-                IDENT "nixpkgs"
-                SLASH "/"
+                IDENT "erlang"
                 WHITESPACE " "
-                GREATER ">"
+                L_BRACE "{"
                 WHITESPACE " "
-                IDENT "a"
-                SLASH "/"
-                IDENT "b"
+                PUB_KW "pub"
                 WHITESPACE " "
-                IDENT "a"
-                SLASH "/"
-                WHITESPACE " "
-                IDENT "b"
+                CONST_KW "const"
                 WHITESPACE " "
                 IDENT "a"
                 WHITESPACE " "
-                SLASH "/"
-                IDENT "b"
+                EQ "="
+                WHITESPACE " "
+                STRING "\"123\""
+                WHITESPACE " "
+                R_BRACE "}"
             "#]],
         );
     }
