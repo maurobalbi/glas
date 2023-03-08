@@ -168,68 +168,56 @@ impl<'i> Parser<'i> {
 
 fn parse_module(p: &mut Parser) {
     p.start_node(MODULE);
-    match p.peek_non_ws() {
-        Some(T!["if"]) => {
-            parse_target_group(p);
-        }
-        _ => parse_statements(p),
+    while let Some(i) = p.peek_non_ws() {
+        parse_target_group(p)
     }
-    // self.expr_function_opt();
-    // while self.peek_non_ws().is_some() {
-    //     // Tolerate multiple exprs and just emit errors.
-    //     self.error(ErrorKind::MultipleRoots);
-
-    //     let prev = self.tokens.len();
-    //     self.expr_function_opt();
-    //     // Don't stuck.
-    //     if self.tokens.len() == prev {
-    //         self.bump_error();
-    //     }
-    // }
     p.finish_node();
 }
 
 const VALID_TARGETS: [&str; 2] = ["javascript", "erlang"];
 
 fn parse_target_group(p: &mut Parser) {
-    assert!(p.at(T!["if"]));
     p.start_node(TARGET_GROUP);
-    p.bump(); //if
-    if let Some(LexToken { text, kind, .. }) = p.peek_full_non_ws() {
-        if !VALID_TARGETS.contains(&text) {
-            p.error(ErrorKind::ExpectedTarget);
-        }
-        if kind == IDENT {
+    match p.peek() {
+        Some(T!["if"]) => {
             p.bump();
+            if let Some(LexToken { text, kind, .. }) = p.peek_full_non_ws() {
+                if !VALID_TARGETS.contains(&text) {
+                    p.error(ErrorKind::ExpectedTarget);
+                }
+                if kind == IDENT {
+                    p.start_node(TARGET);
+                    p.bump();
+                    p.finish_node();
+                }
+            }
+            if p.peek_non_ws() == Some(T!["{"]) {
+                p.bump();
+                parse_statements(p);
+                p.want(T!["}"]);
+            }
         }
-    }
-    if p.peek_non_ws() == Some(T!["{"]) {
-        p.bump();
-        parse_statements(p);
-        p.want(T!["}"]);
+        Some(_) => parse_statements(p),
+        None => {}
     }
 
     p.finish_node();
 }
 
 fn parse_statements(p: &mut Parser) {
-    p.start_node(STATEMENTS);
+    // p.start_node(STATEMENTS);
     loop {
         match p.peek_non_ws() {
             Some(t) if t.can_start_statement() => {
                 parse_statement(p);
                 continue;
-            },
-            Some(_) => {
-                p.error(ErrorKind::ExpectedStatement);
-                p.bump_error();
-            },
+            }
             _ => {
                 break;
-            } 
+            }
         }
     }
-    p.finish_node();
+    // p.finish_node();
 }
 
 fn parse_statement(p: &mut Parser) {
@@ -247,7 +235,7 @@ fn parse_module_const(p: &mut Parser, cp: Checkpoint) {
     p.start_node_at(cp, MODULE_CONSTANT);
     p.bump();
     parse_name(p);
-    parse_type_annotation(p);
+    parse_type_annotation_opt(p);
     p.want(T!["="]);
     parse_constant_value(p);
     p.finish_node();
@@ -261,6 +249,11 @@ fn parse_constant_value(p: &mut Parser) {
             p.finish_node()
         }
         Some(HASH) => parse_tuple(p),
+        Some(IDENT) => {
+          p.start_node(NAME_REF);
+          p.bump();
+          p.finish_node();
+        }
         _ => {
             p.error(ErrorKind::ExpectedConstantExpression);
             p.bump_error();
@@ -287,10 +280,6 @@ fn parse_tuple(p: &mut Parser) {
                 p.bump();
                 continue;
             }
-            Some(k) if !k.is_separator() => {
-                p.error(ErrorKind::ExpectedConstantExpression);
-                p.bump_error();
-            }
             _ => {
                 p.error(ErrorKind::ExpectToken(T![")"]));
                 break;
@@ -315,16 +304,60 @@ fn parse_name(p: &mut Parser) {
     p.finish_node();
 }
 
-fn parse_type_annotation(p: &mut Parser) {
+fn parse_type_annotation_opt(p: &mut Parser) {
     match p.peek_non_ws() {
         Some(T![":"]) => {
             p.bump();
-            p.start_node(ANNOTATION);
-            p.want(IDENT);
-            p.finish_node();
+            parse_type(p);
         }
         _ => {}
     }
+}
+
+fn parse_type(p: &mut Parser) {
+    match p.peek_non_ws() {
+        Some(T!["fn"]) => parse_type_fn(p),
+        Some(U_IDENT) => {
+            p.start_node(REF_TYPE);
+            p.bump();
+            p.finish_node()
+        }
+        Some(_) => {
+            p.error(ErrorKind::ExpectToken(U_IDENT));
+            p.bump_error()
+        }
+        None => {}
+    }
+}
+
+fn parse_type_fn(p: &mut Parser) {
+    assert!(p.at(T!("fn")));
+    p.start_node(FN_TYPE);
+    p.bump();
+    p.want(T!("("));
+    p.start_node(PARAM_LIST);
+    loop {
+        match p.peek_non_ws() {
+            Some(T![")"]) => {
+                p.bump();
+                break;
+            }
+            Some(T![","]) => {
+                p.bump();
+                continue;
+            }
+            _ => {
+                p.start_node(PARAM);
+                parse_type(p);
+                p.finish_node();
+                continue;
+            }
+        }
+    }
+    p.finish_node();
+    p.want(T!["->"]);
+    parse_type(p);
+    p.finish_node();
 }
 
 impl SyntaxKind {
@@ -336,7 +369,9 @@ impl SyntaxKind {
         matches!(self, T!["pub"] | T!["const"] | T!["fn"] | T!["type"])
     }
 
+    /// Whether this token is a separator in some syntax.
+    /// We should stop at these tokens during error recovery.
     fn is_separator(self) -> bool {
-        matches!(self, T!["}"] | T!["]"] | T![")"] | T!["="] | T![","])
+        matches!(self, T![")"] | T!["]"] | T!["}"] | T!["="] | T![","])
     }
 }

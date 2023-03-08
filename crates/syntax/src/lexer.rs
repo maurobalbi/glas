@@ -96,7 +96,7 @@ mod tests {
         #[cfg(feature = "comparison")]
         {
             use gleam_core::parse::lexer::make_tokenizer;
-            println!("{:?}", make_tokenizer(input).collect::<Vec<_>>());
+            println!("{:?}", make_tokenizer(INPUT).collect::<Vec<_>>());
         }
     }
 

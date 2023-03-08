@@ -167,19 +167,20 @@ macro_rules! ast_impl {
 
 enums! {
     Statement {
-      ModuleConstant,
+        ModuleConstant,
     },
     ConstantValue {
-      Literal,
-      Tuple,
-      List,
+        Literal,
+        Tuple,
+        List,
+    },
+    TypeAnnotation {
+        FnType,
+        RefType,
     },
 }
 
 asts! {
-    ANNOTATION = Annotation {
-        type_: Name,
-    },
     LIST = List {
         elements: [ConstantValue],
     },
@@ -203,8 +204,9 @@ asts! {
     MODULE_CONSTANT = ModuleConstant {
         name: Name,
         value: ConstantValue,
+        annotation: TypeAnnotation,
         pub fn is_public(&self) -> bool {
-          self.syntax().children_with_tokens().find(|it| it.kind() == T!["pub"]).is_some()
+            self.syntax().children_with_tokens().find(|it| it.kind() == T!["pub"]).is_some()
         }
     },
     NAME = Name {
@@ -212,8 +214,15 @@ asts! {
             self.0.children_with_tokens().find_map(NodeOrToken::into_token)
         }
     },
+    PARAM = Param {
+        // pat: Pat,
+        ty: TypeAnnotation,
+    },
+    PARAM_LIST = ParamList {
+        params: [Param],
+    },
     TARGET = Target {
-      name: Name,
+        name: Name,
     },
     TARGET_GROUP = TargetGroup {
         target: Target,
@@ -221,6 +230,13 @@ asts! {
     },
     TUPLE = Tuple {
         elements: [ConstantValue],
+    },
+    FN_TYPE = FnType {
+        param_list: ParamList,
+        return_: TypeAnnotation,
+    },
+    REF_TYPE = RefType {
+        name: Name,
     },
 }
 
@@ -253,14 +269,14 @@ mod tests {
 
     #[test]
     fn apply() {
-        let e = parse::<Module>("if erlang { const a = 1 } const b = 2");
-        println!("{:#?}", e.syntax());
+        let e = parse::<ModuleConstant>("const a: fn(Int, String) -> Int = 1");
+        println!("{:#?}", e.annotation());
         // println!("{:?}", e.statements().next().unwrap().syntax());
     }
 
     #[test]
     fn assert() {
-        let e = crate::parse_file("pub const a = #(1,2)");
+        let e = crate::parse_file("pub const a = c");
         for error in e.errors() {
             println!("{}", error);
         }
@@ -272,24 +288,47 @@ mod tests {
         let e = parse::<ModuleConstant>("pub const a = \"123\"");
         e.name().unwrap().syntax().should_eq("a");
         assert!(e.is_public());
-        // e.equal_token().unwrap().should_eq("=");
-        // e.value().unwrap().syntax().should_eq("1");
-        // e.semicolon_token().unwrap().should_eq(";");
     }
-    
+
     #[test]
     fn const_tuple() {
         let e = parse::<Tuple>("const a = #(#(2,3),2)");
         let mut iter = e.elements();
-        // assert!(!// // // // // // // // );
         iter.next().unwrap().syntax().should_eq("#(2,3)");
         iter.next().unwrap().syntax().should_eq("2");
         assert!(iter.next().is_none())
-        // e.equal_token().unwrap().should_eq("=");
-        // e.value().unwrap().syntax().should_eq("1");
-        // e.semicolon_token().unwrap().should_eq(";");
     }
 
+    #[test]
+    fn module() {
+        let e = parse::<Module>("if erlang {const a = 1} const b = 2 if javascript {const c = 3}");
+        let mut iter = e.statements();
+        iter.next()
+            .unwrap()
+            .syntax()
+            .should_eq("if erlang {const a = 1}");
+        assert!(iter.next().is_some());
+        assert!(iter.next().is_some());
+        assert!(iter.next().is_none());
+    }
+
+    #[test]
+    fn target_group() {
+        let e =
+            parse::<TargetGroup>("if erlang {const a = 1} const b = 2 if javascript {const c = 3}");
+        e.target().unwrap().syntax().should_eq("erlang");
+        let mut iter = e.statements();
+        iter.next().unwrap().syntax().should_eq("const a = 1");
+    }
+
+    #[test]
+    fn fn_type_ann() {
+        let e = parse::<FnType>("const a: fn(Int, String) -> Cat = 1");
+        e.return_().unwrap().syntax().should_eq("Cat");
+        let mut iter = e.param_list().unwrap().params();
+        iter.next().unwrap().syntax().should_eq("Int");
+        iter.next().unwrap().syntax().should_eq("String");
+    }
 
     // #[test]
     // fn plain_attrset() {
