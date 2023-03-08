@@ -214,7 +214,21 @@ fn parse_target_group(p: &mut Parser) {
 
 fn parse_statements(p: &mut Parser) {
     p.start_node(STATEMENTS);
-    parse_statement(p);
+    loop {
+        match p.peek_non_ws() {
+            Some(t) if t.can_start_statement() => {
+                parse_statement(p);
+                continue;
+            },
+            Some(_) => {
+                p.error(ErrorKind::ExpectedStatement);
+                p.bump_error();
+            },
+            _ => {
+                break;
+            } 
+        }
+    }
     p.finish_node();
 }
 
@@ -316,6 +330,10 @@ fn parse_type_annotation(p: &mut Parser) {
 impl SyntaxKind {
     fn can_start_constant_expr(self) -> bool {
         matches!(self, IDENT | INTEGER | FLOAT | STRING | HASH | T!["["])
+    }
+
+    fn can_start_statement(self) -> bool {
+        matches!(self, T!["pub"] | T!["const"] | T!["fn"] | T!["type"])
     }
 
     fn is_separator(self) -> bool {

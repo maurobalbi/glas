@@ -253,7 +253,7 @@ mod tests {
 
     #[test]
     fn apply() {
-        let e = parse::<Module>("if 2");
+        let e = parse::<Module>("if erlang { const a = 1 } const b = 2");
         println!("{:#?}", e.syntax());
         // println!("{:?}", e.statements().next().unwrap().syntax());
     }
