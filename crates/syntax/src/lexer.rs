@@ -89,7 +89,7 @@ mod tests {
 
         println!(
             "{:?}",
-            lex.chain(std::iter::once(SyntaxKind::MODULE))
+            lex.chain(std::iter::once(SyntaxKind::SOURCE_FILE))
                 .collect::<Vec<SyntaxKind>>()
         );
 

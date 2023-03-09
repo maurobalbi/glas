@@ -42,6 +42,7 @@ pub enum ErrorKind {
     ExpectedConstantExpression,
     ExpectedStatement,
     ExpectedType,
+    ExpectedIdentifier,
     UnexpectedImport
   }
 
@@ -52,6 +53,7 @@ impl fmt::Display for ErrorKind {
             Self::UnexpectedEof => "Did not expect end of file.",
             Self::ExpectToken(tok) => return write!(f, "Expecting {}", tok),
             Self::ExpectedTarget => "Expected target javascript or erlang",
+            Self::ExpectedIdentifier => "Expected an identifier",
             Self::ExpectedConstantExpression => "Expected constant expression",
             Self::ExpectedStatement => "Expected statement",
             Self::ExpectedType => "Expected type",

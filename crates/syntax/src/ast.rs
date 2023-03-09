@@ -181,6 +181,9 @@ enums! {
         TupleType,
         ConstructorType,
     },
+    ImportPath {
+        Name,
+    },
 }
 
 asts! {
@@ -202,9 +205,12 @@ asts! {
         }
     },
     IMPORT = Import {
-
+        module: ImportModule,
     },
-    MODULE = Module {
+    IMPORT_MODULE = ImportModule {
+        module_path: [ImportPath],
+    },
+    SOURCE_FILE = SourceFile {
         statements: [TargetGroup],
     },
     MODULE_NAME = ModuleName {
@@ -287,14 +293,14 @@ mod tests {
 
     #[test]
     fn apply() {
-        let e = parse::<TupleType>("const a: #(gleam.Int, String) = 1");
-        println!("{}", e.field_types().next().unwrap().syntax());
+        let e = parse::<ImportModule>("import aa/a");
+        println!("{:?}", e.module_path());
         // println!("{:?}", e.statements().next().unwrap().syntax());
     }
 
     #[test]
     fn assert() {
-        let e = crate::parse_file("import");
+        let e = crate::parse_file("import aa/a import bla");
         for error in e.errors() {
             println!("{}", error);
         }
@@ -319,7 +325,7 @@ mod tests {
 
     #[test]
     fn module() {
-        let e = parse::<Module>("if erlang {const a = 1} const b = 2 if javascript {const c = 3}");
+        let e = parse::<SourceFile>("if erlang {const a = 1} const b = 2 if javascript {const c = 3}");
         let mut iter = e.statements();
         iter.next()
             .unwrap()
@@ -369,7 +375,15 @@ mod tests {
         e.constructor().unwrap().syntax().should_eq("Int");
         e.module().unwrap().syntax().should_eq("gleam");
     }
-
+    
+    #[test]
+    fn import_module() {
+        let e = parse::<ImportModule>("import aa/a");
+        let mut iter = e.module_path();
+        iter.next().unwrap().syntax().should_eq("aa");
+        iter.next().unwrap().syntax().should_eq("a");
+        assert!(iter.next().is_none());
+    }
     // #[test]
     // fn plain_attrset() {
     //     let e = parse::<AttrSet>("{ a = let { }; b = rec { }; }");

@@ -1,4 +1,4 @@
-use crate::ast::{AstNode, Module};
+use crate::ast::{AstNode, SourceFile};
 use crate::lexer::{GleamLexer, LexToken};
 use crate::SyntaxKind::{self, *};
 use crate::{Error, ErrorKind, SyntaxNode};
@@ -18,8 +18,8 @@ impl Parse {
         self.green.clone()
     }
 
-    pub fn root(&self) -> Module {
-        Module::cast(self.syntax_node()).unwrap()
+    pub fn root(&self) -> SourceFile {
+        SourceFile::cast(self.syntax_node()).unwrap()
     }
 
     pub fn syntax_node(&self) -> SyntaxNode {
@@ -167,7 +167,7 @@ impl<'i> Parser<'i> {
 }
 
 fn parse_module(p: &mut Parser) {
-    p.start_node(MODULE);
+    p.start_node(SOURCE_FILE);
     while let Some(i) = p.peek_non_ws() {
         parse_target_group(p)
     }
@@ -229,12 +229,12 @@ fn parse_statement(p: &mut Parser) {
     match p.peek_non_ws() {
         Some(T!["const"]) => parse_module_const(p, cp),
         Some(T!["import"]) => {
-          if is_pub {
-            p.error(ErrorKind::UnexpectedImport);
-            p.bump_error();
-          } else {
-            parse_import(p);  
-          }
+            if is_pub {
+                p.error(ErrorKind::UnexpectedImport);
+                p.bump_error();
+            } else {
+                parse_import(p);
+            }
         }
         Some(_) => p.bump(),
         None => p.error(ErrorKind::UnexpectedEof),
@@ -242,10 +242,31 @@ fn parse_statement(p: &mut Parser) {
 }
 
 fn parse_import(p: &mut Parser) {
-  assert!(p.at(T!["import"]));
-  p.start_node(IMPORT);
-  p.bump();
-  p.finish_node();
+    assert!(p.at(T!["import"]));
+    p.start_node(IMPORT);
+    p.bump();
+    p.start_node(IMPORT_MODULE);
+    loop {
+        match p.peek_non_ws() {
+            Some(IDENT) => {
+                p.start_node(NAME);
+                p.bump();
+                p.finish_node();
+                if p.at(T!["/"]) {
+                    p.bump();
+                    continue;
+                } else {
+                    break;
+                }
+            }
+            _ => {
+                p.error(ErrorKind::ExpectedIdentifier);
+                break;
+            }
+        }
+    }
+    p.finish_node();
+    p.finish_node();
 }
 
 fn parse_module_const(p: &mut Parser, cp: Checkpoint) {
@@ -448,7 +469,10 @@ impl SyntaxKind {
     }
 
     fn can_start_statement(self) -> bool {
-        matches!(self, T!["import"] | T!["pub"] | T!["const"] | T!["fn"] | T!["type"])
+        matches!(
+            self,
+            T!["import"] | T!["pub"] | T!["const"] | T!["fn"] | T!["type"]
+        )
     }
 
     /// Whether this token is a separator in some syntax.
