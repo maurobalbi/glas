@@ -41,7 +41,9 @@ pub enum ErrorKind {
     ExpectedTarget,
     ExpectedConstantExpression,
     ExpectedStatement,
-}
+    ExpectedType,
+    UnexpectedImport
+  }
 
 impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -51,7 +53,9 @@ impl fmt::Display for ErrorKind {
             Self::ExpectToken(tok) => return write!(f, "Expecting {}", tok),
             Self::ExpectedTarget => "Expected target javascript or erlang",
             Self::ExpectedConstantExpression => "Expected constant expression",
-            Self::ExpectedStatement => "Expected statement"
+            Self::ExpectedStatement => "Expected statement",
+            Self::ExpectedType => "Expected type",
+            Self::UnexpectedImport => "Did not expect an import here"
         }
         .fmt(f)
     }

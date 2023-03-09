@@ -1,0 +1,12 @@
+MODULE@0..11
+  TARGET_GROUP@0..11
+    MODULE_CONSTANT@0..11
+      CONST_KW@0..5 "const"
+      WHITESPACE@5..6 " "
+      NAME@6..7
+        IDENT@6..7 "a"
+      WHITESPACE@7..8 " "
+      EQ@8..9 "="
+      WHITESPACE@9..10 " "
+      LITERAL@10..11
+        INTEGER@10..11 "1"

@@ -168,6 +168,7 @@ macro_rules! ast_impl {
 enums! {
     Statement {
         ModuleConstant,
+        Import,
     },
     ConstantValue {
         Literal,
@@ -176,7 +177,9 @@ enums! {
     },
     TypeAnnotation {
         FnType,
-        RefType,
+        VarType,
+        TupleType,
+        ConstructorType,
     },
 }
 
@@ -198,8 +201,16 @@ asts! {
             })
         }
     },
+    IMPORT = Import {
+
+    },
     MODULE = Module {
         statements: [TargetGroup],
+    },
+    MODULE_NAME = ModuleName {
+        pub fn token(&self) -> Option<SyntaxToken> {
+            self.0.children_with_tokens().find_map(NodeOrToken::into_token)
+        }
     },
     MODULE_CONSTANT = ModuleConstant {
         name: Name,
@@ -231,11 +242,18 @@ asts! {
     TUPLE = Tuple {
         elements: [ConstantValue],
     },
+    CONSTRUCTOR_TYPE = ConstructorType {
+      constructor: Name,
+      module: ModuleName,
+    },
+    TUPLE_TYPE = TupleType{
+      field_types: [TypeAnnotation],
+    },
     FN_TYPE = FnType {
         param_list: ParamList,
         return_: TypeAnnotation,
     },
-    REF_TYPE = RefType {
+    VAR_TYPE = VarType {
         name: Name,
     },
 }
@@ -269,14 +287,14 @@ mod tests {
 
     #[test]
     fn apply() {
-        let e = parse::<ModuleConstant>("const a: fn(Int, String) -> Int = 1");
-        println!("{:#?}", e.annotation());
+        let e = parse::<TupleType>("const a: #(gleam.Int, String) = 1");
+        println!("{}", e.field_types().next().unwrap().syntax());
         // println!("{:?}", e.statements().next().unwrap().syntax());
     }
 
     #[test]
     fn assert() {
-        let e = crate::parse_file("pub const a = c");
+        let e = crate::parse_file("import");
         for error in e.errors() {
             println!("{}", error);
         }
@@ -328,6 +346,28 @@ mod tests {
         let mut iter = e.param_list().unwrap().params();
         iter.next().unwrap().syntax().should_eq("Int");
         iter.next().unwrap().syntax().should_eq("String");
+    }
+
+    #[test]
+    fn tuple_type_ann() {
+        let e = parse::<TupleType>("const a: #(Int, String) = 1");
+        let mut iter = e.field_types();
+        iter.next().unwrap().syntax().should_eq("Int");
+        iter.next().unwrap().syntax().should_eq("String");
+    }
+
+    #[test]
+    fn constructor_module_type() {
+        let e = parse::<ModuleConstant>("const a: gleam.Int = 1");
+        e.annotation().unwrap().syntax().should_eq("gleam.Int")
+
+    }
+
+    #[test]
+    fn module_constructor_type() {
+        let e = parse::<ConstructorType>("const a : gleam.Int = 1");
+        e.constructor().unwrap().syntax().should_eq("Int");
+        e.module().unwrap().syntax().should_eq("gleam");
     }
 
     // #[test]
