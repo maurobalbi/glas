@@ -181,9 +181,6 @@ enums! {
         TupleType,
         ConstructorType,
     },
-    ImportPath {
-        Name,
-    },
 }
 
 asts! {
@@ -208,7 +205,9 @@ asts! {
         module: ImportModule,
     },
     IMPORT_MODULE = ImportModule {
-        module_path: [ImportPath],
+        module_path: [Path],
+        as_name: Name,
+        unqualified: [UnqualifiedImport],
     },
     SOURCE_FILE = SourceFile {
         statements: [TargetGroup],
@@ -230,6 +229,15 @@ asts! {
         pub fn token(&self) -> Option<SyntaxToken> {
             self.0.children_with_tokens().find_map(NodeOrToken::into_token)
         }
+    },
+    PATH = Path {
+        pub fn token(&self) -> Option<SyntaxToken> {
+            self.0.children_with_tokens().find_map(NodeOrToken::into_token)
+        }
+    },
+    UNQUALIFIED_IMPORT = UnqualifiedImport {
+      name: Name,
+      as_name[1]: Name,
     },
     PARAM = Param {
         // pat: Pat,
@@ -293,14 +301,14 @@ mod tests {
 
     #[test]
     fn apply() {
-        let e = parse::<ImportModule>("import aa/a");
-        println!("{:?}", e.module_path());
+        let e = parse::<ImportModule>("import aa/a.{m as a}");
+        println!("{:?}", e.unqualified().next().unwrap().as_name());
         // println!("{:?}", e.statements().next().unwrap().syntax());
     }
 
     #[test]
     fn assert() {
-        let e = crate::parse_file("import aa/a import bla");
+        let e = crate::parse_file("import aa/a.{m as a, M as A as e");
         for error in e.errors() {
             println!("{}", error);
         }
@@ -384,14 +392,27 @@ mod tests {
         iter.next().unwrap().syntax().should_eq("a");
         assert!(iter.next().is_none());
     }
-    // #[test]
-    // fn plain_attrset() {
-    //     let e = parse::<AttrSet>("{ a = let { }; b = rec { }; }");
-    //     assert!(e.let_token().is_none());
-    //     assert!(e.rec_token().is_none());
-    //     e.l_curly_token().unwrap().should_eq("{");
-    //     e.r_curly_token().unwrap().should_eq("}");
 
+    #[test]
+     fn import_unqualified() {
+        let e = parse::<ImportModule>("import aa/a.{m as a, M as A}");
+        let mut iter = e.unqualified();
+        let fst = iter.next().unwrap();
+        let snd = iter.next().unwrap();
+
+        fst.as_name().unwrap().syntax().should_eq("a");
+        fst.name().unwrap().syntax().should_eq("m");
+        snd.as_name().unwrap().syntax().should_eq("A");
+        snd.name().unwrap().syntax().should_eq("M");
+        assert!(iter.next().is_none());
+    }   
+    
+    #[test]
+     fn import_qualified_as() {
+        let e = parse::<ImportModule>("import aa/a.{m as a, M as A} as e");
+
+        e.as_name().unwrap().syntax().should_eq("e");
+    }   
     //     let mut iter = e.bindings();
     //     iter.next().unwrap().syntax().should_eq("a = let { };");
     //     iter.next().unwrap().syntax().should_eq("b = rec { };");

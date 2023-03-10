@@ -249,7 +249,7 @@ fn parse_import(p: &mut Parser) {
     loop {
         match p.peek_non_ws() {
             Some(IDENT) => {
-                p.start_node(NAME);
+                p.start_node(PATH);
                 p.bump();
                 p.finish_node();
                 if p.at(T!["/"]) {
@@ -265,8 +265,56 @@ fn parse_import(p: &mut Parser) {
             }
         }
     }
+
+    if p.peek_non_ws() == Some(T!["."]) {
+        parse_unqualified_imports(p);
+    }
+
+    if p.at_non_ws(T!["as"]) {
+      p.bump();
+      p.start_node(NAME);
+      p.want(IDENT);
+      p.finish_node();
+    }
+
     p.finish_node();
     p.finish_node();
+}
+
+fn parse_unqualified_imports(p: &mut Parser) {
+    assert!(p.at(T!["."]));
+    p.bump();
+    p.want(T!["{"]);
+    loop {
+        match p.peek_non_ws() {
+            Some(T!["}"]) => {
+                p.bump();
+                break;
+            }
+            Some(k @ (U_IDENT | IDENT)) => {
+                p.start_node(UNQUALIFIED_IMPORT);
+                p.start_node(NAME);
+                p.bump();
+                p.finish_node();
+                if p.at_non_ws(T!["as"]) {
+                    p.bump();
+                    p.start_node(NAME);
+                    p.want(k);
+                    p.finish_node();
+                }
+                p.finish_node();
+                continue;
+            }
+            Some(T![","]) => {
+                p.bump();
+                continue;
+            }
+            _ => {
+                p.error(ErrorKind::ExpectToken(T!["}"]));
+                break;
+            }
+        }
+    }
 }
 
 fn parse_module_const(p: &mut Parser, cp: Checkpoint) {

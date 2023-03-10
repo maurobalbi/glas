@@ -82,7 +82,7 @@ def! {
     #[regex("_[_a-z0-9]+")]
     DISCARD_IDENT,
 
-    #[regex("[A-Z][0-9a-zA-Z]+")]
+    #[regex("[A-Z][0-9a-zA-Z]*")]
     U_IDENT ,
 
     #[regex("(0[xXbBoO])?[0-9_]+")]
@@ -270,6 +270,7 @@ def! {
     MODULE_NAME,
     MODULE_CONSTANT,
     NAME,
+    PATH,
     NAME_REF,
     PARAM,
     PARAM_LIST,
@@ -280,6 +281,7 @@ def! {
     TUPLE_TYPE,
     HOLE_TYPE,
     IMPORT_MODULE,
+    UNQUALIFIED_IMPORT,
     CONSTRUCTOR_TYPE,
     STATEMENTS,
     TUPLE,
