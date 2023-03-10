@@ -271,10 +271,10 @@ fn parse_import(p: &mut Parser) {
     }
 
     if p.at_non_ws(T!["as"]) {
-      p.bump();
-      p.start_node(NAME);
-      p.want(IDENT);
-      p.finish_node();
+        p.bump();
+        p.start_node(NAME);
+        p.want(IDENT);
+        p.finish_node();
     }
 
     p.finish_node();

@@ -333,7 +333,8 @@ mod tests {
 
     #[test]
     fn module() {
-        let e = parse::<SourceFile>("if erlang {const a = 1} const b = 2 if javascript {const c = 3}");
+        let e =
+            parse::<SourceFile>("if erlang {const a = 1} const b = 2 if javascript {const c = 3}");
         let mut iter = e.statements();
         iter.next()
             .unwrap()
@@ -374,7 +375,6 @@ mod tests {
     fn constructor_module_type() {
         let e = parse::<ModuleConstant>("const a: gleam.Int = 1");
         e.annotation().unwrap().syntax().should_eq("gleam.Int")
-
     }
 
     #[test]
@@ -383,7 +383,7 @@ mod tests {
         e.constructor().unwrap().syntax().should_eq("Int");
         e.module().unwrap().syntax().should_eq("gleam");
     }
-    
+
     #[test]
     fn import_module() {
         let e = parse::<ImportModule>("import aa/a");
@@ -394,7 +394,7 @@ mod tests {
     }
 
     #[test]
-     fn import_unqualified() {
+    fn import_unqualified() {
         let e = parse::<ImportModule>("import aa/a.{m as a, M as A}");
         let mut iter = e.unqualified();
         let fst = iter.next().unwrap();
@@ -405,14 +405,14 @@ mod tests {
         snd.as_name().unwrap().syntax().should_eq("A");
         snd.name().unwrap().syntax().should_eq("M");
         assert!(iter.next().is_none());
-    }   
-    
+    }
+
     #[test]
-     fn import_qualified_as() {
+    fn import_qualified_as() {
         let e = parse::<ImportModule>("import aa/a.{m as a, M as A} as e");
 
         e.as_name().unwrap().syntax().should_eq("e");
-    }   
+    }
     //     let mut iter = e.bindings();
     //     iter.next().unwrap().syntax().should_eq("a = let { };");
     //     iter.next().unwrap().syntax().should_eq("b = rec { };");

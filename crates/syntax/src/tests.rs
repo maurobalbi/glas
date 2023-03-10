@@ -1,9 +1,9 @@
-use rowan::{ast::AstNode};
+use crate::{parse_file, GleamLanguage};
 use expect_test::expect_file;
+use rowan::ast::AstNode;
 use std::fmt::Write;
 use std::fs;
 use std::path::Path;
-use crate::{GleamLanguage, parse_file};
 
 #[track_caller]
 pub fn parse<N: AstNode<Language = GleamLanguage>>(src: &str) -> N {

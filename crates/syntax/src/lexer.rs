@@ -1,8 +1,7 @@
+use crate::kind::SyntaxKind;
 pub use logos::{Lexer, Logos};
 use rowan::{TextRange, TextSize};
 use std::ops::Range as StdRange;
-use crate::kind::SyntaxKind;
-
 
 pub fn lex_string(lex: &mut Lexer<SyntaxKind>) -> bool {
     let remainder: &str = lex.remainder();
@@ -102,15 +101,15 @@ mod tests {
 
     #[test]
     fn string() {
-      check_lex(
-        "\"abc 1 A",
-        expect![[r#"
+        check_lex(
+            "\"abc 1 A",
+            expect![[r#"
             ERROR "\""
             IDENT "abc"
             WHITESPACE " "
             INTEGER "1"
-        "#]]
-      )
+        "#]],
+        )
     }
 
     #[test]

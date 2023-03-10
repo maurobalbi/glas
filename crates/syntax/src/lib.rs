@@ -24,7 +24,13 @@ pub use self::kind::SyntaxKind;
 pub use self::parser::{parse_file, Parse};
 
 pub fn whatever() {
-  println!("{}", Error{range:TextRange::new(1.into(),2.into()),  kind: ErrorKind::NestTooDeep})
+    println!(
+        "{}",
+        Error {
+            range: TextRange::new(1.into(), 2.into()),
+            kind: ErrorKind::NestTooDeep
+        }
+    )
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -43,8 +49,8 @@ pub enum ErrorKind {
     ExpectedStatement,
     ExpectedType,
     ExpectedIdentifier,
-    UnexpectedImport
-  }
+    UnexpectedImport,
+}
 
 impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -57,7 +63,7 @@ impl fmt::Display for ErrorKind {
             Self::ExpectedConstantExpression => "Expected constant expression",
             Self::ExpectedStatement => "Expected statement",
             Self::ExpectedType => "Expected type",
-            Self::UnexpectedImport => "Did not expect an import here"
+            Self::UnexpectedImport => "Did not expect an import here",
         }
         .fmt(f)
     }
