@@ -33,7 +33,7 @@ enum Event {
         diagnostics: Vec<Diagnostic>,
     },
     ClientExited,
-    LoadFlake(Result<LoadModuleResult>),
+    LoadModule(Result<LoadModuleResult>),
 }
 
 struct LoadModuleResult {
@@ -148,6 +148,13 @@ impl Server {
                 let _ = event_tx.send(Event::ClientExited);
             });
         }
+                
+                // Load configurations before loading flake.
+        // The latter depends on `nix.binary`.
+        self.load_config(|st| {
+            // TODO: Register file watcher for flake.lock.
+            st.load_module();
+        });
 
         loop {
             crossbeam_channel::select! {
@@ -204,16 +211,24 @@ impl Server {
             Event::ClientExited => {
                 bail!("The process initializing this server is exited. Exit now")
             }
-            Event::LoadFlake(ret) => match ret {
+            Event::LoadModule(ret) => match ret {
                 Err(err) => {
                     self.show_message(
                         MessageType::ERROR,
                         format!("Failed to load flake workspace: {err:#}"),
                     );
                 }
-                Ok(_) => {
-                    tracing::info!("Workspace is not a flake");
-                    self.vfs.write().unwrap().set_flake_info(None);
+                Ok(LoadModuleResult {
+                    module_info,
+                    missing_inputs,
+                }) => {
+                    tracing::info!(
+                        "Workspace is a flake (missing_inputs = {missing_inputs}): {module_info:?}"
+                    );
+                    if missing_inputs {
+                        self.show_message(MessageType::WARNING, "Some flake inputs are not available, please run `nix flake archive` to fetch all inputs");
+                    }
+                    self.vfs.write().unwrap().set_module_info(Some(module_info));
                     self.apply_vfs_change();
                 }
             },
@@ -310,6 +325,68 @@ impl Server {
             .finish();
     }
 
+    /// Enqueue a task to reload the flake.{nix,lock} and the locked inputs.
+    fn load_module(&self) {
+        tracing::info!("Loading flake configuration");
+
+        let gleam_path = self.config.root_path.join(GLEAM_FILE);
+        let gleam_bin_path = self.config.gleam_binary.clone();
+
+        let vfs = self.vfs.clone();
+        let task = move || {
+            let gleam_vpath = VfsPath::new(&gleam_path);
+            let gleam_src = match fs::read_to_string(&gleam_path) {
+                Ok(src) => src,
+                // Read failure.
+                Err(err) => {
+                    return Err(anyhow::Error::new(err)
+                        .context(format!("Failed to read flake root {gleam_path:?}")));
+                }
+            };
+
+            // Load the flake file in Vfs.
+            let module_file = {
+                let mut vfs = vfs.write().unwrap();
+                match vfs.file_for_path(&gleam_vpath) {
+                    // If the file is already opened (transferred from client),
+                    // prefer the managed one. It contains more recent unsaved changes.
+                    Ok(file) => file,
+                    // Otherwise, cache the file content from disk.
+                    Err(_) => vfs.set_path_content(gleam_vpath, gleam_src),
+                }
+            };
+
+            let lock_src = match fs::read(&gleam_path) {
+                Ok(lock_src) => lock_src,
+                // Flake without inputs.
+                Err(err) if err.kind() == ErrorKind::NotFound => {
+                    return Ok(LoadModuleResult {
+                        missing_inputs: false,
+                        module_info: ModuleInfo {
+                            module_file,
+                            input_store_paths: HashMap::new(),
+                        },
+                    });
+                }
+                Err(err) => {
+                    return Err(anyhow::Error::new(err)
+                        .context(format!("Failed to read flake lock")));
+                }
+            };
+
+            Ok(LoadModuleResult {
+                missing_inputs: false,
+                module_info: ModuleInfo {
+                    module_file,
+                    input_store_paths: HashMap::new(),
+                },
+            })
+        };
+        self.task_tx
+            .send(Box::new(move || Event::LoadModule(task())))
+            .unwrap();
+    }
+
     fn send_request<R: req::Request>(
         &mut self,
         params: R::Params,
@@ -397,6 +474,7 @@ impl Server {
 
     fn update_diagnostics(&self, uri: Url, version: u64) {
         let snap = self.snapshot();
+        tracing::info!("Updating diagnostics {:?}", &uri.clone());
         let task = move || {
             // Return empty diagnostics for ignored files.
             let diagnostics = (!snap.config.diagnostics_excluded_files.contains(&uri))

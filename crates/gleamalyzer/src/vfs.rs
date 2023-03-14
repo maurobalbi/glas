@@ -38,9 +38,9 @@ impl Vfs {
         }
     }
 
-    pub fn set_flake_info(&mut self, flake_info: Option<ModuleInfo>) {
+    pub fn set_module_info(&mut self, module_info: Option<ModuleInfo>) {
         self.change.set_module_graph(ModuleGraph {
-            nodes: HashMap::from_iter(flake_info.map(|info| (SourceRootId(0), info))),
+            nodes: HashMap::from_iter(module_info.map(|info| (SourceRootId(0), info))),
         });
     }
 
