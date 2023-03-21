@@ -16,6 +16,7 @@ pub enum DiagnosticKind {
     // Lowering.
 
     // Name resolution.
+    InactiveTarget,
 
     // Liveness.
 }
@@ -24,6 +25,7 @@ pub enum DiagnosticKind {
 pub enum Severity {
     Error,
     Warning,
+    Info,
     IncompleteSyntax,
 }
 
@@ -44,19 +46,23 @@ impl Diagnostic {
     pub fn code(&self) -> &'static str {
         match self.kind {
             DiagnosticKind::SyntaxError(_) => "syntax_error",
+            DiagnosticKind::InactiveTarget => "inactive_target",
         }
     }
 
     pub fn severity(&self) -> Severity {
         match self.kind {
             DiagnosticKind::SyntaxError(_) => Severity::Error,
+            DiagnosticKind::InactiveTarget => Severity::Info,
         }
     }
 
     pub fn message(&self) -> String {
         match self.kind {
             DiagnosticKind::SyntaxError(kind) => return kind.to_string(),
+            DiagnosticKind::InactiveTarget => "Inactive Target",
         }
+        .into()
     }
 
     // pub fn is_unnecessary(&self) -> bool {

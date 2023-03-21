@@ -1,13 +1,18 @@
 mod diagnostics;
+mod highlight_related;
 
 use crate::base::SourceDatabaseStorage;
 use crate::def::DefDatabaseStorage;
-use crate::{Change, Diagnostic, FileId, FileSet, SourceRoot, VfsPath};
+use crate::{Change, Diagnostic, FileId, FileSet, FilePos, SourceRoot, VfsPath};
 use salsa::{Database, Durability, ParallelDatabase};
 use std::fmt;
 use syntax::TextRange;
+
+pub use highlight_related::HlRelated;
+
 pub const DEFAULT_LRU_CAP: usize = 128;
 use crate::DEFAULT_IMPORT_FILE;
+
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NavigationTarget {
@@ -21,6 +26,7 @@ pub use salsa::Cancelled;
 pub type Cancellable<T> = Result<T, Cancelled>;
 
 #[salsa::database(SourceDatabaseStorage, DefDatabaseStorage)]
+
 struct RootDatabase {
     storage: salsa::Storage<Self>,
 }
@@ -112,5 +118,9 @@ impl Analysis {
 
     pub fn diagnostics(&self, file: FileId) -> Cancellable<Vec<Diagnostic>> {
         self.with_db(|db| diagnostics::diagnostics(db, file))
+    }
+
+    pub fn highlight_related(&self, fpos: FilePos) -> Cancellable<Vec<HlRelated>> {
+        self.with_db(|db| highlight_related::highlight_related(db, fpos).unwrap_or_default())
     }
 }

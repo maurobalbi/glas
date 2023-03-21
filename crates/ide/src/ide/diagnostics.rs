@@ -7,6 +7,9 @@ pub(crate) fn diagnostics(db: &dyn DefDatabase, file: FileId) -> Vec<Diagnostic>
     let parse = db.parse(file);
     diags.extend(parse.errors().iter().map(|&err| Diagnostic::from(err)));
 
+    let source_map = db.source_map(file);
+    diags.extend(source_map.diagnostics().iter().cloned());
+
     diags
 }
 
@@ -33,5 +36,10 @@ mod tests {
     #[test]
     fn syntax_error() {
         check("bla = bla", expect!["7..9: SyntaxError(MultipleNoAssoc)"]);
+    }
+    
+    #[test]
+    fn unused_target() {
+        check("if javascript {} const a", expect!["7..9: SyntaxError(MultipleNoAssoc)"]);
     }
 }

@@ -12,11 +12,12 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         let mut group = c.benchmark_group("lexers");
         for i in ["1//this ()is a comment\n//more comment\n()Create ridiculously fast Lexers.23123 1231 23123124 124 124 1", "fast ist the impossible"].iter() {
           group.bench_with_input(BenchmarkId::new("Logox Lexer", i), i, 
-              |b, i| b.iter(|| lexer::LexToken::lexer(*i)));
+              |b, i| b.iter(|| GleamLexer::new(*i)));
           group.bench_with_input(BenchmarkId::new("Gleam hand-crafted lexer", i), i, 
               |b, i| b.iter(|| make_tokenizer(*i)));
       }
         group.finish();
+        println!("{:?}", make_tokenizer("let a = add(_, 1)").collect::<Vec<_>>());
     }
 }
 

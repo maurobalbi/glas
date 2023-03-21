@@ -102,7 +102,7 @@ mod tests {
     #[test]
     fn string() {
         check_lex(
-            "\"abc 1 A",
+            "\"abc 1",
             expect![[r#"
             ERROR "\""
             IDENT "abc"

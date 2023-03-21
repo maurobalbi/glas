@@ -248,14 +248,48 @@ fn parse_function(p: &mut Parser, cp: Checkpoint) {
     assert!(p.at(T!["fn"]));
     p.start_node(FUNCTION);
     p.bump();
+    p.start_node(NAME);
     p.want(IDENT);
+    p.finish_node();
     p.want(T!["("]);
     p.start_node(PARAM_LIST);
-    parse_params_opt(p);
+    loop {
+        match p.peek_non_ws() {
+            Some(T![")"]) => {
+                p.bump();
+                break;
+            }
+            Some(T![","]) => {
+                p.bump();
+                continue;
+            }
+            Some(_) => {
+                p.start_node(PARAM);
+                if p.peek_iter_non_ws().nth(1) == Some(IDENT) {
+                  p.start_node(LABEL);
+                  p.want(IDENT);
+                  p.finish_node();
+                } 
+                p.start_node(NAME);
+                p.want(IDENT);
+                p.finish_node();
+                parse_type_annotation_opt(p);
+                p.finish_node();
+                continue;
+            }
+            None => {
+              p.error(ErrorKind::ExpectToken(T![")"]));
+              break;
+            }
+        }
+    }
     p.finish_node();
-    p.want(T![")"]);
-    p.want(T!["{"]);
+    if p.at_non_ws(T!["->"]) {
+      p.bump();
+      parse_type(p);
+    }
     p.start_node(FN_BODY);
+    p.want(T!["{"]);
     parse_exprs(p);
     p.finish_node();
     p.want(T!["}"]);
@@ -368,10 +402,11 @@ fn parse_constant_value(p: &mut Parser) {
             p.bump();
             p.finish_node();
         }
-        _ => {
+        Some(_) => {
             p.error(ErrorKind::ExpectedConstantExpression);
             p.bump_error();
         }
+        _ => { p.error(ErrorKind::ExpectedConstantExpression)}
     }
 }
 

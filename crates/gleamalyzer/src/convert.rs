@@ -1,5 +1,6 @@
 use crate::{LineMap, LspError, Result, Vfs};
-use ide::{Diagnostic, FileId, FilePos, FileRange, Severity};
+use ide::{Diagnostic, FileId, FilePos, FileRange, Severity, DiagnosticKind};
+use lsp::DiagnosticTag;
 use lsp_server::ErrorCode;
 use lsp_types::{
     self as lsp, DiagnosticRelatedInformation, DiagnosticSeverity, Location, NumberOrString,
@@ -63,6 +64,7 @@ pub(crate) fn to_diagnostics(
             severity: match diag.severity() {
                 Severity::Error | Severity::IncompleteSyntax => Some(DiagnosticSeverity::ERROR),
                 Severity::Warning => Some(DiagnosticSeverity::WARNING),
+                Severity::Info => Some(DiagnosticSeverity::HINT),
             },
             range: to_range(line_map, diag.range),
             code: Some(NumberOrString::String(diag.code().into())),
@@ -82,6 +84,9 @@ pub(crate) fn to_diagnostics(
             },
             tags: {
                 let mut tags = Vec::new();
+                if diag.kind == DiagnosticKind::InactiveTarget {
+                  tags.push(DiagnosticTag::UNNECESSARY);
+                }
                 Some(tags)
             },
             data: None,

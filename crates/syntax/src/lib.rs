@@ -10,6 +10,7 @@ use core::fmt;
 #[cfg(test)]
 mod tests;
 
+use rowan::TokenAtOffset;
 pub use rowan::{self, NodeOrToken, TextRange, TextSize};
 
 pub type SyntaxNode = rowan::SyntaxNode<GleamLanguage>;
@@ -97,5 +98,16 @@ impl rowan::Language for GleamLanguage {
     #[inline(always)]
     fn kind_to_raw(kind: SyntaxKind) -> rowan::SyntaxKind {
         kind.into()
+    }
+}
+
+/// Pick the most meaningful token at given cursor offset.
+pub fn best_token_at_offset(node: &SyntaxNode, offset: TextSize) -> Option<SyntaxToken> {
+    match node.token_at_offset(offset) {
+        TokenAtOffset::None => None,
+        TokenAtOffset::Single(tok) => Some(tok),
+        TokenAtOffset::Between(lhs, rhs) => {
+          Some(lhs)
+        }
     }
 }

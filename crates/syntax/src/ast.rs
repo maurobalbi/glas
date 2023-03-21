@@ -175,7 +175,7 @@ enums! {
         Tuple,
         List,
     },
-    TypeAnnotation {
+    Type_ {
         FnType,
         VarType,
         TupleType,
@@ -203,6 +203,8 @@ asts! {
     },
     FUNCTION = Function {
         name: Name,
+        args: ParamList,
+        return_type: Type_,
     },
     IMPORT = Import {
         module: ImportModule,
@@ -223,12 +225,17 @@ asts! {
     MODULE_CONSTANT = ModuleConstant {
         name: Name,
         value: ConstantValue,
-        annotation: TypeAnnotation,
+        annotation: Type_,
         pub fn is_public(&self) -> bool {
             self.syntax().children_with_tokens().find(|it| it.kind() == T!["pub"]).is_some()
         }
     },
     NAME = Name {
+        pub fn token(&self) -> Option<SyntaxToken> {
+            self.0.children_with_tokens().find_map(NodeOrToken::into_token)
+        }
+    },
+    LABEL = Label {
         pub fn token(&self) -> Option<SyntaxToken> {
             self.0.children_with_tokens().find_map(NodeOrToken::into_token)
         }
@@ -244,7 +251,9 @@ asts! {
     },
     PARAM = Param {
         // pat: Pat,
-        ty: TypeAnnotation,
+        name: Name,
+        label: Label,
+        ty: Type_,
     },
     PARAM_LIST = ParamList {
         params: [Param],
@@ -264,11 +273,11 @@ asts! {
       module: ModuleName,
     },
     TUPLE_TYPE = TupleType{
-      field_types: [TypeAnnotation],
+      field_types: [Type_],
     },
     FN_TYPE = FnType {
         param_list: ParamList,
-        return_: TypeAnnotation,
+        return_: Type_,
     },
     VAR_TYPE = VarType {
         name: Name,
@@ -304,14 +313,14 @@ mod tests {
 
     #[test]
     fn apply() {
-        let e = parse::<ImportModule>("import aa/a.{m as a}");
+        let e = parse::<ImportModule>("const");
         println!("{:?}", e.unqualified().next().unwrap().as_name());
         // println!("{:?}", e.statements().next().unwrap().syntax());
     }
 
     #[test]
     fn assert() {
-        let e = crate::parse_file("fn main() {}");
+        let e = crate::parse_file("fn a(");
         for error in e.errors() {
             println!("{}", error);
         }
@@ -418,8 +427,15 @@ mod tests {
     }
 
     #[test]
-    fn function() {
-        let e = parse::<Function>("fn main() {}");
-
+    fn function_parameters() {
+        let e = parse::<Function>("fn main(a b: Int) -> fn(Int) -> Int {}");
+        e.name().unwrap().syntax().should_eq("main");
+        e.return_type().unwrap().syntax().should_eq("fn(Int) -> Int");
+        let mut args = e.args().unwrap().params();
+        let fst = args.next().unwrap();
+        fst.label().unwrap().syntax().should_eq("a");
+        fst.name().unwrap().syntax().should_eq("b");
+        fst.ty().unwrap().syntax().should_eq("Int");
+        assert!(args.next().is_none())
     }
 }

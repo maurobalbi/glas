@@ -1,7 +1,9 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/*"
+    "crates/ide",
+    "crates/syntax",
+    "crates/gleamalyzer"
 ]
 
 [workspace.package]

@@ -79,7 +79,7 @@ def! {
     #[regex("[a-z][_a-z0-9]*")]
     IDENT,
 
-    #[regex("_[_a-z0-9]+")]
+    #[regex("_[_a-z0-9]*")]
     DISCARD_IDENT,
 
     #[regex("[A-Z][0-9a-zA-Z]*")]
@@ -268,6 +268,7 @@ def! {
     IMPORT,
     FUNCTION,
     FN_BODY,
+    LABEL,
     SOURCE_FILE,
     MODULE_NAME,
     MODULE_CONSTANT,

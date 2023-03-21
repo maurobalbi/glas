@@ -108,6 +108,7 @@ fn main_diagnostics(args: DiagnosticsArgs) {
             let severity = match diag.severity() {
                 ide::Severity::IncompleteSyntax | ide::Severity::Error => Severity::Error,
                 ide::Severity::Warning => Severity::Warning,
+                ide::Severity::Info => continue,
             };
 
             let to_range = |range: TextRange| usize::from(range.start())..usize::from(range.end());
