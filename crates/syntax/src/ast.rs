@@ -201,6 +201,9 @@ asts! {
             })
         }
     },
+    FUNCTION = Function {
+        name: Name,
+    },
     IMPORT = Import {
         module: ImportModule,
     },
@@ -308,7 +311,7 @@ mod tests {
 
     #[test]
     fn assert() {
-        let e = crate::parse_file("import aa/a.{m as a, M as A as e");
+        let e = crate::parse_file("fn main() {}");
         for error in e.errors() {
             println!("{}", error);
         }
@@ -413,8 +416,10 @@ mod tests {
 
         e.as_name().unwrap().syntax().should_eq("e");
     }
-    //     let mut iter = e.bindings();
-    //     iter.next().unwrap().syntax().should_eq("a = let { };");
-    //     iter.next().unwrap().syntax().should_eq("b = rec { };");
-    // }
+
+    #[test]
+    fn function() {
+        let e = parse::<Function>("fn main() {}");
+
+    }
 }

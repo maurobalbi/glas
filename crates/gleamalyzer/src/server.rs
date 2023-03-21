@@ -379,6 +379,7 @@ impl Server {
                 module_info: ModuleInfo {
                     module_file,
                     input_store_paths: HashMap::new(),
+
                 },
             })
         };

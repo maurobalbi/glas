@@ -266,6 +266,8 @@ def! {
     ANNOTATION,
     LITERAL,
     IMPORT,
+    FUNCTION,
+    FN_BODY,
     SOURCE_FILE,
     MODULE_NAME,
     MODULE_CONSTANT,

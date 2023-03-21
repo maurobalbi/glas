@@ -649,6 +649,8 @@ dependencies = [
  "im",
  "itertools",
  "lazy_static",
+ "lsp-server 0.5.2",
+ "lsp-types 0.92.1",
  "petgraph",
  "pulldown-cmark",
  "regex",
@@ -666,6 +668,7 @@ dependencies = [
  "toml",
  "tracing",
  "vec1",
+ "xxhash-rust",
 ]
 
 [[package]]
@@ -679,8 +682,8 @@ dependencies = [
  "ide",
  "libc",
  "log",
- "lsp-server",
- "lsp-types",
+ "lsp-server 0.7.0",
+ "lsp-types 0.94.0",
  "serde_json",
  "text-size",
  "tracing",
@@ -956,6 +959,18 @@ dependencies = [
 
 [[package]]
 name = "lsp-server"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c351c75989da23b355226dc188dc2b52538a7f4f218d70fd7393c6b62b110444"
+dependencies = [
+ "crossbeam-channel",
+ "log",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "lsp-server"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "68a9b4c78d1c3f35c5864c90e9633377b5f374a4a4983ac64c30b8ae898f9305"
@@ -964,6 +979,19 @@ dependencies = [
  "log",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "lsp-types"
+version = "0.92.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c79d4897790e8fd2550afa6d6125821edb5716e60e0e285046e070f0f6a06e0e"
+dependencies = [
+ "bitflags",
+ "serde",
+ "serde_json",
+ "serde_repr",
+ "url",
 ]
 
 [[package]]
@@ -2102,3 +2130,9 @@ checksum = "6d1526bbe5aaeb5eb06885f4d987bcdfa5e23187055de9b83fe00156a821fabc"
 dependencies = [
  "libc",
 ]
+
+[[package]]
+name = "xxhash-rust"
+version = "0.8.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "735a71d46c4d68d71d4b24d03fdc2b98e38cea81730595801db779c04fe80d70"

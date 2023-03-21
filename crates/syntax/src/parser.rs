@@ -236,9 +236,36 @@ fn parse_statement(p: &mut Parser) {
                 parse_import(p);
             }
         }
+        Some(T!["fn"]) => {
+            parse_function(p, cp);
+        }
         Some(_) => p.bump(),
         None => p.error(ErrorKind::UnexpectedEof),
     }
+}
+
+fn parse_function(p: &mut Parser, cp: Checkpoint) {
+    assert!(p.at(T!["fn"]));
+    p.start_node(FUNCTION);
+    p.bump();
+    p.want(IDENT);
+    p.want(T!["("]);
+    p.start_node(PARAM_LIST);
+    parse_params_opt(p);
+    p.finish_node();
+    p.want(T![")"]);
+    p.want(T!["{"]);
+    p.start_node(FN_BODY);
+    parse_exprs(p);
+    p.finish_node();
+    p.want(T!["}"]);
+    p.finish_node();
+}
+
+fn parse_exprs(p: &mut Parser) {
+}
+
+fn parse_params_opt(p: &mut Parser) {
 }
 
 fn parse_import(p: &mut Parser) {
