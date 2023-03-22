@@ -1,11 +1,14 @@
 use crate::ast::{AstNode, SourceFile};
 use crate::lexer::{GleamLexer, LexToken};
+use crate::token_set::TokenSet;
 use crate::SyntaxKind::{self, *};
 use crate::{Error, ErrorKind, SyntaxNode};
 use rowan::{Checkpoint, GreenNode, GreenNodeBuilder, TextRange, TextSize};
 
 const MAX_STEPS: usize = 100_000_000;
 const MAX_DEPTHS: usize = 500;
+const ITEM_RECOVERY_SET: TokenSet =
+    TokenSet::new(&[T!["fn"], T!["type"], T!["import"], T!["const"], T!["pub"]]);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Parse {
@@ -104,6 +107,22 @@ impl<'i> Parser<'i> {
         self.finish_node();
     }
 
+    fn err_recover(&mut self, kind: ErrorKind, recovery: TokenSet) {
+        self.error(kind);
+        match self.peek() {
+            Some(T!["{"] | T!["}"]) => {
+                return;
+            }
+            _ => (),
+        }
+
+        if self.at_ts(recovery) {
+            return;
+        }
+
+        self.bump_error()
+    }
+
     /// Peek the next token, including whitespaces.
     fn peek_full(&mut self) -> Option<LexToken> {
         self.steps += 1;
@@ -122,6 +141,13 @@ impl<'i> Parser<'i> {
 
     fn at(&mut self, kind: SyntaxKind) -> bool {
         self.peek().map(|k| k == kind).unwrap_or(false)
+    }
+
+    fn at_ts(&mut self, kinds: TokenSet) -> bool {
+        if let Some(kind) = self.peek_non_ws() {
+            return kinds.contains(kind);
+        }
+        false
     }
 
     /// Like `peek_full`, but only returns SyntaxKind.
@@ -246,16 +272,39 @@ fn parse_statement(p: &mut Parser) {
 
 fn parse_function(p: &mut Parser, cp: Checkpoint) {
     assert!(p.at(T!["fn"]));
-    p.start_node(FUNCTION);
     p.bump();
-    p.start_node(NAME);
-    p.want(IDENT);
+    p.start_node_at(cp, FUNCTION);
+    name_r(p, ITEM_RECOVERY_SET);
+    if p.at_non_ws(T!["("]) {
+        parse_params(p, T![")"]);
+    } else {
+        p.error(ErrorKind::ExpectToken(T!["("]));
+    }
+
+    if p.at_non_ws(T!["->"]) {
+        p.bump();
+        parse_type(p);
+    }
+
+    p.start_node(FN_BODY);
+    if p.at_non_ws(T!["{"]) {
+        parse_exprs(p, T!["}"]);
+        p.bump();
+    } else {
+        p.error(ErrorKind::ExpectToken(T!["{"]));
+    }
+    
     p.finish_node();
-    p.want(T!["("]);
+    p.finish_node();
+}
+
+fn parse_params(p: &mut Parser, guard: SyntaxKind) {
+    assert!(p.at_non_ws(T!["("]));
     p.start_node(PARAM_LIST);
+    p.bump();
     loop {
         match p.peek_non_ws() {
-            Some(T![")"]) => {
+            Some(k) if k == guard => {
                 p.bump();
                 break;
             }
@@ -263,44 +312,62 @@ fn parse_function(p: &mut Parser, cp: Checkpoint) {
                 p.bump();
                 continue;
             }
-            Some(_) => {
-                p.start_node(PARAM);
-                if p.peek_iter_non_ws().nth(1) == Some(IDENT) {
-                  p.start_node(LABEL);
-                  p.want(IDENT);
-                  p.finish_node();
-                } 
-                p.start_node(NAME);
-                p.want(IDENT);
-                p.finish_node();
-                parse_type_annotation_opt(p);
-                p.finish_node();
+            Some(IDENT) => {
+                parse_param(p);
                 continue;
             }
-            None => {
-              p.error(ErrorKind::ExpectToken(T![")"]));
-              break;
+            _ => {
+                p.error(ErrorKind::ExpectToken(guard));
+                break;
             }
         }
     }
     p.finish_node();
-    if p.at_non_ws(T!["->"]) {
-      p.bump();
-      parse_type(p);
+}
+
+fn parse_param(p: &mut Parser) {
+    p.start_node(PARAM);
+    if p.peek_iter_non_ws().nth(1) == Some(IDENT) {
+        p.start_node(LABEL);
+        p.want(IDENT);
+        p.finish_node();
     }
-    p.start_node(FN_BODY);
-    p.want(T!["{"]);
-    parse_exprs(p);
+    p.start_node(NAME);
+    p.want(IDENT);
     p.finish_node();
-    p.want(T!["}"]);
+    parse_type_annotation_opt(p);
     p.finish_node();
 }
 
-fn parse_exprs(p: &mut Parser) {
+fn parse_exprs(p: &mut Parser, guard: SyntaxKind) {
+    assert!(p.at_non_ws(T!["{"]));
+    p.bump();
+    loop {
+        match p.peek_non_ws() {
+            None => {
+                p.error(ErrorKind::ExpectToken(guard));
+                break;
+            }
+            Some(k) if k == guard => {
+                p.bump();
+                break;
+            }
+            _ => p.error(ErrorKind::ExpectedIdentifier),
+        }
+    }
 }
 
-fn parse_params_opt(p: &mut Parser) {
+fn name_r(p: &mut Parser, recovery: TokenSet) {
+    if p.at_non_ws(IDENT) {
+        p.start_node(NAME);
+        p.bump();
+        p.finish_node();
+    } else {
+        p.err_recover(ErrorKind::ExpectedIdentifier, recovery)
+    }
 }
+
+fn parse_params_opt(p: &mut Parser) {}
 
 fn parse_import(p: &mut Parser) {
     assert!(p.at(T!["import"]));
@@ -406,7 +473,7 @@ fn parse_constant_value(p: &mut Parser) {
             p.error(ErrorKind::ExpectedConstantExpression);
             p.bump_error();
         }
-        _ => { p.error(ErrorKind::ExpectedConstantExpression)}
+        _ => p.error(ErrorKind::ExpectedConstantExpression),
     }
 }
 

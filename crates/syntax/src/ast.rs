@@ -320,7 +320,7 @@ mod tests {
 
     #[test]
     fn assert() {
-        let e = crate::parse_file("fn a(");
+      let e = crate::parse_file("fn a (a b: Int) {} fn b");
         for error in e.errors() {
             println!("{}", error);
         }

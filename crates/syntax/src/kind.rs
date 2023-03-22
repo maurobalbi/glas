@@ -262,6 +262,8 @@ def! {
     #[error]
     ERROR,
 
+    EOF,
+
     // Nodes
     ANNOTATION,
     LITERAL,

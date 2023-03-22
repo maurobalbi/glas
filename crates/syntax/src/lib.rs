@@ -4,6 +4,7 @@ mod kind;
 pub mod ast;
 pub mod lexer;
 pub mod parser;
+mod token_set;
 
 use core::fmt;
 
