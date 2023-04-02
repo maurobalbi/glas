@@ -320,7 +320,14 @@ mod tests {
 
     #[test]
     fn assert() {
-      let e = crate::parse_file("fn a (a b: Int) {} fn b");
+      let e = crate::parse_file("if javascript {
+  const a = b
+}
+
+pub fn test () {
+  
+}
+");
         for error in e.errors() {
             println!("{}", error);
         }

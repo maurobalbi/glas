@@ -293,7 +293,7 @@ fn parse_function(p: &mut Parser, cp: Checkpoint) {
     } else {
         p.error(ErrorKind::ExpectToken(T!["{"]));
     }
-    
+
     p.finish_node();
     p.finish_node();
 }
