@@ -46,8 +46,10 @@ pub enum ErrorKind {
     NestTooDeep,
     UnexpectedEof,
     ExpectToken(SyntaxKind),
+    ExpectedExpression,
     ExpectedTarget,
     ExpectedConstantExpression,
+    MultipleNoAssoc,
     ExpectedStatement,
     ExpectedType,
     ExpectedIdentifier,
@@ -62,9 +64,11 @@ impl fmt::Display for ErrorKind {
             Self::ExpectToken(tok) => return write!(f, "Expecting {}", tok),
             Self::ExpectedTarget => "Expected target javascript or erlang",
             Self::ExpectedIdentifier => "Expected an identifier",
+            Self::MultipleNoAssoc => "No-associative operators cannot be chained",
             Self::ExpectedConstantExpression => "Expected constant expression",
             Self::ExpectedStatement => "Expected statement",
             Self::ExpectedType => "Expected type",
+            Self::ExpectedExpression => "Expected Expression",
             Self::UnexpectedImport => "Did not expect an import here",
         }
         .fmt(f)

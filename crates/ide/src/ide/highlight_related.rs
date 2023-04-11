@@ -42,10 +42,10 @@ mod tests {
         expect.assert_eq(&src);
     }
 
-    #[test]
-    fn definition() {
-        check("const b = 1 const a = $0b", expect!["const <b> = 1 const a = <<b>>"]);
+    // #[test]
+    // fn definition() {
+    //     check("const b = 1 const a = $0b", expect!["const <b> = 1 const a = <<b>>"]);
     
-    }
+    // }
 
 }

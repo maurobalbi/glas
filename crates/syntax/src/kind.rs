@@ -264,8 +264,17 @@ def! {
 
     EOF,
 
+
+    
     // Nodes
     ANNOTATION,
+    ASSIGNMENT,
+    BLOCK,
+    UNARY_OP,
+    BINARY_OP,
+    FIELD_ACCESS,
+    FIELD_NAME,
+    VARIABLE,
     LITERAL,
     IMPORT,
     FUNCTION,
@@ -289,8 +298,8 @@ def! {
     UNQUALIFIED_IMPORT,
     CONSTRUCTOR_TYPE,
     STATEMENTS,
-    TUPLE,
-    LIST,
+    CONSTANT_TUPLE,
+    CONSTANT_LIST,
     RECORD,
     BITSTRING,
 

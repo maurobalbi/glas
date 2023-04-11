@@ -35,11 +35,19 @@ mod tests {
 
     #[test]
     fn syntax_error() {
-        check("bla = bla", expect!["7..9: SyntaxError(MultipleNoAssoc)"]);
+        check("bla = bla", expect![[r#"
+            0..3: SyntaxError(ExpectedStatement)
+            4..5: SyntaxError(ExpectedStatement)
+            6..9: SyntaxError(ExpectedStatement)
+        "#]]);
     }
     
     #[test]
     fn unused_target() {
-        check("if javascript {} const a", expect!["7..9: SyntaxError(MultipleNoAssoc)"]);
+        check("if javascript {} const a", expect![[r#"
+            24..24: SyntaxError(ExpectToken(EQ))
+            24..24: SyntaxError(ExpectedConstantExpression)
+            0..16: InactiveTarget
+        "#]]);
     }
 }

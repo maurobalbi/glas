@@ -7,20 +7,6 @@ pub use rowan::ast::{AstChildren, AstNode};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum BinaryOpKind {
-    Imply,
-    Or,
-    And,
-
-    Equal,
-    NotEqual,
-    Less,
-    Greater,
-    LessEqual,
-    GreaterEqual,
-
-    Update,
-    Concat,
-
     Add,
     Sub,
     Mul,
@@ -45,11 +31,11 @@ trait NodeWrapper {
 }
 
 macro_rules! enums {
-    ($($name:ident { $($variant:ident,)* },)*) => {
+    ($($name:ident { $($variant:ident$(<$gen:ident>)?,)* },)*) => {
         $(
         #[derive(Clone, Debug, PartialEq, Eq, Hash)]
         pub enum $name {
-            $($variant($variant),)*
+            $($variant($variant$(<$gen>)*),)*
         }
 
         impl AstNode for $name {
@@ -66,7 +52,7 @@ macro_rules! enums {
                 Self: Sized
             {
                 match node.kind() {
-                    $(<$variant as NodeWrapper>::KIND => Some(Self::$variant($variant(node))),)*
+                    $(<$variant as NodeWrapper>::KIND => Some(Self::$variant$(::<$gen>)*($variant(node))),)*
                     _ => None,
                 }
             }
@@ -90,7 +76,7 @@ macro_rules! asts {
     ) => {
         $(
         #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-        pub struct $name(SyntaxNode);
+        pub struct $name (SyntaxNode);
 
         impl $name {
             ast_impl!($($impl)*);
@@ -98,7 +84,7 @@ macro_rules! asts {
 
         $(impl $trait for $name {})*
 
-        impl NodeWrapper for $name {
+        impl NodeWrapper for $name{
             const KIND: SyntaxKind = SyntaxKind::$kind;
         }
 
@@ -166,16 +152,27 @@ macro_rules! ast_impl {
 }
 
 enums! {
-    Statement {
+    TopLevelStatement {
         ModuleConstant,
         Import,
+        Function,
     },
     ConstantValue {
         Literal,
-        Tuple,
-        List,
+        ConstantTuple,
+        ConstantList,
     },
-    Type_ {
+    Statement {
+        Assignment,
+    },
+    Expression {
+        Literal,
+        Block,
+        Variable,
+        BinaryOp,
+        UnaryOp,
+    },
+    Type {
         FnType,
         VarType,
         TupleType,
@@ -184,7 +181,39 @@ enums! {
 }
 
 asts! {
-    LIST = List {
+    ASSIGNMENT = Assignment {
+        //pattern
+        annotation: Type,
+        value: Expression,
+    },
+    BLOCK = Block {
+        expressions: [Expression],
+    },
+    BINARY_OP = BinaryOp {
+        lhs: Expression,
+        rhs[1]: Expression,
+
+        pub fn op_details(&self) -> Option<(SyntaxToken, BinaryOpKind)> {
+            self.syntax().children_with_tokens().find_map(|n| {
+                let tok = n.into_token()?;
+                let op = match tok.kind() {
+                    T!["+"] => BinaryOpKind::Add,
+                    T!["-"] => BinaryOpKind::Sub,
+                    T!["*"] => BinaryOpKind::Mul,
+                    T!["/"] => BinaryOpKind::Div,
+                    _ => return None,
+                };
+                Some((tok, op))
+            })
+        }
+        pub fn op_token(&self) -> Option<SyntaxToken> {
+            self.op_details().map(|t| t.0)
+        }
+        pub fn op_kind(&self) -> Option<BinaryOpKind> {
+            self.op_details().map(|t| t.1)
+        }
+    },
+    CONSTANT_LIST = ConstantList {
         elements: [ConstantValue],
     },
     LITERAL = Literal {
@@ -204,7 +233,8 @@ asts! {
     FUNCTION = Function {
         name: Name,
         args: ParamList,
-        return_type: Type_,
+        return_type: Type,
+        body: Block,
     },
     IMPORT = Import {
         module: ImportModule,
@@ -225,7 +255,7 @@ asts! {
     MODULE_CONSTANT = ModuleConstant {
         name: Name,
         value: ConstantValue,
-        annotation: Type_,
+        annotation: Type,
         pub fn is_public(&self) -> bool {
             self.syntax().children_with_tokens().find(|it| it.kind() == T!["pub"]).is_some()
         }
@@ -253,19 +283,40 @@ asts! {
         // pat: Pat,
         name: Name,
         label: Label,
-        ty: Type_,
+        ty: Type,
     },
     PARAM_LIST = ParamList {
         params: [Param],
+    },
+    UNARY_OP = UnaryOp {
+        arg: Expression,
+
+        pub fn op_details(&self) -> Option<(SyntaxToken, UnaryOpKind)> {
+            self.syntax().children_with_tokens().find_map(|n| {
+                let tok = n.into_token()?;
+                let kind = match tok.kind() {
+                    T!["!"] => UnaryOpKind::Not,
+                    T!["-"] => UnaryOpKind::Negate,
+                    _ => return None,
+                };
+                Some((tok, kind))
+            })
+        }
+        pub fn op_token(&self) -> Option<SyntaxToken> {
+            self.op_details().map(|t| t.0)
+        }
+        pub fn op_kind(&self) -> Option<UnaryOpKind> {
+            self.op_details().map(|t| t.1)
+        }
     },
     TARGET = Target {
         name: Name,
     },
     TARGET_GROUP = TargetGroup {
         target: Target,
-        statements: [Statement],
+        statements: [TopLevelStatement],
     },
-    TUPLE = Tuple {
+    CONSTANT_TUPLE = ConstantTuple {
         elements: [ConstantValue],
     },
     CONSTRUCTOR_TYPE = ConstructorType {
@@ -273,13 +324,16 @@ asts! {
       module: ModuleName,
     },
     TUPLE_TYPE = TupleType{
-      field_types: [Type_],
+      field_types: [Type],
     },
     FN_TYPE = FnType {
         param_list: ParamList,
-        return_: Type_,
+        return_: Type,
     },
     VAR_TYPE = VarType {
+        name: Name,
+    },
+    VARIABLE = Variable {
         name: Name,
     },
 }
@@ -313,21 +367,18 @@ mod tests {
 
     #[test]
     fn apply() {
-        let e = parse::<ImportModule>("const");
-        println!("{:?}", e.unqualified().next().unwrap().as_name());
+        let e = parse::<Block>("fn main() {  let = 1 }");
+        println!("{:?}", e.syntax());
         // println!("{:?}", e.statements().next().unwrap().syntax());
     }
 
     #[test]
     fn assert() {
-      let e = crate::parse_file("if javascript {
-  const a = b
-}
-
-pub fn test () {
-  
-}
-");
+        let e = crate::parse_file(
+            "
+           fn bla() { let = 1 + 2 * 3 }
+            ",
+        );
         for error in e.errors() {
             println!("{}", error);
         }
@@ -343,7 +394,7 @@ pub fn test () {
 
     #[test]
     fn const_tuple() {
-        let e = parse::<Tuple>("const a = #(#(2,3),2)");
+        let e = parse::<ConstantTuple>("const a = #(#(2,3),2)");
         let mut iter = e.elements();
         iter.next().unwrap().syntax().should_eq("#(2,3)");
         iter.next().unwrap().syntax().should_eq("2");
@@ -437,12 +488,47 @@ pub fn test () {
     fn function_parameters() {
         let e = parse::<Function>("fn main(a b: Int) -> fn(Int) -> Int {}");
         e.name().unwrap().syntax().should_eq("main");
-        e.return_type().unwrap().syntax().should_eq("fn(Int) -> Int");
+        e.return_type()
+            .unwrap()
+            .syntax()
+            .should_eq("fn(Int) -> Int");
         let mut args = e.args().unwrap().params();
         let fst = args.next().unwrap();
         fst.label().unwrap().syntax().should_eq("a");
         fst.name().unwrap().syntax().should_eq("b");
         fst.ty().unwrap().syntax().should_eq("Int");
         assert!(args.next().is_none())
+    }
+
+    #[test]
+    fn block() {
+        let e = parse::<Block>("fn b() { 1 }");
+        let mut exprs = e.expressions();
+        exprs.next().unwrap().syntax().should_eq("1")
+    }
+
+    #[test]
+    fn binary_op() {
+        let e = parse::<BinaryOp>("fn b() { 1 * 2 + 3 }");
+        e.lhs().unwrap().syntax().should_eq("1 * 2");
+        e.rhs().unwrap().syntax().should_eq("3");
+
+        let e2 = parse::<BinaryOp>("fn b() { 1 + 2 * 3 }");
+        e2.lhs().unwrap().syntax().should_eq("1");
+        e2.rhs().unwrap().syntax().should_eq("2 * 3")
+    }
+
+    #[test]
+    fn unary_op() {
+        let e = parse::<UnaryOp>("fn a() { -1 }");
+        assert_eq!(e.op_kind(), Some(UnaryOpKind::Negate));
+        e.op_token().unwrap().should_eq("-");
+        e.arg().unwrap().syntax().should_eq("1");
+    }
+
+    #[test]
+    fn let_expr() {
+        let e = parse::<Assignment>("fn a() { let :Int = 1}");
+        e.annotation().unwrap().syntax().should_eq("Int")
     }
 }

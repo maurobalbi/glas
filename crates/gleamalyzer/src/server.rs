@@ -318,6 +318,9 @@ impl Server {
             .on_sync_mut::<notif::DidChangeConfiguration>(|st, _params| {
                 st.load_config(|_| {});
             })
+            .on_sync_mut::<notif::DidSaveTextDocument>(|st, _params| {
+                tracing::info!("Saving document");
+            })
             // Workaround:
             // > In former implementations clients pushed file events without the server actively asking for it.
             // Ref: https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspace_didChangeWatchedFiles

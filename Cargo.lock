@@ -628,7 +628,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-core"
-version = "0.27.0"
+version = "0.28.2"
 dependencies = [
  "askama",
  "async-trait",

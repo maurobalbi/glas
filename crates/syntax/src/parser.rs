@@ -46,7 +46,7 @@ pub fn parse_file(src: &str) -> Parse {
         steps: 0,
         depth: 0,
     };
-    parse_module(&mut p);
+    module(&mut p);
     Parse {
         green: p.builder.finish(),
         errors: p.errors,
@@ -192,17 +192,17 @@ impl<'i> Parser<'i> {
     }
 }
 
-fn parse_module(p: &mut Parser) {
+fn module(p: &mut Parser) {
     p.start_node(SOURCE_FILE);
     while let Some(i) = p.peek_non_ws() {
-        parse_target_group(p)
+        target_group(p)
     }
     p.finish_node();
 }
 
 const VALID_TARGETS: [&str; 2] = ["javascript", "erlang"];
 
-fn parse_target_group(p: &mut Parser) {
+fn target_group(p: &mut Parser) {
     p.start_node(TARGET_GROUP);
     match p.peek() {
         Some(T!["if"]) => {
@@ -219,11 +219,11 @@ fn parse_target_group(p: &mut Parser) {
             }
             if p.peek_non_ws() == Some(T!["{"]) {
                 p.bump();
-                parse_statements(p);
+                statements(p);
                 p.want(T!["}"]);
             }
         }
-        Some(t) if t.can_start_statement() => parse_statements(p),
+        Some(t) if t.can_start_statement() => statements(p),
         Some(_) => {
             p.error(ErrorKind::ExpectedStatement);
             p.bump_error()
@@ -234,12 +234,12 @@ fn parse_target_group(p: &mut Parser) {
     p.finish_node();
 }
 
-fn parse_statements(p: &mut Parser) {
+fn statements(p: &mut Parser) {
     // p.start_node(STATEMENTS);
     loop {
         match p.peek_non_ws() {
             Some(t) if t.can_start_statement() => {
-                parse_statement(p);
+                statement(p);
                 continue;
             }
             _ => {
@@ -249,56 +249,53 @@ fn parse_statements(p: &mut Parser) {
     }
 }
 
-fn parse_statement(p: &mut Parser) {
+fn statement(p: &mut Parser) {
     let cp = p.checkpoint();
     let is_pub = visibility_opt(p);
     match p.peek_non_ws() {
-        Some(T!["const"]) => parse_module_const(p, cp),
+        Some(T!["const"]) => module_const(p, cp),
         Some(T!["import"]) => {
             if is_pub {
                 p.error(ErrorKind::UnexpectedImport);
                 p.bump_error();
             } else {
-                parse_import(p);
+                import(p);
             }
         }
         Some(T!["fn"]) => {
-            parse_function(p, cp);
+            function(p, cp);
         }
         Some(_) => p.bump(),
         None => p.error(ErrorKind::UnexpectedEof),
     }
 }
 
-fn parse_function(p: &mut Parser, cp: Checkpoint) {
+fn function(p: &mut Parser, cp: Checkpoint) {
     assert!(p.at(T!["fn"]));
     p.bump();
     p.start_node_at(cp, FUNCTION);
     name_r(p, ITEM_RECOVERY_SET);
     if p.at_non_ws(T!["("]) {
-        parse_params(p, T![")"]);
+        params(p, T![")"]);
     } else {
         p.error(ErrorKind::ExpectToken(T!["("]));
     }
 
     if p.at_non_ws(T!["->"]) {
         p.bump();
-        parse_type(p);
+        type_(p);
     }
 
-    p.start_node(FN_BODY);
     if p.at_non_ws(T!["{"]) {
-        parse_exprs(p, T!["}"]);
-        p.bump();
+        block(p, T!["}"]);
     } else {
         p.error(ErrorKind::ExpectToken(T!["{"]));
     }
 
     p.finish_node();
-    p.finish_node();
 }
 
-fn parse_params(p: &mut Parser, guard: SyntaxKind) {
+fn params(p: &mut Parser, guard: SyntaxKind) {
     assert!(p.at_non_ws(T!["("]));
     p.start_node(PARAM_LIST);
     p.bump();
@@ -313,7 +310,7 @@ fn parse_params(p: &mut Parser, guard: SyntaxKind) {
                 continue;
             }
             Some(IDENT) => {
-                parse_param(p);
+                param(p);
                 continue;
             }
             _ => {
@@ -325,7 +322,7 @@ fn parse_params(p: &mut Parser, guard: SyntaxKind) {
     p.finish_node();
 }
 
-fn parse_param(p: &mut Parser) {
+fn param(p: &mut Parser) {
     p.start_node(PARAM);
     if p.peek_iter_non_ws().nth(1) == Some(IDENT) {
         p.start_node(LABEL);
@@ -335,12 +332,13 @@ fn parse_param(p: &mut Parser) {
     p.start_node(NAME);
     p.want(IDENT);
     p.finish_node();
-    parse_type_annotation_opt(p);
+    type_annotation_opt(p);
     p.finish_node();
 }
 
-fn parse_exprs(p: &mut Parser, guard: SyntaxKind) {
+fn block(p: &mut Parser, guard: SyntaxKind) {
     assert!(p.at_non_ws(T!["{"]));
+    p.start_node(BLOCK);
     p.bump();
     loop {
         match p.peek_non_ws() {
@@ -352,8 +350,106 @@ fn parse_exprs(p: &mut Parser, guard: SyntaxKind) {
                 p.bump();
                 break;
             }
-            _ => p.error(ErrorKind::ExpectedIdentifier),
+            Some(k) if k.can_start_expr() => {
+                expr_opt(p);
+                continue;
+            }
+            _ => {
+                p.error(ErrorKind::ExpectedExpression);
+                p.bump()
+            }
         }
+    }
+    p.finish_node();
+}
+
+fn expr_opt(p: &mut Parser) {
+    p.depth += 1;
+    if p.depth >= MAX_DEPTHS {
+        p.error(ErrorKind::NestTooDeep);
+        p.start_node(ERROR);
+        while p.peek().is_some() {
+            p.bump();
+        }
+        p.finish_node();
+        return;
+    }
+
+    match p.peek_non_ws() {
+        Some(T!["let"]) => parse_assignment(p),
+        _ => expr(p),
+    }
+}
+
+fn parse_assignment(p: &mut Parser) {
+    assert!(p.at(T!["let"]));
+    p.start_node(ASSIGNMENT);
+    p.bump();
+    //parse pattern
+    type_annotation_opt(p);
+    p.want(T!["="]);
+    expr(p);
+    p.finish_node();
+}
+
+fn expr(p: &mut Parser) {
+    expr_bp(p, 0)
+}
+
+fn expr_bp(p: &mut Parser, min_bp: u8) {
+    let tok = match p.peek_non_ws() {
+        None => {
+            p.error(ErrorKind::ExpectedExpression);
+            return;
+        }
+        Some(tok) => tok,
+    };
+
+    let cp = p.checkpoint();
+
+    match tok.prefix_bp() {
+        Some(rbp) => {
+            p.start_node(UNARY_OP);
+            p.bump(); // Prefix op.
+            expr_bp(p, rbp);
+            p.finish_node();
+        }
+        _ => expr_unit(p),
+    }
+
+    loop {
+        let tok = match p.peek_non_ws() {
+            None => break,
+            Some(tok) => tok,
+        };
+
+        let (lbp, rbp) = match tok.infix_bp() {
+            None => break,
+            Some(bps) => bps,
+        };
+        if lbp == min_bp {
+            p.error(ErrorKind::MultipleNoAssoc);
+            break;
+        }
+        if lbp < min_bp {
+            break;
+        }
+
+        p.start_node_at(cp, BINARY_OP);
+        p.bump(); // Infix op.
+        expr_bp(p, rbp);
+        p.finish_node();
+    }
+}
+
+fn expr_unit(p: &mut Parser) {
+    match p.peek_non_ws() {
+        Some(INTEGER | FLOAT | STRING) => {
+            p.start_node(LITERAL);
+            p.bump();
+            p.finish_node();
+        }
+        _ => p.error(ErrorKind::ExpectedExpression),
     }
 }
 
@@ -367,9 +463,9 @@ fn name_r(p: &mut Parser, recovery: TokenSet) {
     }
 }
 
-fn parse_params_opt(p: &mut Parser) {}
+fn params_opt(p: &mut Parser) {}
 
-fn parse_import(p: &mut Parser) {
+fn import(p: &mut Parser) {
     assert!(p.at(T!["import"]));
     p.start_node(IMPORT);
     p.bump();
@@ -395,7 +491,7 @@ fn parse_import(p: &mut Parser) {
     }
 
     if p.peek_non_ws() == Some(T!["."]) {
-        parse_unqualified_imports(p);
+        unqualified_imports(p);
     }
 
     if p.at_non_ws(T!["as"]) {
@@ -409,7 +505,7 @@ fn parse_import(p: &mut Parser) {
     p.finish_node();
 }
 
-fn parse_unqualified_imports(p: &mut Parser) {
+fn unqualified_imports(p: &mut Parser) {
     assert!(p.at(T!["."]));
     p.bump();
     p.want(T!["{"]);
@@ -445,25 +541,25 @@ fn parse_unqualified_imports(p: &mut Parser) {
     }
 }
 
-fn parse_module_const(p: &mut Parser, cp: Checkpoint) {
+fn module_const(p: &mut Parser, cp: Checkpoint) {
     assert!(p.at(T!["const"]));
     p.start_node_at(cp, MODULE_CONSTANT);
     p.bump();
-    parse_name(p);
-    parse_type_annotation_opt(p);
+    name(p);
+    type_annotation_opt(p);
     p.want(T!["="]);
-    parse_constant_value(p);
+    constant_value(p);
     p.finish_node();
 }
 
-fn parse_constant_value(p: &mut Parser) {
+fn constant_value(p: &mut Parser) {
     match p.peek_non_ws() {
         Some(INTEGER | STRING | FLOAT) => {
             p.start_node(LITERAL);
             p.bump();
             p.finish_node()
         }
-        Some(HASH) => parse_tuple(p),
+        Some(HASH) => tuple(p),
         Some(IDENT) => {
             p.start_node(NAME_REF);
             p.bump();
@@ -477,9 +573,9 @@ fn parse_constant_value(p: &mut Parser) {
     }
 }
 
-fn parse_tuple(p: &mut Parser) {
+fn tuple(p: &mut Parser) {
     assert!(p.at(T!["#"]));
-    p.start_node(TUPLE);
+    p.start_node(CONSTANT_TUPLE);
     p.bump();
     p.want(T!["("]);
     loop {
@@ -489,7 +585,7 @@ fn parse_tuple(p: &mut Parser) {
                 break;
             }
             Some(k) if k.can_start_constant_expr() => {
-                parse_constant_value(p);
+                constant_value(p);
                 continue;
             }
             Some(T![","]) => {
@@ -513,27 +609,27 @@ fn visibility_opt(p: &mut Parser) -> bool {
     false
 }
 
-fn parse_name(p: &mut Parser) {
+fn name(p: &mut Parser) {
     p.ws();
     p.start_node(NAME);
     p.want(IDENT);
     p.finish_node();
 }
 
-fn parse_type_annotation_opt(p: &mut Parser) {
+fn type_annotation_opt(p: &mut Parser) {
     match p.peek_non_ws() {
         Some(T![":"]) => {
             p.bump();
-            parse_type(p);
+            type_(p);
         }
         _ => {}
     }
 }
 
-fn parse_type(p: &mut Parser) {
+fn type_(p: &mut Parser) {
     match p.peek_non_ws() {
         // function
-        Some(T!["fn"]) => parse_fn_type(p),
+        Some(T!["fn"]) => fn_type(p),
         // type variable or constructor module
         Some(IDENT) => {
             let cp = p.checkpoint();
@@ -555,8 +651,6 @@ fn parse_type(p: &mut Parser) {
                     p.finish_node()
                 }
             }
-            // could also be a Constructor Module
-            // p.finish_node()
         }
         // constructor
         Some(U_IDENT) => {
@@ -568,7 +662,7 @@ fn parse_type(p: &mut Parser) {
         }
         // tuple
         Some(T!("#")) => {
-            parse_tuple_type(p);
+            tuple_type(p);
         }
         Some(_) => {
             p.error(ErrorKind::ExpectedType);
@@ -578,7 +672,7 @@ fn parse_type(p: &mut Parser) {
     }
 }
 
-fn parse_tuple_type(p: &mut Parser) {
+fn tuple_type(p: &mut Parser) {
     assert!(p.at(T!["#"]));
     p.start_node(TUPLE_TYPE);
     p.bump();
@@ -590,7 +684,7 @@ fn parse_tuple_type(p: &mut Parser) {
                 break;
             }
             Some(k) if k.can_start_type() => {
-                parse_type(p);
+                type_(p);
                 continue;
             }
             Some(T![","]) => {
@@ -606,7 +700,7 @@ fn parse_tuple_type(p: &mut Parser) {
     p.finish_node()
 }
 
-fn parse_fn_type(p: &mut Parser) {
+fn fn_type(p: &mut Parser) {
     assert!(p.at(T!("fn")));
     p.start_node(FN_TYPE);
     p.bump();
@@ -624,7 +718,7 @@ fn parse_fn_type(p: &mut Parser) {
             }
             _ => {
                 p.start_node(PARAM);
-                parse_type(p);
+                type_(p);
                 p.finish_node();
                 continue;
             }
@@ -632,11 +726,27 @@ fn parse_fn_type(p: &mut Parser) {
     }
     p.finish_node();
     p.want(T!["->"]);
-    parse_type(p);
+    type_(p);
     p.finish_node();
 }
 
 impl SyntaxKind {
+    fn prefix_bp(self) -> Option<u8> {
+        Some(match self {
+            T!["!"] => 9,
+            T!["-"] => 11,
+            _ => return None,
+        })
+    }
+
+    fn infix_bp(self) -> Option<(u8, u8)> {
+        Some(match self {
+            T!["+"] | T!["-"] => (1, 2),
+            T!["*"] | T!["/"] => (3, 4),
+            _ => return None,
+        })
+    }
+
     fn can_start_constant_expr(self) -> bool {
         matches!(self, IDENT | INTEGER | FLOAT | STRING | T!["#"] | T!["["])
     }
@@ -649,6 +759,28 @@ impl SyntaxKind {
         matches!(
             self,
             T!["import"] | T!["pub"] | T!["const"] | T!["fn"] | T!["type"]
+        )
+    }
+
+    fn can_start_expr(self) -> bool {
+        matches!(
+            self,
+            U_IDENT
+                | T!["use"]
+                | T!["-"]
+                | T!["panic"]
+                | T!["todo"]
+                | IDENT
+                | INTEGER
+                | FLOAT
+                | STRING
+                | T!["#"]
+                | T!["<<"]
+                | T!["["]
+                | T!["{"]
+                | T!["case"]
+                | T!["fn"]
+                | T!["let"]
         )
     }
 

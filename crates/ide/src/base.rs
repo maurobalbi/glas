@@ -11,6 +11,10 @@ pub struct FileId(pub u32);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct SourceRootId(pub u32);
 
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct PackageConfig(u32);
+
 /// An path in the virtual filesystem.
 #[cfg(unix)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -244,6 +248,9 @@ pub trait SourceDatabase {
 
     #[salsa::input]
     fn module_graph(&self) -> Arc<ModuleGraph>;
+
+    #[salsa::input]
+    fn package_config(&self) -> Arc<PackageConfig>;
 }
 
 fn source_root_module_info(db: &dyn SourceDatabase, sid: SourceRootId) -> Option<Arc<ModuleInfo>> {
