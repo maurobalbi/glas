@@ -376,12 +376,13 @@ fn expr_opt(p: &mut Parser) {
     }
 
     match p.peek_non_ws() {
-        Some(T!["let"]) => parse_assignment(p),
+        Some(T!["let"]) => assignment(p),
+        Some(T!["use"]) => todo!(),
         _ => expr(p),
     }
 }
 
-fn parse_assignment(p: &mut Parser) {
+fn assignment(p: &mut Parser) {
     assert!(p.at(T!["let"]));
     p.start_node(ASSIGNMENT);
     p.bump();
@@ -414,7 +415,7 @@ fn expr_bp(p: &mut Parser, min_bp: u8) {
             expr_bp(p, rbp);
             p.finish_node();
         }
-        _ => expr_unit(p),
+        _ => expr_select(p),
     }
 
     loop {
@@ -442,12 +443,43 @@ fn expr_bp(p: &mut Parser, min_bp: u8) {
     }
 }
 
+fn expr_select(p: &mut Parser) {
+        let cp = p.checkpoint();
+        expr_unit(p);
+        if p.at_non_ws(T!["."]) {
+            p.bump();
+            match p.peek_non_ws() {
+                Some(U_IDENT | IDENT) => {
+                    p.start_node_at(cp, FIELD_ACCESS);
+                    p.bump();
+                    p.finish_node();
+                }
+                Some(INTEGER) => {
+                    p.start_node_at(cp, TUPLE_INDEX);
+                    p.bump();
+                    p.finish_node();
+                }
+                _ => {
+                    p.error(ErrorKind::ExpectedIdentifier)
+                }
+            }
+            
+        }
+}
+
 fn expr_unit(p: &mut Parser) {
     match p.peek_non_ws() {
         Some(INTEGER | FLOAT | STRING) => {
             p.start_node(LITERAL);
             p.bump();
             p.finish_node();
+        }
+        Some(T!["{"]) => {
+            block(p, T!["}"]);
+        }
+        Some(_) => {
+            p.bump();
+            p.error(ErrorKind::ExpectedExpression)
         }
         _ => p.error(ErrorKind::ExpectedExpression),
     }
@@ -462,8 +494,6 @@ fn name_r(p: &mut Parser, recovery: TokenSet) {
         p.err_recover(ErrorKind::ExpectedIdentifier, recovery)
     }
 }
-
-fn params_opt(p: &mut Parser) {}
 
 fn import(p: &mut Parser) {
     assert!(p.at(T!["import"]));

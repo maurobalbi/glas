@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 logos = "0.12.1"
 rowan = "0.15.10"
-gleam-core = { path = "../../../gleam/compiler-core", version = "0.28.2", optional = true }
+gleam-core = { path = "../../../gleam/compiler-core", version = "0.29.0-dev", optional = true }
 
 [dev-dependencies]
 criterion = "0.3"

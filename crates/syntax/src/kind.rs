@@ -11,6 +11,8 @@ macro_rules! def {
   ) => {
     #[allow(bad_style)]
     #[derive(Logos, Clone, Copy, Debug, PartialEq, PartialOrd, Eq, Ord, Hash)]
+    #[logos(subpattern exp = r"[eE][+-]?[0-9][_0-9]*")]
+    #[logos(subpattern decimal = r"[0-9][_0-9]*")]
     #[repr(u16)]
     pub enum SyntaxKind {
       $(
@@ -85,11 +87,13 @@ def! {
     #[regex("[A-Z][0-9a-zA-Z]*")]
     U_IDENT ,
 
+
     #[regex("(0[xXbBoO])?[0-9_]+")]
     INTEGER,
 
-    #[regex(r"([0-9][_0-9]+(\.[0-9_]+)?([eE][+-]?[0-9_]+)?)", priority = 3)]
-    FLOAT,
+    //https://github.com/maciejhirsz/logos/issues/133
+	#[regex(r#"(((?&decimal)\.(?&decimal)?(?&exp)?[fFdD]?)|(\.(?&decimal)(?&exp)?[fFdD]?)|((?&decimal)(?&exp)[fFdD]?)|((?&decimal)(?&exp)?[fFdD]))"#)]
+	FLOAT,
 
     #[regex(r#"""#, lex_string)]
     STRING,
@@ -273,6 +277,7 @@ def! {
     UNARY_OP,
     BINARY_OP,
     FIELD_ACCESS,
+    TUPLE_INDEX,
     FIELD_NAME,
     VARIABLE,
     LITERAL,

@@ -1,0 +1,11 @@
+SOURCE_FILE@0..19
+  TARGET_GROUP@0..18
+    IF_KW@0..2 "if"
+    WHITESPACE@2..3 " "
+    TARGET@3..13
+      IDENT@3..13 "javascript"
+    WHITESPACE@13..14 " "
+    L_BRACE@14..15 "{"
+    WHITESPACE@15..17 "\n\n"
+    R_BRACE@17..18 "}"
+  WHITESPACE@18..19 "\n"

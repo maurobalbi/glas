@@ -1,0 +1,13 @@
+SOURCE_FILE@0..14
+  TARGET_GROUP@0..14
+    MODULE_CONSTANT@0..13
+      CONST_KW@0..5 "const"
+      WHITESPACE@5..6 " "
+      NAME@6..7
+        IDENT@6..7 "b"
+      WHITESPACE@7..8 " "
+      EQ@8..9 "="
+      WHITESPACE@9..10 " "
+      LITERAL@10..13
+        FLOAT@10..13 "1.1"
+    WHITESPACE@13..14 "\n"

@@ -376,7 +376,7 @@ mod tests {
     fn assert() {
         let e = crate::parse_file(
             "
-           fn bla() { let = 1 + 2 * 3 }
+           fn bla() { let = 0x0 }
             ",
         );
         for error in e.errors() {
