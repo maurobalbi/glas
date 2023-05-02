@@ -11,8 +11,6 @@ macro_rules! def {
   ) => {
     #[allow(bad_style)]
     #[derive(Logos, Clone, Copy, Debug, PartialEq, PartialOrd, Eq, Ord, Hash)]
-    #[logos(subpattern exp = r"[eE][+-]?[0-9][_0-9]*")]
-    #[logos(subpattern decimal = r"[0-9][_0-9]*")]
     #[repr(u16)]
     pub enum SyntaxKind {
       $(
@@ -86,14 +84,12 @@ def! {
 
     #[regex("[A-Z][0-9a-zA-Z]*")]
     U_IDENT ,
-
+    
+    #[regex(r"([0-9][0-9_]*(\.[0-9_]+)([eE][+-]?[0-9_]+)?)")]
+	FLOAT,
 
     #[regex("(0[xXbBoO])?[0-9_]+")]
     INTEGER,
-
-    //https://github.com/maciejhirsz/logos/issues/133
-	#[regex(r#"(((?&decimal)\.(?&decimal)?(?&exp)?[fFdD]?)|(\.(?&decimal)(?&exp)?[fFdD]?)|((?&decimal)(?&exp)[fFdD]?)|((?&decimal)(?&exp)?[fFdD]))"#)]
-	FLOAT,
 
     #[regex(r#"""#, lex_string)]
     STRING,
@@ -274,6 +270,9 @@ def! {
     ANNOTATION,
     ASSIGNMENT,
     BLOCK,
+    EXPR_CALL,
+    CALL_ARG,
+    CALL_ARGS,
     UNARY_OP,
     BINARY_OP,
     FIELD_ACCESS,
@@ -292,7 +291,7 @@ def! {
     PATH,
     NAME_REF,
     PARAM,
-    PARAM_LIST,
+    PARAMS,
     TARGET,
     TARGET_GROUP,
     FN_TYPE,

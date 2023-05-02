@@ -1,4 +1,4 @@
-use crate::ast::{AstNode, SourceFile};
+use crate::ast::{AstNode, SourceFile, ParamList};
 use crate::lexer::{GleamLexer, LexToken};
 use crate::token_set::TokenSet;
 use crate::SyntaxKind::{self, *};
@@ -297,23 +297,34 @@ fn function(p: &mut Parser, cp: Checkpoint) {
 
 fn params(p: &mut Parser, guard: SyntaxKind) {
     assert!(p.at_non_ws(T!["("]));
-    p.start_node(PARAM_LIST);
+    p.start_node(PARAMS);
     p.bump();
+    param(p);
+    
     loop {
         match p.peek_non_ws() {
             Some(k) if k == guard => {
                 p.bump();
                 break;
             }
-            Some(T![","]) => {
-                p.bump();
-                continue;
-            }
             Some(IDENT) => {
+                p.error(ErrorKind::ExpectToken(T![","]));
                 param(p);
                 continue;
             }
-            _ => {
+            Some(T![","]) => {
+                p.bump();
+                param(p);
+                continue;
+            }
+            Some(k) => {
+                p.bump_error();
+                if k == U_IDENT {
+                    p.error(ErrorKind::ExpectToken(T![":"]))
+                }
+                continue;
+            }
+            None => {
                 p.error(ErrorKind::ExpectToken(guard));
                 break;
             }
@@ -386,7 +397,7 @@ fn assignment(p: &mut Parser) {
     assert!(p.at(T!["let"]));
     p.start_node(ASSIGNMENT);
     p.bump();
-    //parse pattern
+    name_r(p, ITEM_RECOVERY_SET); //parse pattern
     type_annotation_opt(p);
     p.want(T!["="]);
     expr(p);
@@ -415,7 +426,7 @@ fn expr_bp(p: &mut Parser, min_bp: u8) {
             expr_bp(p, rbp);
             p.finish_node();
         }
-        _ => expr_select(p),
+        _ => expr_select_call(p),
     }
 
     loop {
@@ -443,9 +454,11 @@ fn expr_bp(p: &mut Parser, min_bp: u8) {
     }
 }
 
-fn expr_select(p: &mut Parser) {
-        let cp = p.checkpoint();
-        expr_unit(p);
+fn expr_select_call(p: &mut Parser) {
+    let cp = p.checkpoint();
+    expr_unit(p);
+
+    loop {
         if p.at_non_ws(T!["."]) {
             p.bump();
             match p.peek_non_ws() {
@@ -453,18 +466,54 @@ fn expr_select(p: &mut Parser) {
                     p.start_node_at(cp, FIELD_ACCESS);
                     p.bump();
                     p.finish_node();
+                    continue;
                 }
                 Some(INTEGER) => {
                     p.start_node_at(cp, TUPLE_INDEX);
                     p.bump();
                     p.finish_node();
+                    continue;
                 }
                 _ => {
-                    p.error(ErrorKind::ExpectedIdentifier)
+                    p.error(ErrorKind::ExpectedIdentifier);
+                    break;
                 }
             }
-            
         }
+        else if p.at_non_ws(T!["("]) {
+            p.start_node_at(cp, EXPR_CALL);
+            fn_args(p, T![")"]);
+            p.finish_node();
+        }
+        else {
+            break;
+        }
+    }
+}
+
+
+fn fn_args(p: &mut Parser, guard: SyntaxKind) {
+    assert!(p.at_non_ws(T!["("]));
+    p.start_node(CALL_ARG);
+    p.bump();
+    fn_arg(p);
+
+    while p.at_non_ws(T![","]) {
+        fn_arg(p);
+    }
+    p.want(T![")"]);
+    p.finish_node();
+}
+
+fn fn_arg(p: &mut Parser) {
+    p.start_node(CALL_ARG);
+    if p.peek_iter_non_ws().nth(1) == Some(T![":"]) {
+        p.start_node(LABEL);
+        p.want(IDENT);
+        p.finish_node();
+    }
+    expr(p);
+    p.finish_node();
 }
 
 fn expr_unit(p: &mut Parser) {
@@ -476,6 +525,11 @@ fn expr_unit(p: &mut Parser) {
         }
         Some(T!["{"]) => {
             block(p, T!["}"]);
+        }
+        Some(IDENT | U_IDENT) => {
+            p.start_node(VARIABLE);
+            p.bump();
+            p.finish_node();
         }
         Some(_) => {
             p.bump();
@@ -735,7 +789,7 @@ fn fn_type(p: &mut Parser) {
     p.start_node(FN_TYPE);
     p.bump();
     p.want(T!("("));
-    p.start_node(PARAM_LIST);
+    p.start_node(PARAMS);
     loop {
         match p.peek_non_ws() {
             Some(T![")"]) => {
@@ -798,6 +852,7 @@ impl SyntaxKind {
             U_IDENT
                 | T!["use"]
                 | T!["-"]
+                | T!["!"]
                 | T!["panic"]
                 | T!["todo"]
                 | IDENT
