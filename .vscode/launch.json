@@ -6,17 +6,21 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
-			"name": "Run Extension",
+			"name": "Run Extension (Debug Build)",
 			"type": "extensionHost",
 			"request": "launch",
 			"sourceMaps": true,
 			"args": [
-				"--extensionDevelopmentPath=${workspaceFolder}"
+				"--disable-extensions",
+				"--extensionDevelopmentPath=${workspaceFolder}/editor/code"
 			],
-			"outFiles": [
-				"${workspaceFolder}/dist/**/*.js"
+			"skipFiles": [
+				"<node_internals>/**/*.js"
 			],
-			"preLaunchTask": "${defaultBuildTask}"
+		    "outFiles": [
+				"${workspaceFolder}/editors/code/out/**/*.js"
+			  ],
+			"preLaunchTask": "Build Server and Extension"
 		},
 		{
 			"name": "Extension Tests",
