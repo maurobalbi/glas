@@ -152,7 +152,7 @@ macro_rules! ast_impl {
 }
 
 enums! {
-    TopLevelStatement {
+    ModuleStatement {
         ModuleConstant,
         Import,
         Function,
@@ -245,7 +245,7 @@ asts! {
         unqualified: [UnqualifiedImport],
     },
     SOURCE_FILE = SourceFile {
-        statements: [TargetGroup],
+        target_groups: [TargetGroup],
     },
     MODULE_NAME = ModuleName {
         pub fn token(&self) -> Option<SyntaxToken> {
@@ -285,7 +285,7 @@ asts! {
         label: Label,
         ty: Type,
     },
-    PARAM_LIST = ParamList {
+    PARAMS = ParamList {
         params: [Param],
     },
     UNARY_OP = UnaryOp {
@@ -314,7 +314,7 @@ asts! {
     },
     TARGET_GROUP = TargetGroup {
         target: Target,
-        statements: [TopLevelStatement],
+        statements: [ModuleStatement],
     },
     CONSTANT_TUPLE = ConstantTuple {
         elements: [ConstantValue],
@@ -367,7 +367,7 @@ mod tests {
 
     #[test]
     fn apply() {
-        let e = parse::<Block>("fn main() {  let = 1 }");
+        let e = parse::<Block>("fn main(a b: Int) -> fn(Int) -> Int {}");
         println!("{:?}", e.syntax());
         // println!("{:?}", e.statements().next().unwrap().syntax());
     }
@@ -376,7 +376,12 @@ mod tests {
     fn assert() {
         let e = crate::parse_file(
             "
-           fn bla() { let = 0x0 }
+if erlang {const a = 1} const b = 2 const c = 3 if javascript {const c = 3}
+            fn main(c d, e f) {
+                as
+            }
+
+            fn bla() {}
             ",
         );
         for error in e.errors() {
@@ -405,7 +410,7 @@ mod tests {
     fn module() {
         let e =
             parse::<SourceFile>("if erlang {const a = 1} const b = 2 if javascript {const c = 3}");
-        let mut iter = e.statements();
+        let mut iter = e.target_groups();
         iter.next()
             .unwrap()
             .syntax()

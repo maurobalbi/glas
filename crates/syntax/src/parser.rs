@@ -1,4 +1,4 @@
-use crate::ast::{AstNode, SourceFile, ParamList};
+use crate::ast::{AstNode, ParamList, SourceFile};
 use crate::lexer::{GleamLexer, LexToken};
 use crate::token_set::TokenSet;
 use crate::SyntaxKind::{self, *};
@@ -276,11 +276,12 @@ fn function(p: &mut Parser, cp: Checkpoint) {
     p.start_node_at(cp, FUNCTION);
     name_r(p, ITEM_RECOVERY_SET);
     if p.at_non_ws(T!["("]) {
-        params(p, T![")"]);
+        params(p);
     } else {
         p.error(ErrorKind::ExpectToken(T!["("]));
     }
 
+    // UX: when user is typing '-' error could be nicer
     if p.at_non_ws(T!["->"]) {
         p.bump();
         type_(p);
@@ -295,41 +296,44 @@ fn function(p: &mut Parser, cp: Checkpoint) {
     p.finish_node();
 }
 
-fn params(p: &mut Parser, guard: SyntaxKind) {
+fn params(p: &mut Parser) {
     assert!(p.at_non_ws(T!["("]));
     p.start_node(PARAMS);
     p.bump();
-    param(p);
-    
+
     loop {
         match p.peek_non_ws() {
-            Some(k) if k == guard => {
-                p.bump();
-                break;
-            }
+            None | Some(T![")"]) => break,
             Some(IDENT) => {
-                p.error(ErrorKind::ExpectToken(T![","]));
                 param(p);
-                continue;
-            }
-            Some(T![","]) => {
-                p.bump();
-                param(p);
-                continue;
             }
             Some(k) => {
+                p.error(ErrorKind::ExpectedArgument);
                 p.bump_error();
-                if k == U_IDENT {
-                    p.error(ErrorKind::ExpectToken(T![":"]))
+                // Don't double error.
+                if k == T![","] {
+                    continue;
                 }
-                continue;
-            }
-            None => {
-                p.error(ErrorKind::ExpectToken(guard));
-                break;
             }
         }
+
+        match p.peek_non_ws() {
+            // Terminates after a parameter.
+            None | Some(T![")"]) => break,
+            // Separator.
+            Some(T![","]) => {
+                if p.peek_iter_non_ws().nth(1) == Some(T![")"]) {
+                    p.bump_error();
+                    p.error(ErrorKind::ExpectToken(T![")"]))
+                } else {
+                    p.bump();
+                } // ,
+            }
+            // Consume nothing here, as the previous match must consume something.
+            _ => p.error(ErrorKind::ExpectToken(T![","])),
+        }
     }
+    p.want(T![")"]);
     p.finish_node();
 }
 
@@ -479,27 +483,52 @@ fn expr_select_call(p: &mut Parser) {
                     break;
                 }
             }
-        }
-        else if p.at_non_ws(T!["("]) {
+        } else if p.at_non_ws(T!["("]) {
             p.start_node_at(cp, EXPR_CALL);
-            fn_args(p, T![")"]);
+            fn_args(p);
             p.finish_node();
-        }
-        else {
+        } else {
             break;
         }
     }
 }
 
-
-fn fn_args(p: &mut Parser, guard: SyntaxKind) {
+fn fn_args(p: &mut Parser) {
     assert!(p.at_non_ws(T!["("]));
-    p.start_node(CALL_ARG);
+    p.start_node(CALL_ARGS);
     p.bump();
-    fn_arg(p);
 
-    while p.at_non_ws(T![","]) {
-        fn_arg(p);
+    loop {
+        match p.peek_non_ws() {
+            None | Some(T![")"]) => break,
+            Some(k) if k.can_start_expr() => {
+                fn_arg(p);
+            }
+            Some(k) => {
+                p.error(ErrorKind::ExpectedExpression);
+                p.bump_error();
+                // Don't double error.
+                if k == T![","] {
+                    continue;
+                }
+            }
+        }
+
+        match p.peek_non_ws() {
+            // Terminates after a parameter.
+            None | Some(T![")"]) => break,
+            // Separator.
+            Some(T![","]) => {
+                if p.peek_non_ws() == Some(T![")"]) {
+                    p.bump_error();
+                    p.error(ErrorKind::ExpectToken(T![")"]))
+                } else {
+                    p.bump();
+                }
+            } // ,
+            // Consume nothing here, as the previous match must consume something.
+            _ => p.error(ErrorKind::ExpectToken(T![","])),
+        }
     }
     p.want(T![")"]);
     p.finish_node();
@@ -511,6 +540,7 @@ fn fn_arg(p: &mut Parser) {
         p.start_node(LABEL);
         p.want(IDENT);
         p.finish_node();
+        p.bump();
     }
     expr(p);
     p.finish_node();
@@ -531,7 +561,7 @@ fn expr_unit(p: &mut Parser) {
             p.bump();
             p.finish_node();
         }
-        Some(_) => {
+        Some(k) if !k.is_separator() => {
             p.bump();
             p.error(ErrorKind::ExpectedExpression)
         }
@@ -748,11 +778,13 @@ fn type_(p: &mut Parser) {
         Some(T!("#")) => {
             tuple_type(p);
         }
-        Some(_) => {
+        Some(k) if !k.is_separator() => {
             p.error(ErrorKind::ExpectedType);
             p.bump_error()
         }
-        None => {}
+        _ => {
+            p.error(ErrorKind::ExpectedType);
+        }
     }
 }
 
@@ -872,6 +904,18 @@ impl SyntaxKind {
     /// Whether this token is a separator in some syntax.
     /// We should stop at these tokens during error recovery.
     fn is_separator(self) -> bool {
-        matches!(self, T![")"] | T!["]"] | T!["}"] | T!["="] | T![","])
+        matches!(
+            self,
+            T!["("]
+                | T![")"]
+                | T!["["]
+                | T!["]"]
+                | T!["{"]
+                | T!["}"]
+                | T!["="]
+                | T![","]
+                | T!["->"]
+                | T![":"]
+        )
     }
 }
