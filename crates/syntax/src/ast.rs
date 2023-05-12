@@ -245,7 +245,7 @@ asts! {
         unqualified: [UnqualifiedImport],
     },
     SOURCE_FILE = SourceFile {
-        target_groups: [TargetGroup],
+        statements: [TargetGroup],
     },
     MODULE_NAME = ModuleName {
         pub fn token(&self) -> Option<SyntaxToken> {
@@ -410,7 +410,7 @@ if erlang {const a = 1} const b = 2 const c = 3 if javascript {const c = 3}
     fn module() {
         let e =
             parse::<SourceFile>("if erlang {const a = 1} const b = 2 if javascript {const c = 3}");
-        let mut iter = e.target_groups();
+        let mut iter = e.statements();
         iter.next()
             .unwrap()
             .syntax()

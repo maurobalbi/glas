@@ -18,6 +18,7 @@ pub(super) fn lower(
         file_id,
         module: Module {
             names: Arena::new(),
+            statements: Arena::new(),
             // Placeholder.
         },
         source_map: ModuleSourceMap::default(),
@@ -36,7 +37,7 @@ struct LowerCtx<'a> {
 }
 
 impl LowerCtx<'_> {
-    fn alloc_name(&mut self, text: SmolStr, kind: NameKind, ptr: AstPtr) -> NameId {
+    fn alloc_name(&mut self, text: SmolStr, kind: NameKind, ptr: AstPtr<ast::Name>) -> NameId {
         let id = self.module.names.alloc(Name { text, kind });
         self.source_map.name_map.insert(ptr.clone(), id);
         self.source_map.name_map_rev.insert(id, vec![ptr]);

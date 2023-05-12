@@ -4,6 +4,7 @@ mod kind;
 pub mod ast;
 pub mod lexer;
 pub mod parser;
+pub mod ptr;
 mod token_set;
 
 use core::fmt;
@@ -12,6 +13,7 @@ use core::fmt;
 mod tests;
 
 use rowan::TokenAtOffset;
+
 pub use rowan::{self, NodeOrToken, TextRange, TextSize};
 
 pub type SyntaxNode = rowan::SyntaxNode<GleamLanguage>;
@@ -24,16 +26,7 @@ pub type SyntaxNodePtr = rowan::ast::SyntaxNodePtr<GleamLanguage>;
 
 pub use self::kind::SyntaxKind;
 pub use self::parser::{parse_file, Parse};
-
-pub fn whatever() {
-    println!(
-        "{}",
-        Error {
-            range: TextRange::new(1.into(), 2.into()),
-            kind: ErrorKind::NestTooDeep
-        }
-    )
-}
+pub use self::ptr::{AstPtr};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Error {
