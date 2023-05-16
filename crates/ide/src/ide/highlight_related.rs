@@ -1,4 +1,4 @@
-use crate::def::{AstPtr, ResolveResult};
+use crate::def::{ ResolveResult};
 use crate::{DefDatabase, FilePos};
 use syntax::ast::{self, AstNode};
 use syntax::{best_token_at_offset, TextRange, T};

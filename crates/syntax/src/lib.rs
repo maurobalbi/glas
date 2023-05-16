@@ -101,13 +101,60 @@ impl rowan::Language for GleamLanguage {
     }
 }
 
+/// Matches a `SyntaxNode` against an `ast` type.
+///
+/// # Example:
+///
+/// ```
+/// # use syntax::{SyntaxNode, match_ast, ast};
+/// # fn main() {
+/// # let node: SyntaxNode = return;
+/// match_ast! {
+///     match node {
+///         ast::AttrpathValue(it) => {},
+///         ast::PatField(it) => {},
+///         _ => {},
+///     }
+/// }
+/// # }
+/// ```
+#[macro_export]
+macro_rules! match_ast {
+    (match $node:ident { $($tt:tt)* }) => {
+        match_ast!(match ($node) { $($tt)* })
+    };
+    (match ($node:expr) {
+        $( $( $path:ident )::+ ($it:pat) => $res:expr, )*
+        _ => $catch_all:expr $(,)?
+    }) => {{
+        $( if let Some($it) = <$($path)::* as $crate::rowan::ast::AstNode>::cast($node.clone()) { $res } else )*
+        { $catch_all }
+    }};
+}
+
 /// Pick the most meaningful token at given cursor offset.
 pub fn best_token_at_offset(node: &SyntaxNode, offset: TextSize) -> Option<SyntaxToken> {
+    fn score(tok: SyntaxKind) -> u8 {
+        match tok {
+            SyntaxKind::ERROR | SyntaxKind::WHITESPACE => 0,
+            SyntaxKind::COMMENT => 1,
+            k if k.is_symbol() => 4,
+            k if k.is_keyword() => 5,
+            // IDENT, INT, and etc.
+            _ => 6,
+        }
+    }
+
     match node.token_at_offset(offset) {
         TokenAtOffset::None => None,
         TokenAtOffset::Single(tok) => Some(tok),
-        TokenAtOffset::Between(lhs, rhs) => {
-          Some(lhs)
+       TokenAtOffset::Between(lhs, rhs) => {
+            // Slightly prefer RHS.
+            if score(lhs.kind()) > score(rhs.kind()) {
+                Some(lhs)
+            } else {
+                Some(rhs)
+            }
         }
     }
 }

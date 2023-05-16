@@ -1,4 +1,4 @@
-use crate::ast::{AstNode, ParamList, SourceFile};
+use crate::ast::{AstNode, SourceFile};
 use crate::lexer::{GleamLexer, LexToken};
 use crate::token_set::TokenSet;
 use crate::SyntaxKind::{self, *};
@@ -344,9 +344,8 @@ fn param(p: &mut Parser) {
         p.want(IDENT);
         p.finish_node();
     }
-    p.start_node(NAME);
-    p.want(IDENT);
-    p.finish_node();
+    p.ws();
+    name(p);
     type_annotation_opt(p);
     p.finish_node();
 }
@@ -487,6 +486,7 @@ fn expr_select_call(p: &mut Parser) {
             p.start_node_at(cp, EXPR_CALL);
             fn_args(p);
             p.finish_node();
+            continue;
         } else {
             break;
         }
@@ -537,6 +537,7 @@ fn fn_args(p: &mut Parser) {
 fn fn_arg(p: &mut Parser) {
     p.start_node(CALL_ARG);
     if p.peek_iter_non_ws().nth(1) == Some(T![":"]) {
+        p.ws();
         p.start_node(LABEL);
         p.want(IDENT);
         p.finish_node();
@@ -557,7 +558,7 @@ fn expr_unit(p: &mut Parser) {
             block(p, T!["}"]);
         }
         Some(IDENT | U_IDENT) => {
-            p.start_node(VARIABLE);
+            p.start_node(NAME_REF);
             p.bump();
             p.finish_node();
         }
@@ -571,6 +572,7 @@ fn expr_unit(p: &mut Parser) {
 
 fn name_r(p: &mut Parser, recovery: TokenSet) {
     if p.at_non_ws(IDENT) {
+        p.ws();
         p.start_node(NAME);
         p.bump();
         p.finish_node();
@@ -610,9 +612,7 @@ fn import(p: &mut Parser) {
 
     if p.at_non_ws(T!["as"]) {
         p.bump();
-        p.start_node(NAME);
-        p.want(IDENT);
-        p.finish_node();
+        name(p);
     }
 
     p.finish_node();
@@ -631,11 +631,13 @@ fn unqualified_imports(p: &mut Parser) {
             }
             Some(k @ (U_IDENT | IDENT)) => {
                 p.start_node(UNQUALIFIED_IMPORT);
+                p.ws();
                 p.start_node(NAME);
                 p.bump();
                 p.finish_node();
                 if p.at_non_ws(T!["as"]) {
                     p.bump();
+                    p.ws();
                     p.start_node(NAME);
                     p.want(k);
                     p.finish_node();
@@ -675,6 +677,7 @@ fn constant_value(p: &mut Parser) {
         }
         Some(HASH) => tuple(p),
         Some(IDENT) => {
+            p.ws();
             p.start_node(NAME_REF);
             p.bump();
             p.finish_node();
@@ -755,6 +758,7 @@ fn type_(p: &mut Parser) {
                     p.start_node_at(cp, MODULE_NAME);
                     p.finish_node();
                     p.bump();
+                    p.ws();
                     p.start_node(NAME);
                     p.want(U_IDENT);
                     p.finish_node();
@@ -769,6 +773,7 @@ fn type_(p: &mut Parser) {
         // constructor
         Some(U_IDENT) => {
             p.start_node(CONSTRUCTOR_TYPE);
+            p.ws();
             p.start_node(NAME);
             p.bump();
             p.finish_node();

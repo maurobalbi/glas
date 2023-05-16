@@ -168,7 +168,7 @@ enums! {
     Expression {
         Literal,
         Block,
-        Variable,
+        NameRef,
         BinaryOp,
         UnaryOp,
     },
@@ -232,7 +232,7 @@ asts! {
     },
     FUNCTION = Function {
         name: Name,
-        args: ParamList,
+        param_list: ParamList,
         return_type: Type,
         body: Block,
     },
@@ -333,7 +333,7 @@ asts! {
     VAR_TYPE = VarType {
         name: Name,
     },
-    VARIABLE = Variable {
+    NAME_REF = NameRef {
         name: Name,
     },
 }
@@ -367,8 +367,8 @@ mod tests {
 
     #[test]
     fn apply() {
-        let e = parse::<Block>("fn main(a b: Int) -> fn(Int) -> Int {}");
-        println!("{:?}", e.syntax());
+        let e = parse::<Param>("fn main(a b: Int) -> fn(Int) -> Int {}");
+        println!("{:?}", e.name().unwrap().token().unwrap().text());
         // println!("{:?}", e.statements().next().unwrap().syntax());
     }
 
@@ -376,9 +376,9 @@ mod tests {
     fn assert() {
         let e = crate::parse_file(
             "
-if erlang {const a = 1} const b = 2 const c = 3 if javascript {const c = 3}
+
             fn main(c d, e f) {
-                as
+                asd.name().bla()
             }
 
             fn bla() {}
@@ -497,12 +497,18 @@ if erlang {const a = 1} const b = 2 const c = 3 if javascript {const c = 3}
             .unwrap()
             .syntax()
             .should_eq("fn(Int) -> Int");
-        let mut args = e.args().unwrap().params();
-        let fst = args.next().unwrap();
+        let mut params = e.param_list().unwrap().params();
+        let fst = params.next().unwrap();
         fst.label().unwrap().syntax().should_eq("a");
         fst.name().unwrap().syntax().should_eq("b");
         fst.ty().unwrap().syntax().should_eq("Int");
-        assert!(args.next().is_none())
+        assert!(params.next().is_none())
+    }
+    
+    #[test]
+    fn name() {
+        let e = parse::<Param>("fn bla(a b: Int) {}");
+        e.name().unwrap().token().unwrap().should_eq("b");
     }
 
     #[test]
@@ -533,7 +539,7 @@ if erlang {const a = 1} const b = 2 const c = 3 if javascript {const c = 3}
 
     #[test]
     fn let_expr() {
-        let e = parse::<Assignment>("fn a() { let :Int = 1}");
+        let e = parse::<Assignment>("fn a() { let name:Int = 1}");
         e.annotation().unwrap().syntax().should_eq("Int")
     }
 }

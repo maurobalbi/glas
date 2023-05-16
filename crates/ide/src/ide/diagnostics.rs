@@ -41,13 +41,21 @@ mod tests {
             6..9: SyntaxError(ExpectedStatement)
         "#]]);
     }
+
+    
+    #[test]
+    fn duplicated_param() {
+        check("fn bla(a, a) {}", expect![[r#"
+            10..11: DuplicatedParam
+                7..8: Previously defined here
+        "#]]);
+    }
     
     #[test]
     fn unused_target() {
         check("if javascript {} const a", expect![[r#"
             24..24: SyntaxError(ExpectToken(EQ))
             24..24: SyntaxError(ExpectedConstantExpression)
-            0..16: InactiveTarget
         "#]]);
     }
 }
