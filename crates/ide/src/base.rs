@@ -1,19 +1,15 @@
 use salsa::Durability;
 use std::collections::HashMap;
-use std::fmt;
+use std::{fmt, iter};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use syntax::{TextRange, TextSize};
+use syntax::{TextRange, TextSize, SyntaxNode};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct FileId(pub u32);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct SourceRootId(pub u32);
-
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct PackageConfig(u32);
+pub struct PackageId(pub u32);
 
 /// An path in the virtual filesystem.
 #[cfg(unix)]
@@ -145,12 +141,16 @@ impl fmt::Debug for FileSet {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SourceRoot {
     file_set: FileSet,
-    entry: Option<FileId>,
+    pub is_library: bool,
 }
 
 impl SourceRoot {
-    pub fn new_local(file_set: FileSet, entry: Option<FileId>) -> Self {
-        Self { file_set, entry }
+    pub fn new_local(file_set: FileSet) -> Self {
+        Self { file_set, is_library: false}
+    }
+
+    pub fn new_library(file_set: FileSet) -> SourceRoot {
+        SourceRoot { is_library: true, file_set }
     }
 
     pub fn file_for_path(&self, path: &VfsPath) -> Option<FileId> {
@@ -164,21 +164,27 @@ impl SourceRoot {
     pub fn files(&self) -> impl Iterator<Item = (FileId, &'_ VfsPath)> + ExactSizeIterator + '_ {
         self.file_set.iter()
     }
-
-    pub fn entry(&self) -> Option<FileId> {
-        self.entry
-    }
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
-pub struct ModuleGraph {
-    pub nodes: HashMap<SourceRootId, ModuleInfo>,
+pub struct PackageGraph {
+    pub nodes: HashMap<PackageId, PackageData>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ModuleInfo {
-    pub module_file: FileId,
+pub struct PackageData {
+    pub root_file: FileId,
+    pub version: Option<String>,
+    pub display_name: Option<String>,
+    pub dependencies: Vec<Dependency>,
     pub input_store_paths: HashMap<String, VfsPath>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Dependency {
+    pub package_id: PackageId,
+    pub name: String,
+    prelude: bool,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
@@ -191,12 +197,35 @@ impl<T> InFile<T> {
     pub fn new(file_id: FileId, value: T) -> Self {
         Self { file_id, value }
     }
+    
+    pub fn with_value<U>(&self, value: U) -> InFile<U> {
+        InFile::new(self.file_id, value)
+    }
 
     pub fn map<U, F: FnOnce(T) -> U>(self, f: F) -> InFile<U> {
         InFile {
             file_id: self.file_id,
             value: f(self.value),
         }
+    }
+
+    pub fn as_ref(&self) -> InFile<&T> {
+        self.with_value(&self.value)
+    }
+}
+
+impl<T: Clone> InFile<&T> {
+    pub fn cloned(&self) -> InFile<T> {
+        self.with_value(self.value.clone())
+    }
+}
+
+impl<'a> InFile<&'a SyntaxNode> {
+    pub fn ancestors(self)-> impl Iterator<Item = InFile<SyntaxNode>> + Clone {
+        iter::successors(Some(self.cloned()), move |node| match node.value.parent() {
+            Some(parent) => Some(node.with_value(parent)),
+            None => None,
+        })
     }
 }
 
@@ -239,27 +268,25 @@ pub trait SourceDatabase {
     fn file_content(&self, file_id: FileId) -> Arc<str>;
 
     #[salsa::input]
-    fn source_root(&self, sid: SourceRootId) -> Arc<SourceRoot>;
+    fn source_root(&self, sid: PackageId) -> Arc<SourceRoot>;
 
-    fn source_root_module_info(&self, sid: SourceRootId) -> Option<Arc<ModuleInfo>>;
-
-    #[salsa::input]
-    fn file_source_root(&self, file_id: FileId) -> SourceRootId;
+    fn source_root_module_info(&self, sid: PackageId) -> Option<Arc<PackageData>>;
 
     #[salsa::input]
-    fn module_graph(&self) -> Arc<ModuleGraph>;
+    fn file_source_root(&self, file_id: FileId) -> PackageId;
 
     #[salsa::input]
-    fn package_config(&self) -> Arc<PackageConfig>;
+    fn package_graph(&self) -> Arc<PackageGraph>;
+
 }
 
-fn source_root_module_info(db: &dyn SourceDatabase, sid: SourceRootId) -> Option<Arc<ModuleInfo>> {
-    db.module_graph().nodes.get(&sid).cloned().map(Arc::new)
+fn source_root_module_info(db: &dyn SourceDatabase, sid: PackageId) -> Option<Arc<PackageData>> {
+    db.package_graph().nodes.get(&sid).cloned().map(Arc::new)
 }
 
 #[derive(Default, Clone, PartialEq, Eq)]
 pub struct Change {
-    pub module_graph: Option<ModuleGraph>,
+    pub package_graph: Option<PackageGraph>,
     pub roots: Option<Vec<SourceRoot>>,
     pub file_changes: Vec<(FileId, Arc<str>)>,
 }
@@ -269,8 +296,8 @@ impl Change {
         self.roots.is_none() && self.file_changes.is_empty()
     }
 
-    pub fn set_module_graph(&mut self, graph: ModuleGraph) {
-        self.module_graph = Some(graph);
+    pub fn set_package_graph(&mut self, graph: PackageGraph) {
+        self.package_graph = Some(graph);
     }
 
     pub fn set_roots(&mut self, roots: Vec<SourceRoot>) {
@@ -282,12 +309,12 @@ impl Change {
     }
 
     pub(crate) fn apply(self, db: &mut dyn SourceDatabase) {
-        if let Some(module_graph) = self.module_graph {
-            db.set_module_graph_with_durability(Arc::new(module_graph), Durability::MEDIUM);
+        if let Some(package_graph) = self.package_graph {
+            db.set_package_graph_with_durability(Arc::new(package_graph), Durability::MEDIUM);
         }
         if let Some(roots) = self.roots {
             u32::try_from(roots.len()).expect("Length overflow");
-            for (sid, root) in (0u32..).map(SourceRootId).zip(roots) {
+            for (sid, root) in (0u32..).map(PackageId).zip(roots) {
                 for (fid, _) in root.files() {
                     db.set_file_source_root_with_durability(fid, sid, Durability::HIGH);
                 }

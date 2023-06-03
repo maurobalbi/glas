@@ -35,6 +35,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7de8ce5e0f9f8d88245311066a578d72b7af3e7088f32783804676302df237e4"
 
 [[package]]
+name = "anymap"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "33954243bd79057c2de7338850b85983a44588021f8a5fee574a8888c6de4344"
+
+[[package]]
 name = "argh"
 version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -628,7 +634,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-core"
-version = "0.29.0-dev"
+version = "0.30.0-dev"
 dependencies = [
  "askama",
  "async-trait",
@@ -807,6 +813,7 @@ name = "ide"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "anymap",
  "expect-test",
  "indexmap",
  "la-arena",

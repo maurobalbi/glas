@@ -12,8 +12,6 @@ use syntax::TextRange;
 pub use highlight_related::HlRelated;
 
 pub const DEFAULT_LRU_CAP: usize = 128;
-use crate::DEFAULT_IMPORT_FILE;
-
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NavigationTarget {
@@ -59,7 +57,7 @@ impl Default for RootDatabase {
         crate::def::ParseQuery
             .in_db_mut(&mut db)
             .set_lru_capacity(DEFAULT_LRU_CAP);
-        db.set_module_graph_with_durability(Default::default(), Durability::MEDIUM);
+        db.set_package_graph_with_durability(Default::default(), Durability::MEDIUM);
         db
     }
 }
@@ -79,8 +77,8 @@ impl AnalysisHost {
         let file = FileId(0);
         change.change_file(file, src.into());
         let mut file_set = FileSet::default();
-        file_set.insert(file, VfsPath::new(format!("/{DEFAULT_IMPORT_FILE}")));
-        change.set_roots(vec![SourceRoot::new_local(file_set, Some(file))]);
+        file_set.insert(file, VfsPath::new(format!("/main.gleam"))); // Hack
+        change.set_roots(vec![SourceRoot::new_local(file_set)]);
         let mut this = Self::new();
         this.apply_change(change);
         (this, file)

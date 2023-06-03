@@ -1,6 +1,6 @@
 use crate::UrlExt;
 use anyhow::{ensure, Context, Result};
-use ide::{Change, FileId, FileSet, ModuleGraph, ModuleInfo, SourceRoot, SourceRootId, VfsPath};
+use ide::{Change, FileId, FileSet, PackageGraph, PackageData, SourceRoot, PackageId, VfsPath};
 use lsp_types::Url;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -38,9 +38,9 @@ impl Vfs {
         }
     }
 
-    pub fn set_module_info(&mut self, module_info: Option<ModuleInfo>) {
-        self.change.set_module_graph(ModuleGraph {
-            nodes: HashMap::from_iter(module_info.map(|info| (SourceRootId(0), info))),
+    pub fn set_module_info(&mut self, module_info: Option<PackageData>) {
+        self.change.set_package_graph(PackageGraph {
+            nodes: HashMap::from_iter(module_info.map(|info| (PackageId(0), info))),
         });
     }
 
@@ -119,8 +119,6 @@ impl Vfs {
         if mem::take(&mut self.root_changed) {
             change.set_roots(vec![SourceRoot::new_local(
                 self.local_file_set.clone(),
-                // TODO: Entry.
-                None,
             )]);
         }
         change

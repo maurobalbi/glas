@@ -1,66 +1,70 @@
-use std::collections::HashMap;
-
-use crate::{Diagnostic, DiagnosticKind, FileRange};
-
 use super::{
-    AstPtr, DefDatabase, FileId, Function, FunctionId, Module, ModuleSourceMap, Name, NameId,
-    NameKind, Param,
+    module::{
+        ExprId, Function, FunctionId, Label, ModuleData, ModuleSourceMap, ModuleStatementId, Name,
+        NameId, NameKind, Param, Expr,
+    },
+    AstPtr, DefDatabase, FileId,
 };
 use smol_str::SmolStr;
-use syntax::{
-    ast::{self},
-    Parse,
-};
+use syntax::{ast::{self, AstNode}, Parse};
 
 pub(super) fn lower(
     db: &dyn DefDatabase,
     file_id: FileId,
     parse: Parse,
-) -> (Module, ModuleSourceMap) {
+) -> (ModuleData, ModuleSourceMap) {
     let mut ctx = LowerCtx {
         db,
         file_id,
-        module: Module::default(),
+        module_data: ModuleData::default(),
         source_map: ModuleSourceMap::default(),
     };
 
     ctx.lower_module(parse.root());
-    (ctx.module, ctx.source_map)
+    (ctx.module_data, ctx.source_map)
 }
 
 struct LowerCtx<'a> {
     db: &'a dyn DefDatabase,
     file_id: FileId,
-    module: Module,
+    module_data: ModuleData,
     source_map: ModuleSourceMap,
 }
 
 impl LowerCtx<'_> {
+    fn alloc_module_statement(
+        &mut self,
+        function: Function,
+        ptr: AstPtr<ast::Function>,
+    ) -> FunctionId {
+        let id = self.module_data.functions.alloc(function);
+        self.source_map.fn_map.insert(ptr.clone(), id.into());
+        self.source_map.fn_map_rev.insert(id, ptr);
+        id
+    }
+
     fn alloc_name(&mut self, text: SmolStr, kind: NameKind, ptr: AstPtr<ast::Name>) -> NameId {
-        let id = self.module.names.alloc(Name { text, kind });
+        let id = self.module_data.names.alloc(Name { text, kind });
         self.source_map.name_map.insert(ptr.clone(), id);
         self.source_map.name_map_rev.insert(id, ptr);
         id
     }
 
-    fn alloc_function(&mut self, function: Function, ptr: AstPtr<ast::Function>) -> FunctionId {
-        let id = self.module.functions.alloc(function);
-        self.source_map.function_map.insert(ptr.clone(), id);
-        self.source_map.function_map_rev.insert(id, ptr);
+   fn alloc_expr(&mut self, expr: Expr, ptr: AstPtr<ast::Expr>) -> ExprId {
+        let id = self.module_data.exprs.alloc(expr);
+        self.source_map.expr_map.insert(ptr.clone(), id);
+        self.source_map.expr_map_rev.insert(id, ptr);
         id
     }
 
-    fn diagnostic(&mut self, diag: Diagnostic) {
-        self.source_map.diagnostics.push(diag);
+    fn lower_module(&mut self, module: ast::SourceFile) -> Vec<ModuleStatementId> {
+        module
+            .statements()
+            .flat_map(|tg| self.lower_target_group(&tg))
+            .collect()
     }
 
-    fn lower_module(&mut self, module: ast::SourceFile) {
-        for tg in module.statements() {
-            self.lower_target_group(tg);
-        }
-    }
-
-    fn lower_target_group(&mut self, tg: ast::TargetGroup) {
+    fn lower_target_group(&mut self, tg: &ast::TargetGroup) -> Vec<ModuleStatementId> {
         // if let Some(target) = stmnt.target() {
         //     if target.syntax().to_string() == "javascript" {
         //         self.diagnostic(Diagnostic::new(
@@ -69,70 +73,82 @@ impl LowerCtx<'_> {
         //         ));
         //     }
         // };
-        for stmnt in tg.statements() {
-            self.lower_module_statement(stmnt);
-        }
+        tg.statements()
+            .flat_map(|stmt| self.lower_module_statement(&stmt))
+            .collect()
     }
 
-    fn lower_module_statement(&mut self, stmnt: ast::ModuleStatement) {
-        let ptr = AstPtr::new(&stmnt);
-
-        //Needs module item enum and into() calls
-        match stmnt {
+    fn lower_module_statement(
+        &mut self,
+        stmnt: &ast::ModuleStatement,
+    ) -> Option<ModuleStatementId> {
+        let item = match stmnt {
             // ast::ModuleStatement::ModuleConstant(_) => todo!(),
             // ast::ModuleStatement::Import(_) => todo!(),
-            ast::ModuleStatement::Function(f) => self.lower_function(f),
-            _ => None,
+            ast::ModuleStatement::Function(f) => self.lower_function(f)?.into(),
+            _ => return None,
         };
+
+        Some(item)
     }
 
-    fn lower_function(&mut self, fun: ast::Function) -> Option<FunctionId> {
-        let ptr = AstPtr::new(&fun);
-        let mut param_locs = HashMap::new();
-        let mut lower_name = |this: &mut Self, node: ast::Name, kind: NameKind| -> NameId {
-            let ptr = AstPtr::new(&node);
-            let text = match node.token() {
-                None => "".into(),
-                Some(tok) => {
-                    let text: SmolStr = tok.text().into();
-                    if let Some(prev_loc) = param_locs.insert(text.clone(), ptr.text_range()) {
-                        this.diagnostic(
-                            Diagnostic::new(ptr.text_range(), DiagnosticKind::DuplicatedParam)
-                                .with_note(
-                                    FileRange::new(this.file_id, prev_loc),
-                                    "Previously defined here",
-                                ),
-                        );
-                    }
-                    text
-                }
-            };
-            this.alloc_name(text, kind, ptr)
-        };
+    fn lower_function(&mut self, fun: &ast::Function) -> Option<FunctionId> {
+        let ast_ptr = AstPtr::new(fun);
 
-        // Assoc function name
-        // let name = self.alloc_name(fun, )?
-
-        // let params = fun.param_list().map(|param_list| {
-        //     param_list.params().filter_map(|param| {
-        //         let name = param.name().map(|n| lower_name(self, n, NameKind::Param))?;
-        //         Some(Param::Normal(name))
-        //     })
-        // }).iter();
-        let name = self.alloc_name(
-            fun.name()?.token()?.text().into(),
-            NameKind::Function,
-            AstPtr::new(&fun.name()?),
-        );
+        let name = fun.name().and_then(|n| {
+            Some(self.alloc_name(
+                n.token()?.text().into(),
+                NameKind::Function,
+                AstPtr::new(&n),
+            ))
+        })?;
 
         let mut params = Vec::new();
 
         if let Some(param_list) = fun.param_list() {
             for param in param_list.params() {
-                let param_name = lower_name(self, param.name()?, NameKind::Param);
-                params.push(Param::Normal(param_name));
+                let param_name = self.alloc_name(
+                    // ToDo: Refactor question marks with .map to not skip loops early
+                    param.name()?.token()?.text().into(),
+                    NameKind::Param,
+                    AstPtr::new(&param.name()?),
+                );
+                params.push(Param {
+                    name: param_name,
+                    label: param
+                        .label()
+                        .and_then(|n| Some(Label(n.token()?.text().into()))),
+                });
             }
         };
-        Some(self.alloc_function(Function { name, params }, ptr))
+
+        let expr_id = self.lower_expr(fun.body()?);
+
+        Some(
+            self.alloc_module_statement(
+                Function {
+                    name,
+                    params,
+                    body: expr_id,
+                    ast_ptr: ast_ptr.clone(),
+                },
+                ast_ptr,
+            )
+            .into(),
+        )
+    }
+
+    fn lower_expr(&mut self, expr: ast::Expr) -> ExprId {
+        let ptr = AstPtr::new(&expr);
+        match expr {
+            ast::Expr::NameRef(e) => {
+                let name = e
+                    .token()
+                    .map_or_else(Default::default, |tok| tok.text().into());
+                self.alloc_expr(Expr::NameRef(name), ptr)
+            }
+            _ => self.alloc_expr(Expr::Missing, ptr)
+        }
     }
 }
+

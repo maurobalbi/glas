@@ -1,8 +1,8 @@
 use crate::base::SourceDatabaseStorage;
 use crate::def::DefDatabaseStorage;
 use crate::{
-    Change, DefDatabase, FileId, FilePos, FileRange, FileSet, ModuleGraph, ModuleInfo, SourceRoot,
-    SourceRootId, VfsPath,
+    Change, DefDatabase, FileId, FilePos, FileRange, FileSet, PackageGraph, PackageData, SourceRoot,
+    PackageId, VfsPath,
 };
 use anyhow::{bail, ensure, Context, Result};
 use indexmap::IndexMap;
@@ -41,12 +41,11 @@ impl TestDB {
             file_set.insert(file, path.clone());
             change.change_file(file, text.to_owned().into());
         }
-        let entry = file_set.file_for_path(&VfsPath::new(format!("/{DEFAULT_IMPORT_FILE}")));
-        change.set_roots(vec![SourceRoot::new_local(file_set, entry)]);
-        let module_graph = ModuleGraph {
-            nodes: HashMap::from_iter(f.module_info.clone().map(|info| (SourceRootId(0), info))),
+        change.set_roots(vec![SourceRoot::new_local(file_set)]);
+        let package_graph = PackageGraph {
+            nodes: HashMap::from_iter(f.module_info.clone().map(|info| (PackageId(0), info))),
         };
-        change.set_module_graph(module_graph);
+        change.set_package_graph(package_graph);
         change.apply(&mut db);
         Ok((db, f))
     }
@@ -70,7 +69,7 @@ pub struct Fixture {
     files: IndexMap<VfsPath, String>,
     file_ids: Vec<FileId>,
     markers: Vec<FilePos>,
-    module_info: Option<ModuleInfo>,
+    module_info: Option<PackageData>,
 }
 
 impl ops::Index<usize> for Fixture {
@@ -117,9 +116,12 @@ impl Fixture {
                     {
                         let target = VfsPath::new(target);
                         this.module_info
-                            .get_or_insert_with(|| ModuleInfo {
-                                module_file: cur_file,
+                            .get_or_insert_with(|| PackageData {
+                                root_file: cur_file,
                                 input_store_paths: HashMap::default(),
+                                dependencies: Default::default(),
+                                version: None,
+                                display_name: None,
                             })
                             .input_store_paths
                             .insert(name.into(), target);

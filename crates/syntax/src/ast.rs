@@ -165,7 +165,7 @@ enums! {
     Statement {
         Assignment,
     },
-    Expression {
+    Expr {
         Literal,
         Block,
         NameRef,
@@ -184,14 +184,14 @@ asts! {
     ASSIGNMENT = Assignment {
         //pattern
         annotation: Type,
-        value: Expression,
+        value: Expr,
     },
     BLOCK = Block {
-        expressions: [Expression],
+        expressions: [Expr],
     },
     BINARY_OP = BinaryOp {
-        lhs: Expression,
-        rhs[1]: Expression,
+        lhs: Expr,
+        rhs[1]: Expr,
 
         pub fn op_details(&self) -> Option<(SyntaxToken, BinaryOpKind)> {
             self.syntax().children_with_tokens().find_map(|n| {
@@ -234,7 +234,15 @@ asts! {
         name: Name,
         param_list: ParamList,
         return_type: Type,
-        body: Block,
+        body: Expr,
+    },
+    FIELD_ACCESS = FieldAccess {
+        label: NameRef,
+        container: Expr,
+    },
+    TUPLE_INDEX = TupleIndex {
+        index: Literal,
+        container: Expr,
     },
     IMPORT = Import {
         module: ImportModule,
@@ -252,6 +260,7 @@ asts! {
             self.0.children_with_tokens().find_map(NodeOrToken::into_token)
         }
     },
+    // Change to body with expression to be able to reuse parser / collecting logic and validate constant during lowering
     MODULE_CONSTANT = ModuleConstant {
         name: Name,
         value: ConstantValue,
@@ -289,7 +298,7 @@ asts! {
         params: [Param],
     },
     UNARY_OP = UnaryOp {
-        arg: Expression,
+        arg: Expr,
 
         pub fn op_details(&self) -> Option<(SyntaxToken, UnaryOpKind)> {
             self.syntax().children_with_tokens().find_map(|n| {
@@ -334,7 +343,9 @@ asts! {
         name: Name,
     },
     NAME_REF = NameRef {
-        name: Name,
+        pub fn token(&self) -> Option<SyntaxToken> {
+            self.0.children_with_tokens().find_map(NodeOrToken::into_token)
+        }
     },
 }
 
@@ -376,12 +387,15 @@ mod tests {
     fn assert() {
         let e = crate::parse_file(
             "
+            import aa/a/b
 
-            fn main(c d, e f) {
-                asd.name().bla()
+            fn main(c d, e f) -> test.Int {
+                asd(a).test.0
             }
 
-            fn bla() {}
+            fn bla(b) {
+                b + 1 * 2
+            }
             ",
         );
         for error in e.errors() {
@@ -504,7 +518,7 @@ mod tests {
         fst.ty().unwrap().syntax().should_eq("Int");
         assert!(params.next().is_none())
     }
-    
+
     #[test]
     fn name() {
         let e = parse::<Param>("fn bla(a b: Int) {}");

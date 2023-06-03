@@ -2,7 +2,7 @@ use crate::config::{Config, CONFIG_KEY};
 use crate::{convert, handler, LspError, UrlExt, Vfs, MAX_FILE_LEN};
 use anyhow::{anyhow, bail, Context, Result};
 use crossbeam_channel::{Receiver, Sender};
-use ide::{Analysis, AnalysisHost, Cancelled, ModuleInfo, VfsPath};
+use ide::{Analysis, AnalysisHost, Cancelled, PackageData, VfsPath};
 use lsp_server::{ErrorCode, Message, Notification, ReqQueue, Request, RequestId, Response};
 use lsp_types::notification::Notification as _;
 use lsp_types::{
@@ -37,7 +37,7 @@ enum Event {
 }
 
 struct LoadModuleResult {
-    module_info: ModuleInfo,
+    module_info: PackageData,
     missing_inputs: bool,
 }
 
@@ -348,7 +348,7 @@ impl Server {
             };
 
             // Load the flake file in Vfs.
-            let module_file = {
+            let root_file = {
                 let mut vfs = vfs.write().unwrap();
                 match vfs.file_for_path(&gleam_vpath) {
                     // If the file is already opened (transferred from client),
@@ -365,9 +365,12 @@ impl Server {
                 Err(err) if err.kind() == ErrorKind::NotFound => {
                     return Ok(LoadModuleResult {
                         missing_inputs: false,
-                        module_info: ModuleInfo {
-                            module_file,
+                        module_info: PackageData {
+                            root_file,
                             input_store_paths: HashMap::new(),
+                            version: None,
+                            display_name: None,
+                            dependencies: Default::default(),
                         },
                     });
                 }
@@ -379,10 +382,12 @@ impl Server {
 
             Ok(LoadModuleResult {
                 missing_inputs: false,
-                module_info: ModuleInfo {
-                    module_file,
+                module_info: PackageData {
+                    root_file,
                     input_store_paths: HashMap::new(),
-
+                    version: None,
+                    dependencies: Default::default(),
+                    display_name: None
                 },
             })
         };
