@@ -147,6 +147,10 @@ impl LowerCtx<'_> {
                     .map_or_else(Default::default, |tok| tok.text().into());
                 self.alloc_expr(Expr::NameRef(name), ptr)
             }
+            ast::Expr::Block(defs) => {
+                let expr_ids = defs.expressions().into_iter().map(|a| self.lower_expr(a)).collect();
+                self.alloc_expr(Expr::Block{exprs: expr_ids}, ptr)
+            }
             _ => self.alloc_expr(Expr::Missing, ptr)
         }
     }

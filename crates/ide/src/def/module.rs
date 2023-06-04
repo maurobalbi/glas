@@ -1,8 +1,11 @@
-use std::{collections::{HashMap}, ops};
+use std::{collections::HashMap, ops};
 
-use la_arena::{Arena, Idx, ArenaMap};
+use la_arena::{Arena, ArenaMap, Idx};
 use smol_str::SmolStr;
-use syntax::{AstPtr, ast::{self, BinaryOpKind}};
+use syntax::{
+    ast::{self, BinaryOpKind},
+    AstPtr,
+};
 
 use crate::impl_from;
 
@@ -21,6 +24,20 @@ impl ModuleData {
         self.params.shrink_to_fit();
         self.exprs.shrink_to_fit();
         self.names.shrink_to_fit();
+    }
+
+    pub fn functions(
+        &self,
+    ) -> impl Iterator<Item = (FunctionId, &'_ Function)> + ExactSizeIterator + '_ {
+        self.functions.iter()
+    }
+
+    pub fn exprs(&self) -> impl Iterator<Item = (ExprId, &'_ Expr)> + ExactSizeIterator + '_ {
+        self.exprs.iter()
+    }
+
+    pub fn names(&self) -> impl Iterator<Item = (NameId, &'_ Name)> + ExactSizeIterator + '_ {
+        self.names.iter()
     }
 }
 
@@ -64,7 +81,7 @@ impl ModuleSourceMap {
 
         self.fn_map.shrink_to_fit();
         self.fn_map_rev.shrink_to_fit();
-        
+
         self.name_map.shrink_to_fit();
         self.name_map_rev.shrink_to_fit();
     }
@@ -81,6 +98,10 @@ impl ModuleSourceMap {
         self.name_map.get(&node).copied()
     }
 
+    pub fn node_for_name(&self, name_id: NameId) -> Option<AstPtr<ast::Name>> {
+        self.name_map_rev.get(name_id).cloned()
+    }
+
     pub fn fn_to_def(&self, ptr: AstPtr<ast::Function>) -> Option<FunctionId> {
         self.fn_map.get(&ptr).cloned()
     }
@@ -92,7 +113,7 @@ impl ModuleSourceMap {
 
 #[derive(Hash, Debug, Clone, Eq, PartialEq)]
 pub enum ModuleStatementId {
-    FunctionId(FunctionId)
+    FunctionId(FunctionId),
 }
 
 impl_from!(
@@ -107,7 +128,7 @@ pub struct Function {
     pub params: Vec<Param>,
 
     pub body: ExprId,
- 
+
     pub ast_ptr: AstPtr<ast::Function>,
 }
 
@@ -120,7 +141,7 @@ pub struct Param {
 #[derive(Debug, PartialEq, Eq)]
 pub enum Visibility {
     Public,
-    Private
+    Private,
 }
 
 pub type ExprId = Idx<Expr>;
@@ -129,6 +150,9 @@ pub type ExprId = Idx<Expr>;
 pub enum Expr {
     Missing,
     Literal(Literal),
+    Block {
+        exprs: Vec<ExprId>
+    },
     Binary {
         left: ExprId,
         right: ExprId,
@@ -160,6 +184,5 @@ pub enum NameKind {
     PatField,
 }
 
-
-#[derive(Debug, Clone, PartialEq, Eq )]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Label(pub SmolStr);

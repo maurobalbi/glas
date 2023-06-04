@@ -252,6 +252,7 @@ impl Server {
                 st.is_shutdown = true;
                 Ok(())
             })
+            .on::<req::GotoDefinition>(handler::goto_definition)
             .finish();
     }
 

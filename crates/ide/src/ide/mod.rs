@@ -10,6 +10,7 @@ use std::fmt;
 use syntax::TextRange;
 
 pub use highlight_related::HlRelated;
+pub use goto_definition::GotoDefinitionResult;
 
 pub const DEFAULT_LRU_CAP: usize = 128;
 
@@ -123,7 +124,7 @@ impl Analysis {
         self.with_db(|db| highlight_related::highlight_related(db, fpos).unwrap_or_default())
     }
 
-   pub fn goto_definition(&self, pos: FilePos) -> Cancellable<Option<Vec<NavigationTarget>>> {
+   pub fn goto_definition(&self, pos: FilePos) -> Cancellable<Option<GotoDefinitionResult>> {
         self.with_db(|db| goto_definition::goto_definition(db, pos))
     }
 }

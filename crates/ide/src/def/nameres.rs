@@ -1,11 +1,18 @@
-use std::{collections::{HashMap, HashSet}, ops, iter, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    iter, ops,
+    sync::Arc,
+};
 
-use la_arena::{Idx, Arena, ArenaMap};
+use la_arena::{Arena, ArenaMap, Idx};
 use smol_str::SmolStr;
 
 use crate::{DefDatabase, FileId};
 
-use super::{module::{Name, ModuleStatementId, Visibility, ExprId, NameId, ModuleData, FunctionId}, hir::Function};
+use super::{
+    hir::Function,
+    module::{ExprId, FunctionId, ModuleData, ModuleStatementId, Name, NameId, Visibility, Expr},
+};
 
 // #[derive(Debug, Default, PartialEq, Eq)]
 // pub struct ModuleScope {
@@ -49,15 +56,18 @@ impl ModuleScope {
             scope_by_expr: ArenaMap::with_capacity(module.exprs.len()),
         };
 
-        let definitions = module.functions.iter().map(|(idx, f)| (module[f.name].text.clone(), f.name));
+        let definitions = module
+            .functions
+            .iter()
+            .map(|(idx, f)| (module[f.name].text.clone(), f.name));
 
-        let root_scope = this.scopes.alloc( ScopeData {
+        let root_scope = this.scopes.alloc(ScopeData {
             parent: None,
             kind: ScopeKind::Definitions(definitions.collect()),
         });
 
         for (function, _) in module.functions.iter() {
-           this.traverse_function(function, &module, root_scope); 
+            this.traverse_function(function, &module, root_scope);
         }
 
         this.shrink_to_fit();
@@ -77,33 +87,19 @@ impl ModuleScope {
         iter::successors(Some(scope_id), |&i| self[i].parent).map(|i| &self[i])
     }
 
-    // /// Resolve a name in the scope of an Expr.
-    // fn resolve_name(&self, expr_id: ExprId, name: &SmolStr) -> Option<ResolveResult> {
-    //     let scope = self.scope_for_expr(expr_id)?;
-    //     // 1. Local defs.
-    //     if let Some(name) = self
-    //         .ancestors(scope)
-    //         .find_map(|data| data.as_definitions()?.get(name))
-    //     {
-    //         return Some(ResolveResult::Definition(*name));
-    //     }
-    //     // 2. Global builtin names.
-    //     if let Some((name, b)) = ALL_BUILTINS.get_entry(name) {
-    //         if b.is_global {
-    //             return Some(ResolveResult::Builtin(name));
-    //         }
-    //     }
-    //     // 3. "with" exprs.
-    //     let withs = self
-    //         .ancestors(scope)
-    //         .filter_map(|data| data.as_with())
-    //         .collect::<Vec<_>>();
-    //     if !withs.is_empty() {
-    //         return Some(ResolveResult::WithExprs(withs));
-    //     }
-    //     None
-    // }
-
+    /// Resolve a name in the scope of an Expr.
+    fn resolve_name(&self, expr_id: ExprId, name: &SmolStr) -> Option<ResolveResult> {
+        let scope = self.scope_for_expr(expr_id)?;
+        //     // 1. Local defs.
+        if let Some(name) = self
+            .ancestors(scope)
+            .find_map(|data| data.as_definitions()?.get(name))
+        {
+            return Some(ResolveResult::Definition(*name));
+        }
+        None
+    }
+ 
     fn traverse_function(&mut self, function_id: FunctionId, module: &ModuleData, scope: ScopeId) {
         let mut defs = HashMap::default();
 
@@ -115,7 +111,10 @@ impl ModuleScope {
         }
 
         let scope = if !defs.is_empty() {
-            self.scopes.alloc(ScopeData { parent: Some(scope), kind: ScopeKind::Definitions(defs) })
+            self.scopes.alloc(ScopeData {
+                parent: Some(scope),
+                kind: ScopeKind::Definitions(defs),
+            })
         } else {
             scope
         };
@@ -127,6 +126,9 @@ impl ModuleScope {
         self.scope_by_expr.insert(expr, scope);
 
         match &module[expr] {
+            Expr::Block { exprs } => {
+                exprs.iter().for_each(|e| self.traverse_expr(module, *e, scope));
+            }
             _ => {}
         }
     }
@@ -230,7 +232,6 @@ impl ModuleScope {
     // }
 }
 
-
 #[derive(Debug, PartialEq, Eq)]
 pub struct ScopeEntry {
     name: Name,
@@ -259,7 +260,14 @@ enum ScopeKind {
     Definitions(HashMap<SmolStr, NameId>),
 }
 
-
+impl ScopeData {
+    pub fn as_definitions(&self) -> Option<&HashMap<SmolStr, NameId>> {
+        match &self.kind {
+            ScopeKind::Definitions(defs) => Some(defs),
+            _ => None,
+        }
+    }
+}
 
 /// Name resolution of all references.
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
@@ -272,14 +280,28 @@ pub struct NameResolution {
     // inherited_builtins: HashSet<NameId>,
 }
 
-
 impl NameResolution {
     pub(crate) fn name_resolution_query(db: &dyn DefDatabase, file_id: FileId) -> Arc<Self> {
         let module = db.module(file_id);
+        let scopes = db.scopes(file_id);
+        tracing::info!("Scopes: {:#?}", scopes);
+        let resolve_map = module
+            .exprs()
+            .filter_map(|(e, kind)| {
+                match kind {
+                    // Inherited attrs are also translated into Expr::References.
+                    Expr::NameRef(name) => Some((e, scopes.resolve_name(e, name))),
+                    _ => None,
+                }
+            })
+            .collect::<HashMap<_, _>>();
 
         Arc::new(Self {
-            resolve_map: HashMap::new(),
+            resolve_map,
         })
     }
-}
 
+    pub fn get(&self, expr: ExprId) -> Option<&ResolveResult> {
+        self.resolve_map.get(&expr)?.as_ref()
+    }
+}

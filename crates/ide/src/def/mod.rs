@@ -17,10 +17,11 @@ pub use syntax::ast::{AstNode, BinaryOpKind as BinaryOp, Expr, UnaryOpKind as Un
 use self::module::{ModuleData, ModuleSourceMap};
 use self::nameres::{NameResolution, ModuleScope};
 
+pub use self::nameres::{ResolveResult};
+
 #[salsa::query_group(DefDatabaseStorage)]
 pub trait DefDatabase: SourceDatabase {
     fn parse(&self, file_id: FileId) -> Parse;
-
    
     fn module_with_source_map(&self, file_id: FileId) -> (Arc<ModuleData>, Arc<ModuleSourceMap>);
     

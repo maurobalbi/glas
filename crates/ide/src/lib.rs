@@ -8,7 +8,7 @@ mod tests;
 
 pub const DEFAULT_IMPORT_FILE: &str = "gleam.toml";
 
-pub use self::ide::{Analysis, AnalysisHost, Cancelled};
+pub use self::ide::{Analysis, AnalysisHost, Cancelled, GotoDefinitionResult};
 pub use base::{
     Change, FileId, FilePos, FileRange, FileSet, InFile, PackageGraph, PackageData, SourceDatabase,
     SourceRoot, PackageId, VfsPath,

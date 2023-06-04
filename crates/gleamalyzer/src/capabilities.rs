@@ -1,5 +1,5 @@
 use lsp_types::{
-    ServerCapabilities, TextDocumentSyncCapability, TextDocumentSyncKind, TextDocumentSyncOptions, SaveOptions,
+    ServerCapabilities, TextDocumentSyncCapability, TextDocumentSyncKind, TextDocumentSyncOptions, SaveOptions, OneOf,
 };
 
 pub(crate) fn server_capabilities() -> ServerCapabilities {
@@ -13,6 +13,7 @@ pub(crate) fn server_capabilities() -> ServerCapabilities {
                 save: Some(SaveOptions::default().into()),
             },
         )),
+        definition_provider: Some(OneOf::Left(true)),
         ..Default::default()
     }
 }

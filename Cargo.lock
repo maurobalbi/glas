@@ -822,6 +822,8 @@ dependencies = [
  "smallvec",
  "smol_str",
  "syntax",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
