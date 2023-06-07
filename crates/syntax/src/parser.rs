@@ -5,7 +5,7 @@ use crate::lexer::{GleamLexer, LexToken};
 use crate::token_set::TokenSet;
 use crate::SyntaxKind::{self, *};
 use crate::{Error, ErrorKind, SyntaxNode};
-use rowan::{ GreenNode, GreenNodeBuilder, TextRange, TextSize};
+use rowan::{GreenNode, GreenNodeBuilder, TextRange, TextSize};
 
 const STMT_RECOVERY: TokenSet =
     TokenSet::new(&[T!["fn"], T!["type"], T!["import"], T!["const"], T!["pub"]]);
@@ -58,37 +58,39 @@ impl Parse {
 
 pub fn parse_file(src: &str) -> Parse {
     assert!(src.len() < u32::MAX as usize);
-    let lexed: Vec<_> = GleamLexer::new(src).collect();
-    let tokens = lexed
+    let tokens_raw: Vec<_> = GleamLexer::new(src).collect();
+    let tokens = tokens_raw
         .clone()
         .into_iter()
-        .filter(|t|  !t.kind.is_trivia())
-        .map(|t| t.kind)
+        .filter(|&t| !t.kind.is_trivia())
         .collect();
-
     let mut p = Parser {
         tokens,
+        tokens_raw,
+        errors: Vec::new(),
+        src,
         pos: 0,
         fuel: Cell::new(256),
         events: Vec::new(),
     };
     module(&mut p);
-
-    Builder {
-        lexed,
-        pos: 0,
-        src,
-        errors: Vec::new(),
-        builder: GreenNodeBuilder::new(),
-    }.build_tree(p.events)
+    p.build_tree()
 }
+
+// struct Parser<'i> {
+//     tokens: Vec<LexToken<'i>>,
+//     builder: GreenNodeBuilder<'static>,
+//     errors: Vec<Error>,
+//     src: &'i str,
+//     steps: usize,
+//     depth: usize,
+// }
 
 #[derive(Debug)]
 enum Event {
     Open { kind: SyntaxKind },
     Close,
     Advance,
-    Error { kind: ErrorKind },
 }
 
 struct MarkOpened {
@@ -99,88 +101,94 @@ struct MarkClosed {
     index: usize,
 }
 
-struct Builder<'i> {
-    lexed: Vec<LexToken<'i>>,
+struct Parser<'i> {
+    tokens: Vec<LexToken<'i>>,
+    tokens_raw: Vec<LexToken<'i>>,
+    pos: usize,
     src: &'i str,
-    pos: usize,
-    errors: Vec<Error>,
-    builder: GreenNodeBuilder<'i>,
-}
-
-impl<'i> Builder<'i> {
-    fn build_tree(&mut self, events: Vec<Event>) -> Parse {
-        let tokens = &self.lexed;
-        let len = tokens.len();
-
-        let errors = Vec::new();
-
-        println!("{:#?}", events);
-
-        for event in events {
-            match event {
-                Event::Open { kind } => {
-                    self.start_node(kind.into());
-                }
-                Event::Close => {
-                    self.finish_node();
-                }
-                Event::Advance => {
-                    let LexToken{kind, ..} = tokens.get(self.pos).unwrap();
-                    self.token((*kind).into());
-                }
-                Event::Error {kind} => {
-
-                }
-            }
-        }
-        
-        Parse {
-            green: self.builder.finish(),
-            errors,
-        }
-    }
-
-    fn token(&mut self,  kind: SyntaxKind) {
-        self.eat_trivias();
-        self.do_token( kind);
-    }
-
-    fn start_node(&mut self, kind: SyntaxKind) {
-       self.builder.start_node(kind.into());
-    }
-
-    fn finish_node(&mut self) {
-        self.builder.finish_node();
-    }
-
-    fn do_token(&mut self, kind: SyntaxKind) {
-        let LexToken{text , kind, ..} = self.lexed.get(self.pos).expect("This should not happen");
-        self.pos += 1;
-        self.builder.token((*kind).into(), text);
-    }
-
-    fn eat_trivias(&mut self,) {
-       while self.pos < self.lexed.len() {
-            let LexToken{ kind, .. } = self.lexed.get(self.pos).expect("This should not happen");
-            if !kind.is_trivia() {
-                break;
-            }
-            self.do_token( (*kind).into());
-        }
-    }
-
-}
-
-struct Parser {
-    tokens: Vec<SyntaxKind>,
-    pos: usize,
     fuel: Cell<u32>,
+    errors: Vec<Error>,
     events: Vec<Event>,
 }
 
-impl Parser {
+// This is very hackish to intersperce whitespace, but it's nice to not have to think about whitespace in the parser
+// refactor next time this needs to be changed..
+impl<'i> Parser<'i> {
+    fn build_tree(self) -> Parse {
+        let mut builder = GreenNodeBuilder::default();
+        let tokens = self.tokens_raw;
+        let mut events = self.events;
+        let len = tokens.len();
+
+        events.pop();
+
+        let mut pos = 0;
+
+        macro_rules! n_tokens {
+            ($ident: ident) => {
+                (pos..len).take_while(|&it| tokens.get(it).unwrap().kind.$ident()).count()
+            };
+        }
+
+        let eat_token = |n, builder: &mut GreenNodeBuilder, pos: &mut usize| {
+            for _ in 0..n {
+                let LexToken { kind, range, .. } = tokens.get(*pos).unwrap();
+                builder.token((*kind).into(), &self.src[*range]);
+                *pos += 1;
+            }
+        };
+
+        for event in events {
+            match event {
+                Event::Open { kind } => match kind {
+                    SOURCE_FILE => {
+                        builder.start_node(kind.into());
+                        
+                        let n_ws = n_tokens!(is_module_doc);
+                        eat_token(n_ws, &mut builder, &mut pos);
+                    }
+                    FUNCTION | MODULE_CONSTANT => {
+                        let n_ws = n_tokens!(is_whitespace);
+                        eat_token(n_ws, &mut builder, &mut pos);
+
+                        builder.start_node(kind.into());
+
+                        let n_trivias = n_tokens!(is_stmt_doc);
+                        eat_token(n_trivias, &mut builder, &mut pos);
+                    }
+                    _ => {
+                        let n_trivias = n_tokens!(is_trivia);
+                        eat_token(n_trivias, &mut builder, &mut pos);
+
+                        builder.start_node(kind.into());
+                    }
+                },
+                Event::Close => {
+                    builder.finish_node();
+                }
+                Event::Advance => {
+                    let n_trivias = n_tokens!(is_trivia);
+                    eat_token(n_trivias + 1, &mut builder, &mut pos);
+                }
+            }
+        }
+        let n_trivias = n_tokens!(is_trivia);
+        eat_token(n_trivias, &mut builder, &mut pos);
+        builder.finish_node();
+
+        Parse {
+            green: builder.finish(),
+            errors: self.errors,
+        }
+    }
+
     fn error(&mut self, kind: ErrorKind) {
-        self.events.push(Event::Error { kind });
+        let range = self
+            .tokens
+            .last()
+            .map(|&LexToken { range, .. }| range)
+            .unwrap_or_else(|| TextRange::empty(TextSize::from(self.src.len() as u32)));
+        self.errors.push(Error { range, kind });
     }
 
     fn start_node(&mut self) -> MarkOpened {
@@ -235,8 +243,10 @@ impl Parser {
         }
         self.fuel.set(self.fuel.get() - 1);
         self.tokens
-            .get(self.pos + lookahead)
-            .map_or(SyntaxKind::EOF, |it| *it)
+            .iter()
+            .filter(|t| !t.kind.is_whitespace())
+            .nth(self.pos + lookahead)
+            .map_or(SyntaxKind::EOF, |it| it.kind)
     }
 
     fn at(&self, kind: SyntaxKind) -> bool {

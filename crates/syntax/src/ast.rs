@@ -384,7 +384,7 @@ mod tests {
     }
 
     #[test]
-    fn assert() {
+    fn assfert() {
         let e = crate::parse_file(
             "
                 //// asdfttt

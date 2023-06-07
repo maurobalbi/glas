@@ -316,13 +316,18 @@ impl SyntaxKind {
     }
 
     #[inline(always)]
+    pub fn is_module_doc(self) -> bool {
+        self.is_whitespace() || self == Self::COMMENT_MODULE
+    }
+
+    #[inline(always)]
     pub fn is_trivia(self) -> bool {
         (Self::WHITESPACE_FIRST as u16..=Self::DOC_COMMENT_LAST as u16).contains(&(self as u16))
     }
     
     #[inline(always)]
-    pub fn is_doc_comment(self) -> bool {
-        (Self::DOC_COMMENT_FIRST as u16..=Self::DOC_COMMENT_LAST as u16).contains(&(self as u16))
+    pub fn is_stmt_doc(self) -> bool {
+        self.is_whitespace() || self == Self::COMMENT_MODULE
     }
 
     #[inline(always)]
