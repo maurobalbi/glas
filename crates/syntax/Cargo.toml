@@ -9,6 +9,18 @@ edition = "2021"
 logos = "0.12.1"
 rowan = "0.15.10"
 gleam-core = { path = "../../../gleam/compiler-core", version = "0.30.0-dev", optional = true }
+tracing = { version = "0.1.37", features = ["release_max_level_info"] }
+
+[dependencies.tracing-subscriber]
+version = "0.3.15"
+default_features = false
+features = [
+    "env-filter",
+    "fmt",
+    "smallvec",
+    "std",
+    "tracing-log",
+]
 
 [dev-dependencies]
 criterion = "0.3"

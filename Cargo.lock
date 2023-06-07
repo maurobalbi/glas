@@ -1645,6 +1645,8 @@ dependencies = [
  "logos",
  "rowan",
  "smol_str",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

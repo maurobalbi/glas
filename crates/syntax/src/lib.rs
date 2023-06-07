@@ -48,6 +48,7 @@ pub enum ErrorKind {
     ExpectedType,
     ExpectedIdentifier,
     UnexpectedImport,
+    ExpectedParameter,
 }
 
 impl fmt::Display for ErrorKind {
@@ -65,6 +66,7 @@ impl fmt::Display for ErrorKind {
             Self::ExpectedType => "Expected type",
             Self::ExpectedExpression => "Expected Expression",
             Self::UnexpectedImport => "Did not expect an import here",
+            Self::ExpectedParameter => "Expected a parameter",
         }
         .fmt(f)
     }

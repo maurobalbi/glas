@@ -181,7 +181,7 @@ enums! {
 }
 
 asts! {
-    ASSIGNMENT = Assignment {
+    LET_EXPR = Assignment {
         //pattern
         annotation: Type,
         value: Expr,
@@ -294,7 +294,7 @@ asts! {
         label: Label,
         ty: Type,
     },
-    PARAMS = ParamList {
+    PARAM_LIST = ParamList {
         params: [Param],
     },
     UNARY_OP = UnaryOp {
@@ -387,15 +387,12 @@ mod tests {
     fn assert() {
         let e = crate::parse_file(
             "
-            import aa/a/b
+                //// asdfttt
 
-            fn main(c d, e f) -> test.Int {
-                asd(a).test.0
-            }
-
-            fn bla(b) {
-                b + 1 * 2
-            }
+                /// asdfasdfasdf
+             
+                /// asdf
+                fn asdf() {}
             ",
         );
         for error in e.errors() {

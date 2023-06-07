@@ -1,14 +1,36 @@
+use std::cell::Cell;
+
 use crate::ast::{AstNode, SourceFile};
 use crate::lexer::{GleamLexer, LexToken};
 use crate::token_set::TokenSet;
 use crate::SyntaxKind::{self, *};
 use crate::{Error, ErrorKind, SyntaxNode};
-use rowan::{Checkpoint, GreenNode, GreenNodeBuilder, TextRange, TextSize};
+use rowan::{ GreenNode, GreenNodeBuilder, TextRange, TextSize};
 
-const MAX_STEPS: usize = 100_000_000;
-const MAX_DEPTHS: usize = 500;
-const ITEM_RECOVERY_SET: TokenSet =
+const STMT_RECOVERY: TokenSet =
     TokenSet::new(&[T!["fn"], T!["type"], T!["import"], T!["const"], T!["pub"]]);
+
+const PARAM_LIST_RECOVERY: TokenSet = TokenSet::new(&[T!["->"], T!["("]]).union(STMT_RECOVERY);
+
+const EXPR_FIRST: TokenSet = TokenSet::new(&[
+    U_IDENT,
+    T!["use"],
+    T!["-"],
+    T!["!"],
+    T!["panic"],
+    T!["todo"],
+    IDENT,
+    INTEGER,
+    FLOAT,
+    STRING,
+    T!["#"],
+    T!["<<"],
+    T!["["],
+    T!["{"],
+    T!["case"],
+    T!["fn"],
+    T!["let"],
+]);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Parse {
@@ -36,375 +58,373 @@ impl Parse {
 
 pub fn parse_file(src: &str) -> Parse {
     assert!(src.len() < u32::MAX as usize);
-    let mut tokens: Vec<_> = GleamLexer::new(src).collect();
-    tokens.reverse();
+    let lexed: Vec<_> = GleamLexer::new(src).collect();
+    let tokens = lexed
+        .clone()
+        .into_iter()
+        .filter(|t|  !t.kind.is_trivia())
+        .map(|t| t.kind)
+        .collect();
+
     let mut p = Parser {
         tokens,
-        builder: GreenNodeBuilder::default(),
-        errors: Vec::new(),
-        src,
-        steps: 0,
-        depth: 0,
+        pos: 0,
+        fuel: Cell::new(256),
+        events: Vec::new(),
     };
     module(&mut p);
-    Parse {
-        green: p.builder.finish(),
-        errors: p.errors,
-    }
+
+    Builder {
+        lexed,
+        pos: 0,
+        src,
+        errors: Vec::new(),
+        builder: GreenNodeBuilder::new(),
+    }.build_tree(p.events)
 }
 
-struct Parser<'i> {
-    tokens: Vec<LexToken<'i>>,
-    builder: GreenNodeBuilder<'static>,
-    errors: Vec<Error>,
+#[derive(Debug)]
+enum Event {
+    Open { kind: SyntaxKind },
+    Close,
+    Advance,
+    Error { kind: ErrorKind },
+}
+
+struct MarkOpened {
+    index: usize,
+}
+
+struct MarkClosed {
+    index: usize,
+}
+
+struct Builder<'i> {
+    lexed: Vec<LexToken<'i>>,
     src: &'i str,
-    steps: usize,
-    depth: usize,
+    pos: usize,
+    errors: Vec<Error>,
+    builder: GreenNodeBuilder<'i>,
 }
 
-impl<'i> Parser<'i> {
-    fn error(&mut self, kind: ErrorKind) {
-        let range = self
-            .tokens
-            .last()
-            .map(|&LexToken { range, .. }| range)
-            .unwrap_or_else(|| TextRange::empty(TextSize::from(self.src.len() as u32)));
-        self.errors.push(Error { range, kind });
+impl<'i> Builder<'i> {
+    fn build_tree(&mut self, events: Vec<Event>) -> Parse {
+        let tokens = &self.lexed;
+        let len = tokens.len();
+
+        let errors = Vec::new();
+
+        println!("{:#?}", events);
+
+        for event in events {
+            match event {
+                Event::Open { kind } => {
+                    self.start_node(kind.into());
+                }
+                Event::Close => {
+                    self.finish_node();
+                }
+                Event::Advance => {
+                    let LexToken{kind, ..} = tokens.get(self.pos).unwrap();
+                    self.token((*kind).into());
+                }
+                Event::Error {kind} => {
+
+                }
+            }
+        }
+        
+        Parse {
+            green: self.builder.finish(),
+            errors,
+        }
     }
 
-    fn checkpoint(&mut self) -> Checkpoint {
-        self.builder.checkpoint()
+    fn token(&mut self,  kind: SyntaxKind) {
+        self.eat_trivias();
+        self.do_token( kind);
     }
 
     fn start_node(&mut self, kind: SyntaxKind) {
-        self.builder.start_node(kind.into());
-    }
-
-    fn start_node_at(&mut self, cp: Checkpoint, kind: SyntaxKind) {
-        self.builder.start_node_at(cp, kind.into());
+       self.builder.start_node(kind.into());
     }
 
     fn finish_node(&mut self) {
         self.builder.finish_node();
     }
 
-    /// Consume the next token, including whitespaces. Panic if there is no more token.
-    fn bump(&mut self) {
-        let LexToken { kind, range, .. } = self.tokens.pop().unwrap();
-        self.builder.token(kind.into(), &self.src[range]);
+    fn do_token(&mut self, kind: SyntaxKind) {
+        let LexToken{text , kind, ..} = self.lexed.get(self.pos).expect("This should not happen");
+        self.pos += 1;
+        self.builder.token((*kind).into(), text);
     }
 
-    /// Same with `bump`, but override the kind.
-    fn bump_with_kind(&mut self, kind: SyntaxKind) {
-        let LexToken { range, .. } = self.tokens.pop().unwrap();
-        self.builder.token(kind.into(), &self.src[range]);
-    }
-
-    /// Consume the next token and wrap it in an ERROR node.
-    fn bump_error(&mut self) {
-        self.start_node(ERROR);
-        self.bump();
-        self.finish_node();
-    }
-
-    fn err_recover(&mut self, kind: ErrorKind, recovery: TokenSet) {
-        self.error(kind);
-        match self.peek() {
-            Some(T!["{"] | T!["}"]) => {
-                return;
+    fn eat_trivias(&mut self,) {
+       while self.pos < self.lexed.len() {
+            let LexToken{ kind, .. } = self.lexed.get(self.pos).expect("This should not happen");
+            if !kind.is_trivia() {
+                break;
             }
-            _ => (),
+            self.do_token( (*kind).into());
         }
+    }
 
-        if self.at_ts(recovery) {
-            return;
+}
+
+struct Parser {
+    tokens: Vec<SyntaxKind>,
+    pos: usize,
+    fuel: Cell<u32>,
+    events: Vec<Event>,
+}
+
+impl Parser {
+    fn error(&mut self, kind: ErrorKind) {
+        self.events.push(Event::Error { kind });
+    }
+
+    fn start_node(&mut self) -> MarkOpened {
+        let mark = MarkOpened {
+            index: self.events.len(),
+        };
+        self.events.push(Event::Open {
+            kind: SyntaxKind::ERROR,
+        });
+        mark
+    }
+
+    fn start_node_before(&mut self, m: MarkClosed) -> MarkOpened {
+        let mark = MarkOpened { index: m.index };
+        self.events.insert(
+            m.index,
+            Event::Open {
+                kind: SyntaxKind::ERROR,
+            },
+        );
+        mark
+    }
+
+    fn finish_node(&mut self, m: MarkOpened, kind: SyntaxKind) -> MarkClosed {
+        self.events[m.index] = Event::Open { kind };
+        self.events.push(Event::Close);
+        MarkClosed { index: m.index }
+    }
+
+    fn bump(&mut self) {
+        assert!(!self.eof());
+        self.fuel.set(256);
+        self.events.push(Event::Advance);
+        self.pos += 1;
+    }
+
+    fn bump_with_error(&mut self, kind: ErrorKind) {
+        let m = self.start_node();
+        self.error(kind);
+        self.bump();
+        self.finish_node(m, ERROR);
+    }
+
+    fn eof(&self) -> bool {
+        self.pos == self.tokens.len()
+    }
+
+    /// Ignores whitespace
+    fn nth(&self, lookahead: usize) -> SyntaxKind {
+        if self.fuel.get() == 0 {
+            panic!("parser is stuck")
         }
-
-        self.bump_error()
-    }
-
-    /// Peek the next token, including whitespaces.
-    fn peek_full(&mut self) -> Option<LexToken> {
-        self.steps += 1;
-        assert!(self.steps < MAX_STEPS);
-        self.tokens.last().copied()
-    }
-
-    fn peek_full_non_ws(&mut self) -> Option<LexToken> {
-        self.ws();
-        self.peek_full()
-    }
-
-    fn at_non_ws(&mut self, kind: SyntaxKind) -> bool {
-        self.peek_non_ws().map(|k| k == kind).unwrap_or(false)
-    }
-
-    fn at(&mut self, kind: SyntaxKind) -> bool {
-        self.peek().map(|k| k == kind).unwrap_or(false)
-    }
-
-    fn at_ts(&mut self, kinds: TokenSet) -> bool {
-        if let Some(kind) = self.peek_non_ws() {
-            return kinds.contains(kind);
-        }
-        false
-    }
-
-    /// Like `peek_full`, but only returns SyntaxKind.
-    fn peek(&mut self) -> Option<SyntaxKind> {
-        self.peek_full().map(|LexToken { kind, .. }| kind)
-    }
-
-    /// Consume all following whitespaces if any, and peek the next token.
-    fn peek_non_ws(&mut self) -> Option<SyntaxKind> {
-        self.ws();
-        self.peek()
-    }
-
-    /// Get an iterator of following non-whitespace tokens.
-    fn peek_iter_non_ws(&mut self) -> impl Iterator<Item = SyntaxKind> + '_ {
-        self.steps += 1;
-        assert!(self.steps < MAX_STEPS);
+        self.fuel.set(self.fuel.get() - 1);
         self.tokens
-            .iter()
-            .rev()
-            .map(|&LexToken { kind, .. }| kind)
-            .filter(|k| !k.is_whitespace())
+            .get(self.pos + lookahead)
+            .map_or(SyntaxKind::EOF, |it| *it)
     }
 
-    /// Consumes all following whitespaces if any.
-    fn ws(&mut self) {
-        while matches!(self.peek(), Some(k) if k.is_whitespace()) {
-            self.bump();
-        }
+    fn at(&self, kind: SyntaxKind) -> bool {
+        self.nth(0) == kind
     }
 
-    /// Consumes a token if the next token matches the expected one, or does nothing if not.
-    /// Return whether the expected token is consumed.
-    fn want(&mut self, expect: SyntaxKind) -> bool {
-        if self.peek_non_ws() == Some(expect) {
+    fn at_any(&self, kinds: TokenSet) -> bool {
+        kinds.contains(self.nth(0))
+    }
+
+    fn eat(&mut self, kind: SyntaxKind) -> bool {
+        if self.at(kind) {
             self.bump();
             true
         } else {
-            self.error(ErrorKind::ExpectToken(expect));
             false
         }
+    }
+
+    fn expect(&mut self, kind: SyntaxKind) {
+        if self.eat(kind) {
+            return;
+        }
+        self.error(ErrorKind::ExpectToken(kind));
     }
 }
 
 fn module(p: &mut Parser) {
-    p.start_node(SOURCE_FILE);
-    while let Some(i) = p.peek_non_ws() {
-        target_group(p)
+    let m = p.start_node();
+    while !p.eof() {
+        stmnt_or_tg(p)
     }
-    p.finish_node();
+    p.finish_node(m, SOURCE_FILE);
 }
 
 const VALID_TARGETS: [&str; 2] = ["javascript", "erlang"];
 
-fn target_group(p: &mut Parser) {
-    p.start_node(TARGET_GROUP);
-    match p.peek() {
-        Some(T!["if"]) => {
-            p.bump();
-            if let Some(LexToken { text, kind, .. }) = p.peek_full_non_ws() {
-                if !VALID_TARGETS.contains(&text) {
-                    p.error(ErrorKind::ExpectedTarget);
-                }
-                if kind == IDENT {
-                    p.start_node(TARGET);
-                    p.bump();
-                    p.finish_node();
-                }
-            }
-            if p.peek_non_ws() == Some(T!["{"]) {
-                p.bump();
-                statements(p);
-                p.want(T!["}"]);
-            }
-        }
-        Some(t) if t.can_start_statement() => statements(p),
-        Some(_) => {
-            p.error(ErrorKind::ExpectedStatement);
-            p.bump_error()
-        }
-        None => {}
+fn stmnt_or_tg(p: &mut Parser) {
+    match p.nth(0) {
+        T!["if"] => target_group(p),
+        _ => statement(p),
     }
-
-    p.finish_node();
 }
 
-fn statements(p: &mut Parser) {
-    // p.start_node(STATEMENTS);
-    loop {
-        match p.peek_non_ws() {
-            Some(t) if t.can_start_statement() => {
-                statement(p);
-                continue;
-            }
-            _ => {
-                break;
-            }
-        }
+fn target_group(p: &mut Parser) {
+    assert!(p.at(T!["if"]));
+    let m = p.start_node();
+    p.expect(T!["if"]);
+    p.expect(IDENT);
+    if p.at(T!["{"]) {
+        statements_block(p);
     }
+    p.finish_node(m, TARGET_GROUP);
+}
+
+fn statements_block(p: &mut Parser) {
+    assert!(p.at(T!["{"]));
+    // let m = p.start_node();
+    p.expect(T!["{"]);
+    while !p.at(T!["}"]) && !p.eof() {
+        statement(p);
+    }
+    p.expect(T!["}"]);
+    // p.finish_node(m, STATEMENTS);
 }
 
 fn statement(p: &mut Parser) {
-    let cp = p.checkpoint();
-    let is_pub = visibility_opt(p);
-    match p.peek_non_ws() {
-        Some(T!["const"]) => module_const(p, cp),
-        Some(T!["import"]) => {
+    let m = p.start_node();
+    let is_pub = p.at(T!["pub"]);
+    if is_pub {
+        p.expect(T!["pub"]);
+    }
+    match p.nth(0) {
+        T!["const"] => module_const(p, m),
+        T!["fn"] => function(p, m),
+        T!["import"] => {
             if is_pub {
-                p.error(ErrorKind::UnexpectedImport);
-                p.bump_error();
+                p.bump_with_error(ErrorKind::UnexpectedImport);
             } else {
-                import(p);
+                import(p, m);
             }
         }
-        Some(T!["fn"]) => {
-            function(p, cp);
-        }
-        Some(_) => p.bump(),
-        None => p.error(ErrorKind::UnexpectedEof),
+        _ => p.bump_with_error(ErrorKind::ExpectedStatement),
     }
 }
 
-fn function(p: &mut Parser, cp: Checkpoint) {
+fn function(p: &mut Parser, m: MarkOpened) {
     assert!(p.at(T!["fn"]));
-    p.bump();
-    p.start_node_at(cp, FUNCTION);
-    name_r(p, ITEM_RECOVERY_SET);
-    if p.at_non_ws(T!["("]) {
-        params(p);
-    } else {
-        p.error(ErrorKind::ExpectToken(T!["("]));
+    p.expect(T!["fn"]);
+    p.expect(IDENT);
+    if p.at(T!["("]) {
+        param_list(p);
     }
 
     // UX: when user is typing '-' error could be nicer
-    if p.at_non_ws(T!["->"]) {
-        p.bump();
-        type_(p);
+    if p.eat(T!["->"]) {
+        type_expr(p);
     }
 
-    if p.at_non_ws(T!["{"]) {
-        block(p, T!["}"]);
-    } else {
-        p.error(ErrorKind::ExpectToken(T!["{"]));
+    if p.at(T!["{"]) {
+        block(p);
     }
 
-    p.finish_node();
+    p.finish_node(m, FUNCTION);
 }
 
-fn params(p: &mut Parser) {
-    assert!(p.at_non_ws(T!["("]));
-    p.start_node(PARAMS);
-    p.bump();
+fn param_list(p: &mut Parser) {
+    assert!(p.at(T!["("]));
+    let m = p.start_node();
+    p.expect(T!["("]);
 
-    loop {
-        match p.peek_non_ws() {
-            None | Some(T![")"]) => break,
-            Some(IDENT) => {
-                param(p);
+    while !p.at(T![")"]) && !p.eof() {
+        if p.at(IDENT) {
+            param(p);
+        } else {
+            if p.at_any(PARAM_LIST_RECOVERY) {
+                break;
             }
-            Some(k) => {
-                p.error(ErrorKind::ExpectedArgument);
-                p.bump_error();
-                // Don't double error.
-                if k == T![","] {
-                    continue;
-                }
-            }
-        }
-
-        match p.peek_non_ws() {
-            // Terminates after a parameter.
-            None | Some(T![")"]) => break,
-            // Separator.
-            Some(T![","]) => {
-                if p.peek_iter_non_ws().nth(1) == Some(T![")"]) {
-                    p.bump_error();
-                    p.error(ErrorKind::ExpectToken(T![")"]))
-                } else {
-                    p.bump();
-                } // ,
-            }
-            // Consume nothing here, as the previous match must consume something.
-            _ => p.error(ErrorKind::ExpectToken(T![","])),
+            p.bump_with_error(ErrorKind::ExpectedParameter)
         }
     }
-    p.want(T![")"]);
-    p.finish_node();
+    p.expect(T![")"]);
+    p.finish_node(m, PARAM_LIST);
 }
 
 fn param(p: &mut Parser) {
-    p.start_node(PARAM);
-    if p.peek_iter_non_ws().nth(1) == Some(IDENT) {
-        p.start_node(LABEL);
-        p.want(IDENT);
-        p.finish_node();
+    assert!(p.at(IDENT));
+    let m = p.start_node();
+    if p.nth(1) == IDENT {
+        let n = p.start_node();
+        p.expect(IDENT);
+        p.finish_node(n, LABEL);
     }
-    p.ws();
-    name(p);
-    type_annotation_opt(p);
-    p.finish_node();
+    let o = p.start_node();
+    p.expect(IDENT);
+    p.finish_node(o, NAME);
+
+    if p.at(T![":"]) {
+        p.expect(T![":"]);
+        type_expr(p);
+    }
+
+    p.finish_node(m, PARAM);
 }
 
-fn block(p: &mut Parser, guard: SyntaxKind) {
-    assert!(p.at_non_ws(T!["{"]));
-    p.start_node(BLOCK);
-    p.bump();
-    loop {
-        match p.peek_non_ws() {
-            None => {
-                p.error(ErrorKind::ExpectToken(guard));
-                break;
-            }
-            Some(k) if k == guard => {
-                p.bump();
-                break;
-            }
-            Some(k) if k.can_start_expr() => {
-                expr_opt(p);
-                continue;
-            }
+fn block(p: &mut Parser) -> MarkClosed {
+    assert!(p.at(T!["{"]));
+    let m = p.start_node();
+    p.expect(T!["{"]);
+    while !p.at(T!["}"]) && !p.eof() {
+        match p.nth(0) {
+            T!["let"] => stmt_let(p),
+            //   T!["use"] => stmt_use(p)
             _ => {
-                p.error(ErrorKind::ExpectedExpression);
-                p.bump()
+                if p.at_any(EXPR_FIRST) {
+                    stmt_expr(p)
+                } else {
+                    if p.at_any(STMT_RECOVERY) {
+                        break;
+                    }
+                    p.bump_with_error(ErrorKind::ExpectedStatement);
+                }
             }
         }
     }
-    p.finish_node();
+    p.expect(T!["}"]);
+    p.finish_node(m, BLOCK)
 }
 
-fn expr_opt(p: &mut Parser) {
-    p.depth += 1;
-    if p.depth >= MAX_DEPTHS {
-        p.error(ErrorKind::NestTooDeep);
-        p.start_node(ERROR);
-        while p.peek().is_some() {
-            p.bump();
-        }
-        p.finish_node();
-        return;
-    }
-
-    match p.peek_non_ws() {
-        Some(T!["let"]) => assignment(p),
-        Some(T!["use"]) => todo!(),
-        _ => expr(p),
-    }
-}
-
-fn assignment(p: &mut Parser) {
-    assert!(p.at(T!["let"]));
-    p.start_node(ASSIGNMENT);
-    p.bump();
-    name_r(p, ITEM_RECOVERY_SET); //parse pattern
-    type_annotation_opt(p);
-    p.want(T!["="]);
+fn stmt_expr(p: &mut Parser) {
+    let m = p.start_node();
     expr(p);
-    p.finish_node();
+    p.finish_node(m, STMT_EXPR);
+}
+
+fn stmt_let(p: &mut Parser) {
+    assert!(p.at(T!["let"]));
+    let m = p.start_node();
+    p.expect(T!["let"]);
+    p.expect(IDENT); //parse pattern
+    if p.at(T![":"]) {
+        p.expect(T![":"]);
+        type_expr(p);
+    }
+
+    p.expect(T!["="]);
+    expr(p);
+    p.finish_node(m, LET_EXPR);
 }
 
 fn expr(p: &mut Parser) {
@@ -412,33 +432,40 @@ fn expr(p: &mut Parser) {
 }
 
 fn expr_bp(p: &mut Parser, min_bp: u8) {
-    let tok = match p.peek_non_ws() {
-        None => {
-            p.error(ErrorKind::ExpectedExpression);
-            return;
-        }
-        Some(tok) => tok,
+    let Some(mut lhs) = expr_unit(p) else {
+        return;
     };
 
-    let cp = p.checkpoint();
-
-    match tok.prefix_bp() {
-        Some(rbp) => {
-            p.start_node(UNARY_OP);
-            p.bump(); // Prefix op.
-            expr_bp(p, rbp);
-            p.finish_node();
+    loop {
+        match p.nth(0) {
+            T!["("] => {
+                let m = p.start_node_before(lhs);
+                arg_list(p);
+                lhs = p.finish_node(m, EXPR_CALL);
+            }
+            // T!["."] => {
+            //     let m = p.start_node_before(lhs);
+            //     p.expect(T!["."]);
+            //     match p.nth(0) {
+            //         U_IDENT | IDENT => {
+            //             p.bump();
+            //             p.finish_node(m, FIELD_ACCESS);
+            //         },
+            //         INTEGER => {
+            //             p.bump();
+            //             p.finish_node(m, TUPLE_INDEX);
+            //         }
+            //         _ => break
+            //     }
+            // }
+            _ => break,
         }
-        _ => expr_select_call(p),
     }
 
     loop {
-        let tok = match p.peek_non_ws() {
-            None => break,
-            Some(tok) => tok,
-        };
+        let right = p.nth(0);
 
-        let (lbp, rbp) = match tok.infix_bp() {
+        let (lbp, rbp) = match right.infix_bp() {
             None => break,
             Some(bps) => bps,
         };
@@ -450,405 +477,239 @@ fn expr_bp(p: &mut Parser, min_bp: u8) {
             break;
         }
 
-        p.start_node_at(cp, BINARY_OP);
+        // let m = p.start_node_before(lhs);
         p.bump(); // Infix op.
         expr_bp(p, rbp);
-        p.finish_node();
+        // p.finish_node(m, BINARY_OP);
     }
 }
 
-fn expr_select_call(p: &mut Parser) {
-    let cp = p.checkpoint();
-    expr_unit(p);
-
-    loop {
-        if p.at_non_ws(T!["."]) {
+fn expr_unit(p: &mut Parser) -> Option<MarkClosed> {
+    let res = match p.nth(0) {
+        INTEGER | FLOAT | STRING => {
+            let m = p.start_node();
             p.bump();
-            match p.peek_non_ws() {
-                Some(U_IDENT | IDENT) => {
-                    p.start_node_at(cp, FIELD_ACCESS);
-                    p.bump();
-                    p.finish_node();
-                    continue;
-                }
-                Some(INTEGER) => {
-                    p.start_node_at(cp, TUPLE_INDEX);
-                    p.bump();
-                    p.finish_node();
-                    continue;
-                }
-                _ => {
-                    p.error(ErrorKind::ExpectedIdentifier);
-                    break;
-                }
-            }
-        } else if p.at_non_ws(T!["("]) {
-            p.start_node_at(cp, EXPR_CALL);
-            fn_args(p);
-            p.finish_node();
-            continue;
+            p.finish_node(m, LITERAL)
+        }
+        T!["{"] => block(p),
+        IDENT | U_IDENT => {
+            let m = p.start_node();
+            p.bump();
+            p.finish_node(m, NAME_REF)
+        }
+        _ => return None,
+    };
+    Some(res)
+}
+
+fn arg_list(p: &mut Parser) {
+    assert!(p.at(T!["("]));
+    let m = p.start_node();
+
+    p.expect(T!["("]);
+    while !p.at(T![")"]) && !p.eof() {
+        if p.at_any(EXPR_FIRST) {
+            arg(p);
         } else {
             break;
         }
     }
+
+    p.expect(T![")"]);
+    p.finish_node(m, ARG_LIST);
 }
 
-fn fn_args(p: &mut Parser) {
-    assert!(p.at_non_ws(T!["("]));
-    p.start_node(CALL_ARGS);
-    p.bump();
-
-    loop {
-        match p.peek_non_ws() {
-            None | Some(T![")"]) => break,
-            Some(k) if k.can_start_expr() => {
-                fn_arg(p);
-            }
-            Some(k) => {
-                p.error(ErrorKind::ExpectedExpression);
-                p.bump_error();
-                // Don't double error.
-                if k == T![","] {
-                    continue;
-                }
-            }
-        }
-
-        match p.peek_non_ws() {
-            // Terminates after a parameter.
-            None | Some(T![")"]) => break,
-            // Separator.
-            Some(T![","]) => {
-                if p.peek_non_ws() == Some(T![")"]) {
-                    p.bump_error();
-                    p.error(ErrorKind::ExpectToken(T![")"]))
-                } else {
-                    p.bump();
-                }
-            } // ,
-            // Consume nothing here, as the previous match must consume something.
-            _ => p.error(ErrorKind::ExpectToken(T![","])),
-        }
-    }
-    p.want(T![")"]);
-    p.finish_node();
-}
-
-fn fn_arg(p: &mut Parser) {
-    p.start_node(CALL_ARG);
-    if p.peek_iter_non_ws().nth(1) == Some(T![":"]) {
-        p.ws();
-        p.start_node(LABEL);
-        p.want(IDENT);
-        p.finish_node();
-        p.bump();
+fn arg(p: &mut Parser) {
+    let m = p.start_node();
+    if p.nth(1) == T![":"] {
+        let n = p.start_node();
+        p.expect(IDENT);
+        p.finish_node(n, LABEL);
     }
     expr(p);
-    p.finish_node();
+    p.finish_node(m, ARG);
 }
 
-fn expr_unit(p: &mut Parser) {
-    match p.peek_non_ws() {
-        Some(INTEGER | FLOAT | STRING) => {
-            p.start_node(LITERAL);
-            p.bump();
-            p.finish_node();
-        }
-        Some(T!["{"]) => {
-            block(p, T!["}"]);
-        }
-        Some(IDENT | U_IDENT) => {
-            p.start_node(NAME_REF);
-            p.bump();
-            p.finish_node();
-        }
-        Some(k) if !k.is_separator() => {
-            p.bump();
-            p.error(ErrorKind::ExpectedExpression)
-        }
-        _ => p.error(ErrorKind::ExpectedExpression),
-    }
-}
-
-fn name_r(p: &mut Parser, recovery: TokenSet) {
-    if p.at_non_ws(IDENT) {
-        p.ws();
-        p.start_node(NAME);
-        p.bump();
-        p.finish_node();
-    } else {
-        p.err_recover(ErrorKind::ExpectedIdentifier, recovery)
-    }
-}
-
-fn import(p: &mut Parser) {
+fn import(p: &mut Parser, m: MarkOpened) {
     assert!(p.at(T!["import"]));
-    p.start_node(IMPORT);
-    p.bump();
-    p.start_node(IMPORT_MODULE);
-    loop {
-        match p.peek_non_ws() {
-            Some(IDENT) => {
-                p.start_node(PATH);
-                p.bump();
-                p.finish_node();
-                if p.at(T!["/"]) {
-                    p.bump();
-                    continue;
-                } else {
-                    break;
-                }
-            }
-            _ => {
-                p.error(ErrorKind::ExpectedIdentifier);
-                break;
-            }
-        }
-    }
+    let n = p.start_node();
+    p.expect(T!["import"]);
+    // loop {
+    //     match p.peek_non_ws() {
+    //         Some(IDENT) => {
+    //             p.start_node(PATH);
+    //             p.bump();
+    //             p.finish_node();
+    //             if p.at(T!["/"]) {
+    //                 p.bump();
+    //                 continue;
+    //             } else {
+    //                 break;
+    //             }
+    //         }
+    //         _ => {
+    //             p.error(ErrorKind::ExpectedIdentifier);
+    //             break;
+    //         }
+    //     }
+    // }
 
-    if p.peek_non_ws() == Some(T!["."]) {
+    if p.at(T!["."]) {
         unqualified_imports(p);
     }
 
-    if p.at_non_ws(T!["as"]) {
+    if p.at(T!["as"]) {
         p.bump();
-        name(p);
+        let n = p.start_node();
+        p.expect(IDENT);
+        p.finish_node(n, NAME);
     }
 
-    p.finish_node();
-    p.finish_node();
+    p.finish_node(m, IMPORT);
 }
 
 fn unqualified_imports(p: &mut Parser) {
     assert!(p.at(T!["."]));
     p.bump();
-    p.want(T!["{"]);
-    loop {
-        match p.peek_non_ws() {
-            Some(T!["}"]) => {
-                p.bump();
-                break;
-            }
-            Some(k @ (U_IDENT | IDENT)) => {
-                p.start_node(UNQUALIFIED_IMPORT);
-                p.ws();
-                p.start_node(NAME);
-                p.bump();
-                p.finish_node();
-                if p.at_non_ws(T!["as"]) {
-                    p.bump();
-                    p.ws();
-                    p.start_node(NAME);
-                    p.want(k);
-                    p.finish_node();
-                }
-                p.finish_node();
-                continue;
-            }
-            Some(T![","]) => {
-                p.bump();
-                continue;
-            }
-            _ => {
-                p.error(ErrorKind::ExpectToken(T!["}"]));
-                break;
-            }
-        }
-    }
+    // p.want(T!["{"]);
+    // loop {
+    //     match p.peek_non_ws() {
+    //         Some(T!["}"]) => {
+    //             p.bump();
+    //             break;
+    //         }
+    //         Some(k @ (U_IDENT | IDENT)) => {
+    //             p.start_node(UNQUALIFIED_IMPORT);
+    //             p.ws();
+    //             p.start_node(NAME);
+    //             p.bump();
+    //             p.finish_node();
+    //             if p.at_non_ws(T!["as"]) {
+    //                 p.bump();
+    //                 p.ws();
+    //                 p.start_node(NAME);
+    //                 p.want(k);
+    //                 p.finish_node();
+    //             }
+    //             p.finish_node();
+    //             continue;
+    //         }
+    //         Some(T![","]) => {
+    //             p.bump();
+    //             continue;
+    //         }
+    //         _ => {
+    //             p.error(ErrorKind::ExpectToken(T!["}"]));
+    //             break;
+    //         }
+    //     }
+    // }
 }
 
-fn module_const(p: &mut Parser, cp: Checkpoint) {
+fn module_const(p: &mut Parser, m: MarkOpened) {
     assert!(p.at(T!["const"]));
-    p.start_node_at(cp, MODULE_CONSTANT);
     p.bump();
-    name(p);
-    type_annotation_opt(p);
-    p.want(T!["="]);
-    constant_value(p);
-    p.finish_node();
-}
-
-fn constant_value(p: &mut Parser) {
-    match p.peek_non_ws() {
-        Some(INTEGER | STRING | FLOAT) => {
-            p.start_node(LITERAL);
-            p.bump();
-            p.finish_node()
-        }
-        Some(HASH) => tuple(p),
-        Some(IDENT) => {
-            p.ws();
-            p.start_node(NAME_REF);
-            p.bump();
-            p.finish_node();
-        }
-        Some(_) => {
-            p.error(ErrorKind::ExpectedConstantExpression);
-            p.bump_error();
-        }
-        _ => p.error(ErrorKind::ExpectedConstantExpression),
+    let n = p.start_node();
+    p.expect(IDENT);
+    p.finish_node(n, NAME);
+    if p.at(T![":"]) {
+        type_expr(p);
     }
+    p.expect(T!["="]);
+    expr(p);
+    p.finish_node(m, MODULE_CONSTANT);
 }
 
 fn tuple(p: &mut Parser) {
     assert!(p.at(T!["#"]));
-    p.start_node(CONSTANT_TUPLE);
-    p.bump();
-    p.want(T!["("]);
-    loop {
-        match p.peek_non_ws() {
-            Some(T![")"]) => {
-                p.bump();
-                break;
-            }
-            Some(k) if k.can_start_constant_expr() => {
-                constant_value(p);
-                continue;
-            }
-            Some(T![","]) => {
-                p.bump();
-                continue;
-            }
-            _ => {
-                p.error(ErrorKind::ExpectToken(T![")"]));
-                break;
-            }
-        }
-    }
-    p.finish_node()
+    let m = p.start_node();
+    p.expect(T!["#"]);
+
+    p.finish_node(m, TUPLE);
 }
 
-fn visibility_opt(p: &mut Parser) -> bool {
-    if p.at_non_ws(T!["pub"]) {
-        p.bump();
-        return true;
-    }
-    false
-}
-
-fn name(p: &mut Parser) {
-    p.ws();
-    p.start_node(NAME);
-    p.want(IDENT);
-    p.finish_node();
-}
-
-fn type_annotation_opt(p: &mut Parser) {
-    match p.peek_non_ws() {
-        Some(T![":"]) => {
-            p.bump();
-            type_(p);
-        }
-        _ => {}
-    }
-}
-
-fn type_(p: &mut Parser) {
-    match p.peek_non_ws() {
+fn type_expr(p: &mut Parser) {
+    match p.nth(0) {
         // function
-        Some(T!["fn"]) => fn_type(p),
+        T!["fn"] => fn_type(p),
         // type variable or constructor module
-        Some(IDENT) => {
-            let cp = p.checkpoint();
-            p.bump();
+        IDENT => {
+            let m = p.start_node();
+            p.expect(IDENT);
 
-            match p.peek_non_ws() {
-                Some(T!["."]) => {
-                    p.start_node_at(cp, CONSTRUCTOR_TYPE);
-                    p.start_node_at(cp, MODULE_NAME);
-                    p.finish_node();
-                    p.bump();
-                    p.ws();
-                    p.start_node(NAME);
-                    p.want(U_IDENT);
-                    p.finish_node();
-                    p.finish_node();
-                }
-                _ => {
-                    p.start_node_at(cp, VAR_TYPE);
-                    p.finish_node()
-                }
-            }
+            // match p.nth(0) {
+            //     T!["."] => {
+            //         p.start_node_at(cp, CONSTRUCTOR_TYPE);
+            //         p.finish_node();
+            //         p.bump();
+            //         p.ws();
+            //         p.start_node(NAME);
+            //         p.want(U_IDENT);
+            //         p.finish_node(m,);
+            //         p.finish_node();
+            //     }
+            //     _ => {
+            //         p.start_node_at(cp, VAR_TYPE);
+            //         p.finish_node()
+            //     }
+            // }
         }
         // constructor
-        Some(U_IDENT) => {
-            p.start_node(CONSTRUCTOR_TYPE);
-            p.ws();
-            p.start_node(NAME);
+        U_IDENT => {
+            // p.start_node(CONSTRUCTOR_TYPE);
+            // p.ws();
+            // p.start_node(NAME);
             p.bump();
-            p.finish_node();
-            p.finish_node()
+            // p.finish_node();
+            // p.finish_node()
         }
         // tuple
-        Some(T!("#")) => {
+        T!("#") => {
             tuple_type(p);
         }
-        Some(k) if !k.is_separator() => {
-            p.error(ErrorKind::ExpectedType);
-            p.bump_error()
-        }
         _ => {
-            p.error(ErrorKind::ExpectedType);
+            p.bump_with_error(ErrorKind::ExpectedType);
         }
     }
 }
 
 fn tuple_type(p: &mut Parser) {
     assert!(p.at(T!["#"]));
-    p.start_node(TUPLE_TYPE);
-    p.bump();
-    p.want(T!["("]);
-    loop {
-        match p.peek_non_ws() {
-            Some(T![")"]) => {
-                p.bump();
-                break;
-            }
-            Some(k) if k.can_start_type() => {
-                type_(p);
-                continue;
-            }
-            Some(T![","]) => {
-                p.bump();
-                continue;
-            }
-            _ => {
-                p.error(ErrorKind::ExpectToken(T![")"]));
-                break;
-            }
-        }
-    }
-    p.finish_node()
+    let m = p.start_node();
+    p.expect(T!["#"]);
+    p.expect(T!["("]);
+    // loop {
+    //     match p.nth(0) {
+    //         T![")"] => {
+    //             p.bump();
+    //             break;
+    //         }
+    //         Some(k) if k.can_start_type() => {
+    //             type_expr(p);
+    //             continue;
+    //         }
+    //         Some(T![","]) => {
+    //             p.bump();
+    //             continue;
+    //         }
+    //         _ => {
+    //             p.error(ErrorKind::ExpectToken(T![")"]));
+    //             break;
+    //         }
+    //     }
+    // }
+    p.expect(T![")"]);
+    p.finish_node(m, TUPLE_TYPE);
 }
 
 fn fn_type(p: &mut Parser) {
     assert!(p.at(T!("fn")));
-    p.start_node(FN_TYPE);
+    let m = p.start_node();
     p.bump();
-    p.want(T!("("));
-    p.start_node(PARAMS);
-    loop {
-        match p.peek_non_ws() {
-            Some(T![")"]) => {
-                p.bump();
-                break;
-            }
-            Some(T![","]) => {
-                p.bump();
-                continue;
-            }
-            _ => {
-                p.start_node(PARAM);
-                type_(p);
-                p.finish_node();
-                continue;
-            }
-        }
-    }
-    p.finish_node();
-    p.want(T!["->"]);
-    type_(p);
-    p.finish_node();
+
+    // p.want(T!["->"]);
+    // type_expr(p);
+    p.finish_node(m, FN_TYPE);
 }
 
 impl SyntaxKind {

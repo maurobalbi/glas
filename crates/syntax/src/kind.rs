@@ -68,13 +68,13 @@ def! {
     WHITESPACE @WHITESPACE_FIRST,
 
     #[regex(r"//[^\n\r]*")]
-    COMMENT,
+    COMMENT @WHITESPACE_LAST,
 
     #[regex(r"///[^\n\r]*")]
-    COMMENT_STATEMENT,
+    COMMENT_STATEMENT @DOC_COMMENT_FIRST,
 
     #[regex(r"////[^\n\r]*")]
-    COMMENT_MODULE @WHITESPACE_LAST,
+    COMMENT_MODULE @DOC_COMMENT_LAST,
 
     #[regex("[a-z][_a-z0-9]*")]
     IDENT,
@@ -263,16 +263,16 @@ def! {
     ERROR,
 
     EOF,
-
-
     
     // Nodes
     ANNOTATION,
-    ASSIGNMENT,
+    LET_EXPR,
+    STMT_EXPR,
+    TUPLE,
     BLOCK,
     EXPR_CALL,
-    CALL_ARG,
-    CALL_ARGS,
+    ARG,
+    ARG_LIST,
     UNARY_OP,
     BINARY_OP,
     FIELD_ACCESS,
@@ -290,7 +290,7 @@ def! {
     NAME,
     PATH,
     PARAM,
-    PARAMS,
+    PARAM_LIST,
     TARGET,
     TARGET_GROUP,
     FN_TYPE,
@@ -313,6 +313,16 @@ impl SyntaxKind {
     #[inline(always)]
     pub fn is_whitespace(self) -> bool {
         (Self::WHITESPACE_FIRST as u16..=Self::WHITESPACE_LAST as u16).contains(&(self as u16))
+    }
+
+    #[inline(always)]
+    pub fn is_trivia(self) -> bool {
+        (Self::WHITESPACE_FIRST as u16..=Self::DOC_COMMENT_LAST as u16).contains(&(self as u16))
+    }
+    
+    #[inline(always)]
+    pub fn is_doc_comment(self) -> bool {
+        (Self::DOC_COMMENT_FIRST as u16..=Self::DOC_COMMENT_LAST as u16).contains(&(self as u16))
     }
 
     #[inline(always)]
@@ -340,4 +350,10 @@ impl From<rowan::SyntaxKind> for SyntaxKind {
         // SAFETY: Guarded by the assert.
         unsafe { std::mem::transmute::<u16, SyntaxKind>(k.0 as u16) }
     }
+}
+
+#[test] 
+fn is_trivia() {
+    assert!(SyntaxKind::COMMENT.is_trivia());
+    assert!(SyntaxKind::COMMENT.is_whitespace());
 }
