@@ -157,13 +157,14 @@ enums! {
         Import,
         Function,
     },
-    ConstantValue {
+    ConstantExpr {
         Literal,
         ConstantTuple,
         ConstantList,
     },
-    Statement {
-        Assignment,
+    StatementExpr {
+        StmtLet,
+        StmtExpr,
     },
     Expr {
         Literal,
@@ -172,7 +173,7 @@ enums! {
         BinaryOp,
         UnaryOp,
     },
-    Type {
+    TypeExpr {
         FnType,
         VarType,
         TupleType,
@@ -181,13 +182,8 @@ enums! {
 }
 
 asts! {
-    LET_EXPR = Assignment {
-        //pattern
-        annotation: Type,
-        value: Expr,
-    },
     BLOCK = Block {
-        expressions: [Expr],
+        expressions: [StatementExpr],
     },
     BINARY_OP = BinaryOp {
         lhs: Expr,
@@ -214,7 +210,7 @@ asts! {
         }
     },
     CONSTANT_LIST = ConstantList {
-        elements: [ConstantValue],
+        elements: [ConstantExpr],
     },
     LITERAL = Literal {
         pub fn token(&self) -> Option<SyntaxToken> {
@@ -233,8 +229,8 @@ asts! {
     FUNCTION = Function {
         name: Name,
         param_list: ParamList,
-        return_type: Type,
-        body: Expr,
+        return_type: TypeExpr,
+        body: Block,
     },
     FIELD_ACCESS = FieldAccess {
         label: NameRef,
@@ -245,13 +241,11 @@ asts! {
         container: Expr,
     },
     IMPORT = Import {
-        module: ImportModule,
-    },
-    IMPORT_MODULE = ImportModule {
         module_path: [Path],
         as_name: Name,
         unqualified: [UnqualifiedImport],
     },
+
     SOURCE_FILE = SourceFile {
         statements: [TargetGroup],
     },
@@ -263,8 +257,8 @@ asts! {
     // Change to body with expression to be able to reuse parser / collecting logic and validate constant during lowering
     MODULE_CONSTANT = ModuleConstant {
         name: Name,
-        value: ConstantValue,
-        annotation: Type,
+        value: ConstantExpr,
+        annotation: TypeExpr,
         pub fn is_public(&self) -> bool {
             self.syntax().children_with_tokens().find(|it| it.kind() == T!["pub"]).is_some()
         }
@@ -275,6 +269,11 @@ asts! {
         }
     },
     LABEL = Label {
+        pub fn token(&self) -> Option<SyntaxToken> {
+            self.0.children_with_tokens().find_map(NodeOrToken::into_token)
+        }
+    },
+    TARGET = Target {
         pub fn token(&self) -> Option<SyntaxToken> {
             self.0.children_with_tokens().find_map(NodeOrToken::into_token)
         }
@@ -292,7 +291,7 @@ asts! {
         // pat: Pat,
         name: Name,
         label: Label,
-        ty: Type,
+        ty: TypeExpr,
     },
     PARAM_LIST = ParamList {
         params: [Param],
@@ -318,26 +317,34 @@ asts! {
             self.op_details().map(|t| t.1)
         }
     },
-    TARGET = Target {
+    STMT_LET = StmtLet {
         name: Name,
+        annotation: TypeExpr,
+        body: Expr,
+    },
+    STMT_EXPR = StmtExpr {
+        expr: Expr,
     },
     TARGET_GROUP = TargetGroup {
         target: Target,
         statements: [ModuleStatement],
     },
     CONSTANT_TUPLE = ConstantTuple {
-        elements: [ConstantValue],
+        elements: [ConstantExpr],
     },
     CONSTRUCTOR_TYPE = ConstructorType {
       constructor: Name,
       module: ModuleName,
     },
     TUPLE_TYPE = TupleType{
-      field_types: [Type],
+      field_types: [TypeExpr],
     },
     FN_TYPE = FnType {
-        param_list: ParamList,
-        return_: Type,
+        param_list: ParamTypeList,
+        return_: TypeExpr,
+    },
+    PARAM_TYPE_LIST = ParamTypeList {
+        params: [TypeExpr],
     },
     VAR_TYPE = VarType {
         name: Name,
@@ -384,15 +391,10 @@ mod tests {
     }
 
     #[test]
-    fn assfert() {
+    fn assert() {
         let e = crate::parse_file(
             "
-                //// asdfttt
-
-                /// asdfasdfasdf
-             
-                /// asdf
-                fn asdf() {}
+               if erlang {const a = 1} 
             ",
         );
         for error in e.errors() {
@@ -472,7 +474,7 @@ mod tests {
 
     #[test]
     fn import_module() {
-        let e = parse::<ImportModule>("import aa/a");
+        let e = parse::<Import>("import aa/a");
         let mut iter = e.module_path();
         iter.next().unwrap().syntax().should_eq("aa");
         iter.next().unwrap().syntax().should_eq("a");
@@ -481,7 +483,7 @@ mod tests {
 
     #[test]
     fn import_unqualified() {
-        let e = parse::<ImportModule>("import aa/a.{m as a, M as A}");
+        let e = parse::<Import>("import aa/a.{m as a, M as A}");
         let mut iter = e.unqualified();
         let fst = iter.next().unwrap();
         let snd = iter.next().unwrap();
@@ -495,7 +497,7 @@ mod tests {
 
     #[test]
     fn import_qualified_as() {
-        let e = parse::<ImportModule>("import aa/a.{m as a, M as A} as e");
+        let e = parse::<Import>("import aa/a.{m as a, M as A} as e");
 
         e.as_name().unwrap().syntax().should_eq("e");
     }
@@ -550,7 +552,8 @@ mod tests {
 
     #[test]
     fn let_expr() {
-        let e = parse::<Assignment>("fn a() { let name:Int = 1}");
-        e.annotation().unwrap().syntax().should_eq("Int")
+        let e = parse::<StmtLet>("fn a() { let name:Int = 1}");
+        e.annotation().unwrap().syntax().should_eq("Int");
+        e.body().unwrap().syntax().should_eq("1")
     }
 }
