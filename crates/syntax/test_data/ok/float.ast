@@ -1,5 +1,5 @@
 SOURCE_FILE@0..14
-  TARGET_GROUP@0..14
+  TARGET_GROUP@0..13
     MODULE_CONSTANT@0..13
       CONST_KW@0..5 "const"
       WHITESPACE@5..6 " "
@@ -10,4 +10,4 @@ SOURCE_FILE@0..14
       WHITESPACE@9..10 " "
       LITERAL@10..13
         FLOAT@10..13 "1.1"
-    WHITESPACE@13..14 "\n"
+  WHITESPACE@13..14 "\n"

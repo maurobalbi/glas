@@ -348,7 +348,11 @@ fn function(p: &mut Parser, m: MarkOpened) {
 
     // UX: when user is typing '-' error could be nicer
     if p.eat(T!["->"]) {
-        type_expr(p);
+        if p.at_any(TYPE_FIRST) {
+            type_expr(p);
+        } else {
+            p.error(ErrorKind::ExpectedType);
+        }
     }
 
     if p.at(T!["{"]) {
@@ -667,13 +671,17 @@ fn const_expr(p: &mut Parser) {
             p.bump();
             p.finish_node(n, LITERAL);
         }
-        T!["{"] => { block(p); }
+        T!["{"] => {
+            block(p);
+        }
         IDENT | U_IDENT => {
             let n = p.start_node();
             p.bump();
             p.finish_node(n, NAME_REF);
         }
-        T!["#"] => { const_tuple(p); },
+        T!["#"] => {
+            const_tuple(p);
+        }
         _ => (),
     };
 }
@@ -689,9 +697,9 @@ fn const_tuple(p: &mut Parser) -> MarkClosed {
             if !p.at(T![")"]) {
                 p.expect(T![","]);
             }
-          } else {
-              break;
-          }
+        } else {
+            break;
+        }
     }
     p.expect(T![")"]);
     p.finish_node(m, CONSTANT_TUPLE)
@@ -708,9 +716,9 @@ fn tuple(p: &mut Parser) -> MarkClosed {
             if !p.at(T![")"]) {
                 p.expect(T![","]);
             }
-          } else {
-              break;
-          }
+        } else {
+            break;
+        }
     }
     p.expect(T![")"]);
     p.finish_node(m, TUPLE)
@@ -773,9 +781,9 @@ fn tuple_type(p: &mut Parser) {
             if !p.at(T![")"]) {
                 p.expect(T![","]);
             }
-          } else {
-              break;
-          }
+        } else {
+            break;
+        }
     }
     p.expect(T![")"]);
     p.finish_node(m, TUPLE_TYPE);
@@ -796,7 +804,7 @@ fn fn_type(p: &mut Parser) {
         } else {
             break;
         }
-    };
+    }
     p.finish_node(n, PARAM_TYPE_LIST);
 
     p.expect(T![")"]);
