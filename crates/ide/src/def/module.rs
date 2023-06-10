@@ -144,6 +144,17 @@ pub enum Visibility {
     Private,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Statement {
+    Let {
+        name: NameId, // Should be pattern 
+        // type_ann: Type
+        body: ExprId
+    },
+    Expr {
+        expr: ExprId
+    }
+}
 pub type ExprId = Idx<Expr>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -151,7 +162,7 @@ pub enum Expr {
     Missing,
     Literal(Literal),
     Block {
-        exprs: Vec<ExprId>
+        stmts: Vec<Statement>
     },
     Binary {
         left: ExprId,
@@ -179,7 +190,7 @@ pub struct Name {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum NameKind {
     Function,
-    LetIn,
+    Let,
     Param,
     PatField,
 }

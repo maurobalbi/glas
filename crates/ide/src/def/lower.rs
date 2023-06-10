@@ -1,12 +1,15 @@
 use super::{
     module::{
-        ExprId, Function, FunctionId, Label, ModuleData, ModuleSourceMap, ModuleStatementId, Name,
-        NameId, NameKind, Param, Expr,
+        Expr, ExprId, Function, FunctionId, Label, ModuleData, ModuleSourceMap, ModuleStatementId,
+        Name, NameId, NameKind, Param, Statement,
     },
     AstPtr, DefDatabase, FileId,
 };
 use smol_str::SmolStr;
-use syntax::{ast::{self, AstNode}, Parse};
+use syntax::{
+    ast::{self, StatementExpr},
+    Parse,
+};
 
 pub(super) fn lower(
     db: &dyn DefDatabase,
@@ -50,7 +53,7 @@ impl LowerCtx<'_> {
         id
     }
 
-   fn alloc_expr(&mut self, expr: Expr, ptr: AstPtr<ast::Expr>) -> ExprId {
+    fn alloc_expr(&mut self, expr: Expr, ptr: AstPtr<ast::Expr>) -> ExprId {
         let id = self.module_data.exprs.alloc(expr);
         self.source_map.expr_map.insert(ptr.clone(), id);
         self.source_map.expr_map_rev.insert(id, ptr);
@@ -122,7 +125,7 @@ impl LowerCtx<'_> {
             }
         };
 
-        let expr_id = self.lower_expr(fun.body()?);
+        let expr_id = self.lower_expr(ast::Expr::Block(fun.body()?));
 
         Some(
             self.alloc_module_statement(
@@ -148,11 +151,42 @@ impl LowerCtx<'_> {
                 self.alloc_expr(Expr::NameRef(name), ptr)
             }
             ast::Expr::Block(defs) => {
-                let expr_ids = defs.expressions().into_iter().map(|a| self.lower_expr(a)).collect();
-                self.alloc_expr(Expr::Block{exprs: expr_ids}, ptr)
+                let mut stmts = Vec::new();
+                
+                defs
+                    .expressions()
+                    .into_iter()
+                    .for_each(|a| self.lower_expr_stmt(&mut stmts, a));
+                self.alloc_expr(Expr::Block { stmts: stmts }, ptr)
             }
-            _ => self.alloc_expr(Expr::Missing, ptr)
+            _ => self.alloc_expr(Expr::Missing, ptr),
+        }
+    }
+
+    fn lower_expr_stmt(&mut self, statements: &mut Vec<Statement>, ast: ast::StatementExpr) {
+        match ast {
+            StatementExpr::StmtLet(stmt) => {
+                if let (Some(expr), Some(name)) = (stmt.body(), stmt.name()) {
+                    let expr_id = self.lower_expr(expr);
+                    if let Some(token) = name.token() {
+                        let name = self.alloc_name(
+                            token.text().into(),
+                            NameKind::Let,
+                            AstPtr::new(&name),
+                        );
+                        statements.push(Statement::Let {
+                            name,
+                            body: expr_id,
+                        });
+                    }
+                }
+            }
+            StatementExpr::StmtExpr(expr) => {
+                if let Some(expr) = expr.expr() {
+                    let expr_id = self.lower_expr(expr);
+                    statements.push(Statement::Expr { expr: expr_id});
+                }
+            }
         }
     }
 }
-

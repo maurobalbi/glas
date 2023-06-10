@@ -1,5 +1,5 @@
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{HashMap},
     iter, ops,
     sync::Arc,
 };
@@ -10,8 +10,10 @@ use smol_str::SmolStr;
 use crate::{DefDatabase, FileId};
 
 use super::{
-    hir::Function,
-    module::{ExprId, FunctionId, ModuleData, ModuleStatementId, Name, NameId, Visibility, Expr},
+    module::{
+        Expr, ExprId, FunctionId, ModuleData, ModuleStatementId, Name, NameId, Statement,
+        Visibility,
+    },
 };
 
 // #[derive(Debug, Default, PartialEq, Eq)]
@@ -99,7 +101,7 @@ impl ModuleScope {
         }
         None
     }
- 
+
     fn traverse_function(&mut self, function_id: FunctionId, module: &ModuleData, scope: ScopeId) {
         let mut defs = HashMap::default();
 
@@ -126,10 +128,30 @@ impl ModuleScope {
         self.scope_by_expr.insert(expr, scope);
 
         match &module[expr] {
-            Expr::Block { exprs } => {
-                exprs.iter().for_each(|e| self.traverse_expr(module, *e, scope));
+            Expr::Block { stmts } => {
+                self.traverse_stmts(module, stmts, scope);
             }
             _ => {}
+        }
+    }
+
+    fn traverse_stmts(&mut self, module: &ModuleData, stmts: &Vec<Statement>, scope: ScopeId) {
+        let mut scope = scope;
+        for stmt in stmts {
+            match stmt {
+                Statement::Let { name, body } => {
+                    let defs = [(module[*name].text.clone(), *name)].into_iter().collect();
+                    scope = self.scopes.alloc(ScopeData {
+                        parent: Some(scope),
+                        kind: ScopeKind::Definitions(defs),
+                    });
+                    tracing::info!("SCOPE: {:#?}", scope);
+                    self.traverse_expr(module, *body, scope)
+                }
+                Statement::Expr { expr, .. } => {
+                    self.traverse_expr(module, *expr, scope);
+                }
+            }
         }
     }
     //      self.scope_by_expr.insert(expr, scope);
@@ -296,9 +318,7 @@ impl NameResolution {
             })
             .collect::<HashMap<_, _>>();
 
-        Arc::new(Self {
-            resolve_map,
-        })
+        Arc::new(Self { resolve_map })
     }
 
     pub fn get(&self, expr: ExprId) -> Option<&ResolveResult> {
