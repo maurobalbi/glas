@@ -7,19 +7,18 @@ use crate::SyntaxKind::{self, *};
 use crate::{Error, ErrorKind, SyntaxNode};
 use rowan::{GreenNode, GreenNodeBuilder, TextRange, TextSize};
 
-const IDENTIFIER: TokenSet = TokenSet::new(&[IDENT, U_IDENT]);
-
 const STMT_RECOVERY: TokenSet =
     TokenSet::new(&[T!["fn"], T!["type"], T!["import"], T!["const"], T!["pub"]]);
 
-const PARAM_LIST_RECOVERY: TokenSet = TokenSet::new(&[T!["->"], T!["("]]).union(STMT_RECOVERY);
+const PARAM_LIST_RECOVERY: TokenSet = TokenSet::new(&[T!["->"], T!["{"]]).union(STMT_RECOVERY);
+const GENERIC_PARAM_LIST_RECOVERY: TokenSet = TokenSet::new(&[T!["{"]]).union(STMT_RECOVERY);
 const IMPORT_RECOVERY: TokenSet = TokenSet::new(&[T!["as"]]).union(STMT_RECOVERY);
 const CONST_RECOVERY: TokenSet = TokenSet::new(&[T!["="]]).union(STMT_RECOVERY);
 
+const VARIANT_FIELD_FIRST: TokenSet = TokenSet::new(&[U_IDENT, IDENT]);
+
 const TYPE_FIRST: TokenSet = TokenSet::new(&[T!["fn"], T!["#"], IDENT, U_IDENT]);
-
 const CONST_FIRST: TokenSet = TokenSet::new(&[IDENT, T!["#"], T!["["], INTEGER, FLOAT, STRING]);
-
 const EXPR_FIRST: TokenSet = TokenSet::new(&[
     U_IDENT,
     T!["use"],
@@ -329,10 +328,111 @@ fn statement(p: &mut Parser) {
                 import(p, m);
             }
         }
+        T!["type"] | T!["opaque"] => custom_type(p, m),
         _ => {
             p.bump_with_error(ErrorKind::ExpectedStatement);
             p.finish_node(m, ERROR);
         }
+    }
+}
+
+fn custom_type(p: &mut Parser, m: MarkOpened) {
+    let opaque = p.at(T!["opaque"]);
+    if opaque {
+        p.expect(T!["opaque"]);
+    }
+    p.expect(T!["type"]);
+    let t = p.start_node();
+    p.expect(U_IDENT);
+    p.finish_node(t, TYPE_NAME);
+    if p.at(T!["("]) {
+        // parse generic args
+        let pl = p.start_node();
+        while !p.at(T![")"]) && !p.eof() {
+            if p.at(IDENT) {
+                let g = p.start_node();
+                p.expect(IDENT);
+                p.finish_node(g, TYPE_NAME);
+                if !p.at(T![")"]) {
+                    p.expect(T![","]);
+                }
+            } else {
+                if p.at_any(GENERIC_PARAM_LIST_RECOVERY) {
+                    break;
+                }
+                p.bump_with_error(ErrorKind::ExpectedParameter)
+            }
+        }
+        p.finish_node(pl, GENERIC_PARAM_LIST);
+    }
+
+    match p.nth(0) {
+        T!["{"] => {
+            p.expect(T!["{"]);
+            while !p.at(T!["}"]) && !p.eof() {
+                if p.at(U_IDENT) {
+                    custom_type_variant(p);
+                    if !p.at(T!["}"]) {
+                        p.expect(T![","]);
+                    }
+                } else {
+                    if p.at_any(STMT_RECOVERY) {
+                        break;
+                    }
+                    p.bump_with_error(ErrorKind::ExpectedType);
+                }
+            }
+            p.expect(T!["}"]);
+            p.finish_node(m, CUSTOM_TYPE);
+        }
+        T!["="] => {
+            p.expect(T!["="]);
+            if p.at(U_IDENT) {
+                p.expect(U_IDENT); // ToDo: Generic aliases
+            }
+            p.finish_node(m, CUSTOM_TYPE_ALIAS);
+        }
+        _ => {
+            p.finish_node(m, ERROR);
+        }
+    }
+}
+
+fn custom_type_variant(p: &mut Parser) {
+    assert!(p.at(U_IDENT));
+    let m = p.start_node();
+    let n = p.start_node();
+    p.expect(U_IDENT);
+    p.finish_node(n, TYPE_NAME);
+    if p.at(T!["("]) {
+        p.expect(T!["("]);
+        while !p.at(T![")"]) && !p.eof() {
+            if p.at_any(VARIANT_FIELD_FIRST) {
+                type_variant_field(p);
+                if !p.at(T![")"]) {
+                    p.expect(T![","]);
+                }
+            } else {
+                if p.at_any(STMT_RECOVERY) {
+                    break;
+                }
+                p.bump_with_error(ErrorKind::ExpectedType);
+            }
+        }
+        p.expect(T![")"]);
+    }
+
+    p.finish_node(m, CUSTOM_TYPE_VARIANT);
+}
+
+fn type_variant_field(p: &mut Parser) {
+    match p.nth(0) {
+        U_IDENT => {
+            let m = p.start_node();
+            p.expect(U_IDENT);
+            p.finish_node(m, CUSTOM_TYPE_REF);
+        }
+        _ => {}
     }
 }
 
@@ -682,7 +782,7 @@ fn const_expr(p: &mut Parser) {
         T!["#"] => {
             const_tuple(p);
         }
-        _ => (),
+        _ => p.error(ErrorKind::ExpectedConstantExpression),
     };
 }
 
@@ -746,7 +846,7 @@ fn type_expr(p: &mut Parser) {
                             p.error(ErrorKind::ExpectedType);
                         }
                     }
-                    p.finish_node(m, CONSTRUCTOR_TYPE);
+                    p.finish_node(m, CUSTOM_TYPE_REF);
                 }
                 _ => {
                     p.expect(IDENT);
@@ -758,7 +858,7 @@ fn type_expr(p: &mut Parser) {
         U_IDENT => {
             let m = p.start_node();
             type_name(p);
-            p.finish_node(m, CONSTRUCTOR_TYPE);
+            p.finish_node(m, CUSTOM_TYPE_REF);
         }
         // tuple
         T!("#") => {

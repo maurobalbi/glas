@@ -84,9 +84,9 @@ def! {
 
     #[regex("[A-Z][0-9a-zA-Z]*")]
     U_IDENT ,
-    
+
     #[regex(r"([0-9][0-9_]*(\.[0-9_]+)([eE][+-]?[0-9_]+)?)")]
-	FLOAT,
+    FLOAT,
 
     #[regex("(0[xXbBoO])?[0-9_]+")]
     INTEGER,
@@ -263,7 +263,7 @@ def! {
     ERROR,
 
     EOF,
-    
+
     // Nodes
     ANNOTATION,
     STMT_EXPR,
@@ -292,6 +292,8 @@ def! {
     PATH,
     PARAM,
     PARAM_LIST,
+    GENERIC_PARAM_LIST,
+    CUSTOM_TYPE_VARIANT,
     TARGET,
     TARGET_GROUP,
     FN_TYPE,
@@ -300,7 +302,9 @@ def! {
     TUPLE_TYPE,
     HOLE_TYPE,
     UNQUALIFIED_IMPORT,
-    CONSTRUCTOR_TYPE,
+    CUSTOM_TYPE,
+    CUSTOM_TYPE_REF,
+    CUSTOM_TYPE_ALIAS,
     STATEMENTS,
     CONSTANT_TUPLE,
     CONSTANT_LIST,
@@ -325,10 +329,15 @@ impl SyntaxKind {
     pub fn is_trivia(self) -> bool {
         (Self::WHITESPACE_FIRST as u16..=Self::DOC_COMMENT_LAST as u16).contains(&(self as u16))
     }
-    
+
     #[inline(always)]
     pub fn is_stmt_doc(self) -> bool {
         self.is_whitespace() || self == Self::COMMENT_MODULE
+    }
+
+    #[inline(always)]
+    pub fn is_doc(self) -> bool {
+        (Self::DOC_COMMENT_FIRST as u16..=Self::DOC_COMMENT_LAST as u16).contains(&(self as u16))
     }
 
     #[inline(always)]
@@ -358,7 +367,7 @@ impl From<rowan::SyntaxKind> for SyntaxKind {
     }
 }
 
-#[test] 
+#[test]
 fn is_trivia() {
     assert!(SyntaxKind::COMMENT.is_trivia());
     assert!(SyntaxKind::COMMENT.is_whitespace());

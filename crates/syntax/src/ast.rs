@@ -226,6 +226,11 @@ asts! {
             })
         }
     },
+    CUSTOM_TYPE = CustomType {
+        pub fn is_opaque(&self) -> bool {
+            self.0.children_with_tokens().find(|t| t.kind() == T!["opaque"]).is_some()
+        }
+    },
     FUNCTION = Function {
         name: Name,
         param_list: ParamList,
@@ -332,7 +337,7 @@ asts! {
     CONSTANT_TUPLE = ConstantTuple {
         elements: [ConstantExpr],
     },
-    CONSTRUCTOR_TYPE = ConstructorType {
+    CUSTOM_TYPE_REF = ConstructorType {
       constructor: Name,
       module: ModuleName,
     },
@@ -394,7 +399,11 @@ mod tests {
     fn assert() {
         let e = crate::parse_file(
             "
-               if erlang {const a = 1} 
+                pub opaque type Bla {
+                    Bla()
+                }
+
+                fn bla() {}
             ",
         );
         for error in e.errors() {
@@ -449,6 +458,12 @@ mod tests {
         let mut iter = e.param_list().unwrap().params();
         iter.next().unwrap().syntax().should_eq("Int");
         iter.next().unwrap().syntax().should_eq("String");
+    }
+
+    #[test]
+    fn opaque_type() {
+        let e = parse::<CustomType>("pub opaque type Bla = Bla");
+        assert!(e.is_opaque());
     }
 
     #[test]

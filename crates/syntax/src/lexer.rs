@@ -91,12 +91,6 @@ mod tests {
             lex.chain(std::iter::once(SyntaxKind::SOURCE_FILE))
                 .collect::<Vec<SyntaxKind>>()
         );
-
-        #[cfg(feature = "comparison")]
-        {
-            use gleam_core::parse::lexer::make_tokenizer;
-            println!("{:?}", make_tokenizer(INPUT).collect::<Vec<_>>());
-        }
     }
 
     #[test]

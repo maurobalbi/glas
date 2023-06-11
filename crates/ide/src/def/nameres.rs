@@ -140,13 +140,13 @@ impl ModuleScope {
         for stmt in stmts {
             match stmt {
                 Statement::Let { name, body } => {
+                    tracing::info!("SCOPE: {:#?}", scope);
+                    self.traverse_expr(module, *body, scope);
                     let defs = [(module[*name].text.clone(), *name)].into_iter().collect();
                     scope = self.scopes.alloc(ScopeData {
                         parent: Some(scope),
                         kind: ScopeKind::Definitions(defs),
                     });
-                    tracing::info!("SCOPE: {:#?}", scope);
-                    self.traverse_expr(module, *body, scope)
                 }
                 Statement::Expr { expr, .. } => {
                     self.traverse_expr(module, *expr, scope);

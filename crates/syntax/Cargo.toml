@@ -8,7 +8,6 @@ edition = "2021"
 [dependencies]
 logos = "0.12.1"
 rowan = "0.15.10"
-gleam-core = { path = "../../../gleam/compiler-core", version = "0.30.0-dev", optional = true }
 tracing = { version = "0.1.37", features = ["release_max_level_info"] }
 
 [dependencies.tracing-subscriber]
@@ -31,5 +30,3 @@ expect-test = "1.4.1"
 name = "lexer_bench"
 harness = false
 
-[features]
-comparison = ["dep:gleam-core"]
