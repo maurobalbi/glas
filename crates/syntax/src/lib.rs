@@ -49,6 +49,7 @@ pub enum ErrorKind {
     ExpectedIdentifier,
     UnexpectedImport,
     ExpectedParameter,
+    OpaqueAlias,
 }
 
 impl fmt::Display for ErrorKind {
@@ -67,6 +68,7 @@ impl fmt::Display for ErrorKind {
             Self::ExpectedExpression => "Expected Expression",
             Self::UnexpectedImport => "Did not expect an import here",
             Self::ExpectedParameter => "Expected a parameter",
+            Self::OpaqueAlias => "Type alias can't be opaque"
         }
         .fmt(f)
     }

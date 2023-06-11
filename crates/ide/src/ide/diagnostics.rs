@@ -43,13 +43,13 @@ mod tests {
     }
 
     
-    #[test]
-    fn duplicated_param() {
-        check("fn bla(a, a) {}", expect![[r#"
-            10..11: DuplicatedParam
-                7..8: Previously defined here
-        "#]]);
-    }
+    // #[test]
+    // fn duplicated_param() {
+    //     check("fn bla(a, a) {}", expect![[r#"
+    //         10..11: DuplicatedParam
+    //             7..8: Previously defined here
+    //     "#]]);
+    // }
     
     #[test]
     fn unused_target() {

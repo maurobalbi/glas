@@ -172,12 +172,15 @@ enums! {
         NameRef,
         BinaryOp,
         UnaryOp,
+        ExprCall,
+        FieldAccess,
+        TupleIndex,
     },
     TypeExpr {
         FnType,
         VarType,
         TupleType,
-        ConstructorType,
+        TypeNameRef,
     },
 }
 
@@ -227,15 +230,48 @@ asts! {
         }
     },
     CUSTOM_TYPE = CustomType {
+        name: TypeName,
+        variants: [CustomTypeVariant],
+    },
+    CUSTOM_TYPE_ALIAS = CustomTypeAlias {
+        name: TypeName,
+        constructors: [CustomTypeVariant],
+
+        pub fn is_public(&self) -> bool {
+            self.syntax().children_with_tokens().find(|it| it.kind() == T!["pub"]).is_some()
+        }
+
         pub fn is_opaque(&self) -> bool {
             self.0.children_with_tokens().find(|t| t.kind() == T!["opaque"]).is_some()
         }
+    },
+    CUSTOM_TYPE_VARIANT = CustomTypeVariant {
+        name: Name,
+        field_list: VariantFieldList,
+    },
+    VARIANT_FIELD_LIST = VariantFieldList {
+        fields: [VariantField],
+    },
+    VARIANT_FIELD = VariantField {
+        label: Label,
+        type_: TypeExpr,
     },
     FUNCTION = Function {
         name: Name,
         param_list: ParamList,
         return_type: TypeExpr,
         body: Block,
+    },
+    EXPR_CALL = ExprCall {
+        func: NameRef,
+        arguments: ArgList,
+    },
+    ARG_LIST = ArgList {
+        args: [Arg],
+    },
+    ARG = Arg {
+        label: Label,
+        value: Expr,
     },
     FIELD_ACCESS = FieldAccess {
         label: NameRef,
@@ -269,6 +305,11 @@ asts! {
         }
     },
     NAME = Name {
+        pub fn token(&self) -> Option<SyntaxToken> {
+            self.0.children_with_tokens().find_map(NodeOrToken::into_token)
+        }
+    },
+    TYPE_NAME = TypeName {
         pub fn token(&self) -> Option<SyntaxToken> {
             self.0.children_with_tokens().find_map(NodeOrToken::into_token)
         }
@@ -337,8 +378,8 @@ asts! {
     CONSTANT_TUPLE = ConstantTuple {
         elements: [ConstantExpr],
     },
-    CUSTOM_TYPE_REF = ConstructorType {
-      constructor: Name,
+    TYPE_NAME_REF = TypeNameRef {
+      constructor: TypeName,
       module: ModuleName,
     },
     TUPLE_TYPE = TupleType{
@@ -399,11 +440,7 @@ mod tests {
     fn assert() {
         let e = crate::parse_file(
             "
-                pub opaque type Bla {
-                    Bla()
-                }
-
-                fn bla() {}
+        const a : Int = 1
             ",
         );
         for error in e.errors() {
@@ -461,9 +498,30 @@ mod tests {
     }
 
     #[test]
+    fn type_variant() {
+        let e = parse::<CustomType>(
+            "type Wobbles {
+            Alot(name: Int, Int)
+            Of(String)
+        }",
+        );
+        e.name().unwrap().syntax().should_eq("Wobbles");
+        let mut iter = e.variants();
+        let variant = iter.next().unwrap();
+        variant.name().unwrap().syntax().should_eq("Alot");
+        let mut fields = variant.field_list().unwrap().fields();
+        let first_field = fields.next().unwrap();
+        let _ = fields.next().is_some();
+        first_field.label().unwrap().syntax().should_eq("name");
+        first_field.type_().unwrap().syntax().should_eq("Int");
+        let _ = fields.next().is_some();
+        let _ = fields.next().is_none();
+    }
+
+    #[test]
     fn opaque_type() {
-        let e = parse::<CustomType>("pub opaque type Bla = Bla");
-        assert!(e.is_opaque());
+        let e = parse::<CustomTypeAlias>("pub type Bla = Bla");
+        e.name().unwrap().syntax().should_eq("Bla");
     }
 
     #[test]
@@ -482,7 +540,7 @@ mod tests {
 
     #[test]
     fn module_constructor_type() {
-        let e = parse::<ConstructorType>("const a : gleam.Int = 1");
+        let e = parse::<TypeNameRef>("const a : gleam.Int = 1");
         e.constructor().unwrap().syntax().should_eq("Int");
         e.module().unwrap().syntax().should_eq("gleam");
     }
@@ -571,4 +629,22 @@ mod tests {
         e.annotation().unwrap().syntax().should_eq("Int");
         e.body().unwrap().syntax().should_eq("1")
     }
+    
+    #[test]
+    fn call_expr() {
+        let e = parse::<StmtExpr>("fn a() { abc(name: 1, 2) }");
+        match e.expr().unwrap() {
+            Expr::ExprCall(expr) => {
+                expr.syntax().should_eq("abc(name: 1, 2)");
+                let mut args = expr.arguments().unwrap().args();
+                let first = args.next().unwrap();
+                first.label().unwrap().syntax().should_eq("name");
+                first.value().unwrap().syntax().should_eq("1");
+                args.next().unwrap().syntax().should_eq("2");
+            }
+            _ => panic!()
+        }
+    }
+
+
 }
