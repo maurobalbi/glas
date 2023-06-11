@@ -169,6 +169,10 @@ pub enum Expr {
         right: ExprId,
         op: BinaryOpKind,
     },
+    Call {
+        func: ExprId,
+        args: Vec<ExprId>,
+    },
     NameRef(SmolStr),
 }
 

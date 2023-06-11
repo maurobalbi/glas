@@ -129,13 +129,16 @@ impl ModuleScope {
 
         match &module[expr] {
             Expr::Block { stmts } => {
-                self.traverse_stmts(module, stmts, scope);
+                self.traverse_expr_stmts(module, stmts, scope);
+            }
+            Expr::Call { func, args } => {
+                self.traverse_expr(module, *func, scope);
             }
             _ => {}
         }
     }
 
-    fn traverse_stmts(&mut self, module: &ModuleData, stmts: &Vec<Statement>, scope: ScopeId) {
+    fn traverse_expr_stmts(&mut self, module: &ModuleData, stmts: &Vec<Statement>, scope: ScopeId) {
         let mut scope = scope;
         for stmt in stmts {
             match stmt {

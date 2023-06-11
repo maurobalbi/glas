@@ -263,7 +263,7 @@ asts! {
         body: Block,
     },
     EXPR_CALL = ExprCall {
-        func: NameRef,
+        func: Expr,
         arguments: ArgList,
     },
     ARG_LIST = ArgList {
@@ -440,7 +440,9 @@ mod tests {
     fn assert() {
         let e = crate::parse_file(
             "
-        const a : Int = 1
+                
+
+                fn main(a, b,) {abc(abc(a,b,)}
             ",
         );
         for error in e.errors() {
@@ -636,6 +638,7 @@ mod tests {
         match e.expr().unwrap() {
             Expr::ExprCall(expr) => {
                 expr.syntax().should_eq("abc(name: 1, 2)");
+                expr.func().unwrap().syntax().should_eq("abc");
                 let mut args = expr.arguments().unwrap().args();
                 let first = args.next().unwrap();
                 first.label().unwrap().syntax().should_eq("name");

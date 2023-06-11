@@ -159,8 +159,21 @@ impl LowerCtx<'_> {
                     .for_each(|a| self.lower_expr_stmt(&mut stmts, a));
                 self.alloc_expr(Expr::Block { stmts: stmts }, ptr)
             }
+            ast::Expr::ExprCall(call) => {
+                let func = self.lower_expr_opt(call.func());
+
+                self.alloc_expr(Expr::Call {func, args: Vec::new()}, ptr)
+            }
             _ => self.alloc_expr(Expr::Missing, ptr),
         }
+    }
+    
+    fn lower_expr_opt(&mut self, expr: Option<ast::Expr>) -> ExprId {
+        if let Some(expr) = expr {
+            return self.lower_expr(expr);
+        }
+        // Synthetic syntax has no coresponding text.
+        self.module_data.exprs.alloc(Expr::Missing)
     }
 
     fn lower_expr_stmt(&mut self, statements: &mut Vec<Statement>, ast: ast::StatementExpr) {

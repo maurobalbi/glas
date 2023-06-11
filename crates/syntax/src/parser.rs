@@ -7,11 +7,18 @@ use crate::SyntaxKind::{self, *};
 use crate::{Error, ErrorKind, SyntaxNode};
 use rowan::{GreenNode, GreenNodeBuilder, TextRange, TextSize};
 
-const STMT_RECOVERY: TokenSet =
-    TokenSet::new(&[T!["fn"], T!["type"], T!["import"], T!["const"], T!["pub"], T!["if"]]);
+const STMT_RECOVERY: TokenSet = TokenSet::new(&[
+    T!["fn"],
+    T!["type"],
+    T!["import"],
+    T!["const"],
+    T!["pub"],
+    T!["if"],
+]);
 
 const PARAM_LIST_RECOVERY: TokenSet = TokenSet::new(&[T!["->"], T!["{"]]).union(STMT_RECOVERY);
-const GENERIC_PARAM_LIST_RECOVERY: TokenSet = TokenSet::new(&[T!["{"]]).union(STMT_RECOVERY);
+const GENERIC_PARAM_LIST_RECOVERY: TokenSet =
+    TokenSet::new(&[T!["{"], T!["="]]).union(STMT_RECOVERY);
 const IMPORT_RECOVERY: TokenSet = TokenSet::new(&[T!["as"]]).union(STMT_RECOVERY);
 const CONST_RECOVERY: TokenSet = TokenSet::new(&[T!["="]]).union(STMT_RECOVERY);
 
@@ -346,13 +353,18 @@ fn custom_type(p: &mut Parser, m: MarkOpened) {
     if p.at(T!["("]) {
         // parse generic args
         let pl = p.start_node();
+        p.expect(T!["("]);
         while !p.at(T![")"]) && !p.eof() {
             if p.at(IDENT) {
                 let g = p.start_node();
                 p.expect(IDENT);
                 p.finish_node(g, TYPE_NAME);
                 if !p.at(T![")"]) {
-                    p.expect(T![","]);
+                    if p.nth(1) == T![")"] {
+                        p.error(ErrorKind::TrailingComma);
+                    } else {
+                        p.expect(T![","]);
+                    }
                 }
             } else {
                 if p.at_any(GENERIC_PARAM_LIST_RECOVERY) {
@@ -361,6 +373,7 @@ fn custom_type(p: &mut Parser, m: MarkOpened) {
                 p.bump_with_error(ErrorKind::ExpectedParameter)
             }
         }
+        p.expect(T![")"]);
         p.finish_node(pl, GENERIC_PARAM_LIST);
     }
 
@@ -385,7 +398,7 @@ fn custom_type(p: &mut Parser, m: MarkOpened) {
                 p.error(ErrorKind::OpaqueAlias)
             }
             p.expect(T!["="]);
-            if p.at_any(TYPE_FIRST) {
+            if p.at_any(TYPE_FIRST) && p.nth(1) != IDENT {
                 type_expr(p);
             } else {
                 p.error(ErrorKind::ExpectedType)
@@ -393,6 +406,7 @@ fn custom_type(p: &mut Parser, m: MarkOpened) {
             p.finish_node(m, CUSTOM_TYPE_ALIAS);
         }
         _ => {
+            p.error(ErrorKind::ExpectedType);
             p.finish_node(m, ERROR);
         }
     }
@@ -411,7 +425,11 @@ fn custom_type_variant(p: &mut Parser) {
             if p.at_any(VARIANT_FIELD_FIRST) {
                 type_variant_field(p);
                 if !p.at(T![")"]) {
-                    p.expect(T![","]);
+                     if p.nth(1) == T![")"] {
+                        p.error(ErrorKind::TrailingComma);
+                    } else {
+                        p.expect(T![","]);
+                    }
                 }
             } else {
                 if p.at_any(STMT_RECOVERY) {
@@ -451,7 +469,7 @@ fn function(p: &mut Parser, m: MarkOpened) {
 
     // UX: when user is typing '-' error could be nicer
     if p.eat(T!["->"]) {
-        if p.at_any(TYPE_FIRST) {
+        if p.at_any(TYPE_FIRST) && p.nth(1) != IDENT {
             type_expr(p);
         } else {
             p.error(ErrorKind::ExpectedType);
@@ -501,7 +519,11 @@ fn param(p: &mut Parser) {
         type_expr(p);
     }
     if !p.at(T![")"]) {
-        p.expect(T![","]);
+        if p.nth(1) == T![")"] {
+            p.error(ErrorKind::TrailingComma);
+        } else {
+            p.expect(T![","]);
+        }
     }
 
     p.finish_node(m, PARAM);
@@ -577,13 +599,13 @@ fn expr_bp(p: &mut Parser, min_bp: u8) {
                         let m = p.start_node_before(lhs);
                         p.bump();
                         lhs = p.finish_node(m, FIELD_ACCESS);
-                    },
+                    }
                     INTEGER => {
                         let m = p.start_node_before(lhs);
                         p.bump();
                         lhs = p.finish_node(m, TUPLE_INDEX);
                     }
-                    _ => break
+                    _ => break,
                 }
             }
             _ => break,
@@ -661,7 +683,11 @@ fn arg(p: &mut Parser) {
     }
     expr(p);
     if !p.at(T![")"]) {
-        p.expect(T![","]);
+        if p.nth(1) == T![")"] {
+            p.error(ErrorKind::TrailingComma);
+        } else {
+            p.expect(T![","]);
+        }
     }
     p.finish_node(m, ARG);
 }
@@ -743,7 +769,7 @@ fn as_type_name(p: &mut Parser) {
         p.expect(T!["as"]);
         let n = p.start_node();
         p.expect(U_IDENT);
-        p.finish_node(n, TYPE_NAME_REF);
+        p.finish_node(n, TYPE_NAME);
     }
     if !p.at(T!["}"]) {
         p.expect(T![","]);
@@ -756,6 +782,13 @@ fn name(p: &mut Parser) {
     let m = p.start_node();
     p.expect(IDENT);
     p.finish_node(m, NAME);
+}
+
+fn name_ref(p: &mut Parser) {
+    assert!(p.at(IDENT));
+    let m = p.start_node();
+    p.expect(IDENT);
+    p.finish_node(m, NAME_REF);
 }
 
 fn type_name(p: &mut Parser) -> MarkClosed {
@@ -818,7 +851,11 @@ fn const_tuple(p: &mut Parser) -> MarkClosed {
         if p.at_any(CONST_FIRST) {
             const_expr(p);
             if !p.at(T![")"]) {
-                p.expect(T![","]);
+                if p.nth(1) == T![")"] {
+                    p.error(ErrorKind::TrailingComma);
+                } else {
+                    p.expect(T![","]);
+                }
             }
         } else {
             break;
@@ -837,7 +874,11 @@ fn tuple(p: &mut Parser) -> MarkClosed {
         if p.at_any(EXPR_FIRST) {
             expr(p);
             if !p.at(T![")"]) {
-                p.expect(T![","]);
+                if p.nth(1) == T![")"] {
+                    p.error(ErrorKind::TrailingComma);
+                } else {
+                    p.expect(T![","]);
+                }
             }
         } else {
             break;
@@ -858,12 +899,6 @@ fn type_expr(p: &mut Parser) {
                 let m = p.start_node_before(lhs);
                 type_arg_list(p);
                 lhs = p.finish_node(m, TYPE_APPLICATION);
-            },
-            T!["."] => {
-                p.expect(T!["."]);
-                let m = p.start_node_before(lhs);
-                type_expr(p);
-                lhs = p.finish_node(m, QUALIFIED_TYPE_REF);
             }
             _ => {
                 break;
@@ -878,38 +913,51 @@ fn type_arg_list(p: &mut Parser) {
 
     p.expect(T!["("]);
     while !p.at(T![")"]) && !p.eof() {
-        if p.at_any(TYPE_FIRST) {
+        // Lookahead to not continue parsing if a function definition follows.
+        // e.g. type Wobble =
+        //      fn main() {}
+        if p.at_any(TYPE_FIRST) && p.nth(1) != IDENT {
             type_arg(p);
         } else {
             break;
         }
     }
-
     p.expect(T![")"]);
+
     p.finish_node(m, TYPE_ARG_LIST);
 }
 
 fn type_arg(p: &mut Parser) {
     let m = p.start_node();
-    if !p.at_any(TYPE_FIRST) {
+    if !p.at_any(TYPE_FIRST) && p.nth(1) != IDENT {
         p.error(ErrorKind::ExpectedExpression);
     }
     type_expr(p);
     if !p.at(T![")"]) {
-        p.expect(T![","]);
+        if p.nth(1) == T![")"] {
+            p.error(ErrorKind::TrailingComma);
+        } else {
+            p.expect(T![","]);
+        }
     }
     p.finish_node(m, TYPE_ARG);
 }
 
 fn type_expr_unit(p: &mut Parser) -> Option<MarkClosed> {
     match p.nth(0) {
-        // function
         T!["fn"] => fn_type(p),
         // type variable or constructor type
         IDENT => {
             let m = p.start_node();
+            let n = p.start_node();
             p.expect(IDENT);
-            return Some(p.finish_node(m, MODULE_NAME));
+            p.finish_node(n, MODULE_NAME);
+            if !p.at(T!["."]) {
+                return Some(p.finish_node(m, TYPE_NAME_REF));
+            }
+            p.expect(T!["."]);
+            p.expect(U_IDENT);
+            return Some(p.finish_node(m, TYPE_NAME_REF));
         }
         // constructor
         U_IDENT => {
@@ -932,10 +980,14 @@ fn tuple_type(p: &mut Parser) {
     p.expect(T!["#"]);
     p.expect(T!["("]);
     while !p.eof() && !p.at(T![")"]) {
-        if p.at_any(TYPE_FIRST) {
+        if p.at_any(TYPE_FIRST) && p.nth(1) != IDENT {
             type_expr(p);
             if !p.at(T![")"]) {
-                p.expect(T![","]);
+                if p.nth(1) == T![")"] {
+                    p.error(ErrorKind::TrailingComma);
+                } else {
+                    p.expect(T![","]);
+                }
             }
         } else {
             break;
@@ -952,10 +1004,14 @@ fn fn_type(p: &mut Parser) {
     let n = p.start_node();
     p.expect(T!["("]);
     while !p.at(T![")"]) && !p.eof() {
-        if p.at_any(TYPE_FIRST) {
+        if p.at_any(TYPE_FIRST) && p.nth(1) != IDENT {
             type_expr(p);
             if !p.at(T![")"]) {
-                p.expect(T![","]);
+                if p.nth(1) == T![")"] {
+                    p.error(ErrorKind::TrailingComma);
+                } else {
+                    p.expect(T![","]);
+                }
             }
         } else {
             break;
@@ -965,7 +1021,7 @@ fn fn_type(p: &mut Parser) {
 
     p.expect(T![")"]);
     p.expect(T!["->"]);
-    if p.at_any(TYPE_FIRST) {
+    if p.at_any(TYPE_FIRST) && p.nth(1) != IDENT {
         type_expr(p);
     } else {
         p.error(ErrorKind::ExpectedType);

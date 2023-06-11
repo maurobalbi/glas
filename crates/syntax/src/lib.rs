@@ -50,6 +50,7 @@ pub enum ErrorKind {
     UnexpectedImport,
     ExpectedParameter,
     OpaqueAlias,
+    TrailingComma,
 }
 
 impl fmt::Display for ErrorKind {
@@ -68,7 +69,8 @@ impl fmt::Display for ErrorKind {
             Self::ExpectedExpression => "Expected Expression",
             Self::UnexpectedImport => "Did not expect an import here",
             Self::ExpectedParameter => "Expected a parameter",
-            Self::OpaqueAlias => "Type alias can't be opaque"
+            Self::OpaqueAlias => "Type alias can't be opaque",
+            Self::TrailingComma => "Trailing comma is not allowed",
         }
         .fmt(f)
     }
