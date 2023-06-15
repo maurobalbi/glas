@@ -1,7 +1,6 @@
 use anyhow::Context;
 use argh::FromArgs;
 use ide::AnalysisHost;
-use lsp_server::Connection;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::{env, fs, io, process};
@@ -20,6 +19,10 @@ struct Args {
     /// print the version and exit
     #[argh(switch)]
     version: bool,
+    /// use stdin and stdout for the language server. This is the default but it suppress
+    /// warnings when either stdin or stdout is tty.
+    #[argh(switch)]
+    stdio: bool,
     #[argh(subcommand)]
     subcommand: Option<Subcommand>,
 }
@@ -51,7 +54,7 @@ fn main() {
     let args = argh::from_env::<Args>();
     if args.version {
         let release = option_env!("CFG_RELEASE").unwrap_or("unknown");
-        println!("nil {release}");
+        println!("gleam {release}");
         return;
     }
 
@@ -63,12 +66,25 @@ fn main() {
 
     setup_logger();
 
-    let (conn, io_threads) = Connection::stdio();
-    match gleamalyzer::main_loop(conn).and_then(|()| io_threads.join().map_err(Into::into)) {
+    if !args.stdio && (atty::is(atty::Stream::Stdin) || atty::is(atty::Stream::Stdout)) {
+        // TODO: Make this a hard error.
+        eprintln!(
+            "\
+            WARNING: You are NOT supposed to run the language server in terminal. This will be a \
+            hard error in the future. Please configure it in your editor instead.\
+            "
+        );
+    }
+
+    let ret = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("Failed to spawn tokio runtime")
+        .block_on(gleamalyzer::run_server_stdio());
+    match ret {
         Ok(()) => {}
         Err(err) => {
-            tracing::error!("Unexpected error: {}", err);
-            eprintln!("{}", err);
+            tracing::error!("Unexpected error: {err:#}");
             process::exit(101);
         }
     }

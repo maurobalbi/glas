@@ -4,6 +4,7 @@ use ide::{Change, FileId, FileSet, PackageGraph, PackageData, SourceRoot, Packag
 use lsp_types::Url;
 use std::collections::HashMap;
 use std::sync::Arc;
+use slab::Slab;
 use std::{fmt, mem};
 use text_size::{TextRange, TextSize};
 
@@ -11,8 +12,7 @@ use text_size::{TextRange, TextSize};
 /// filesystem paths and `FileId`s.
 /// The query system is built on `FileId`'s.
 pub struct Vfs {
-    // FIXME: Currently this list is append-only.
-    files: Vec<(Arc<str>, Arc<LineMap>)>,
+    files: Slab<(Arc<str>, Arc<LineMap>)>,
     local_file_set: FileSet,
     root_changed: bool,
     change: Change,
@@ -31,7 +31,7 @@ impl fmt::Debug for Vfs {
 impl Vfs {
     pub fn new() -> Self {
         Self {
-            files: Vec::new(),
+            files: Slab::new(),
             local_file_set: FileSet::default(),
             root_changed: false,
             change: Change::default(),
@@ -52,15 +52,15 @@ impl Vfs {
             Some(file) => {
                 self.files[file.0 as usize] = (text.clone(), line_map);
                 self.change.change_file(file, text);
-                self.local_file_set.remove_file(file);
                 self.root_changed = true;
                 file
             }
             None => {
-                let file = FileId(u32::try_from(self.files.len()).expect("Length overflow"));
+                let next_entry = self.files.vacant_entry();
+                let file = FileId(next_entry.key().try_into().expect("Length overflow"));
                 self.local_file_set.insert(file, path);
                 self.root_changed = true;
-                self.files.push((text.clone(), line_map));
+                next_entry.insert((text.clone(), line_map));
                 self.change.change_file(file, text);
                 file
             }
@@ -96,6 +96,16 @@ impl Vfs {
         log::trace!("File {:?} content changed: {:?}", file, new_text);
         self.files[file.0 as usize] = (new_text.clone(), Arc::new(line_map));
         self.change.change_file(file, new_text);
+        Ok(())
+    }
+
+    /// Remove a file from Vfs, reflecting the deletion of a file in real FS.
+    pub fn remove_uri(&mut self, uri: &Url) -> Result<()> {
+        let file = self.file_for_uri(uri)?;
+        self.local_file_set.remove_file(file);
+        self.files.remove(file.0 as usize);
+        // We cannot free a `FileId` from database. The best we can do is setting it to empty.
+        self.change.change_file(file, "".into());
         Ok(())
     }
 

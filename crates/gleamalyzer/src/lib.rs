@@ -2,17 +2,25 @@ mod capabilities;
 mod config;
 mod convert;
 mod handler;
+mod meter;
 mod server;
 mod vfs;
 
 use anyhow::Result;
+use async_lsp::client_monitor::ClientProcessMonitorLayer;
+use async_lsp::concurrency::ConcurrencyLayer;
+use async_lsp::server::LifecycleLayer;
+use async_lsp::stdio::{PipeStdin, PipeStdout};
+use async_lsp::tracing::TracingLayer;
 use ide::VfsPath;
-use lsp_server::{Connection, ErrorCode};
-use lsp_types::{InitializeParams, Url};
-use std::fmt;
+use lsp_types::{MessageType, ShowMessageParams, Url};
+use tokio::io::BufReader;
+use tower::ServiceBuilder;
 
 pub(crate) use server::{Server, StateSnapshot};
 pub(crate) use vfs::{LineMap, Vfs};
+
+use crate::meter::MeterLayer;
 
 /// The file length limit. Files larger than this will be rejected from all interactions.
 /// The hard limit is `u32::MAX` due to following conditions.
@@ -24,21 +32,6 @@ pub(crate) use vfs::{LineMap, Vfs};
 ///
 /// If you have any real world usages for files larger than this, please file an issue.
 pub const MAX_FILE_LEN: usize = 128 << 20;
-
-#[derive(Debug)]
-pub(crate) struct LspError {
-    code: ErrorCode,
-    message: String,
-}
-
-impl fmt::Display for LspError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // NB. This will be displayed in the editor.
-        self.message.fmt(f)
-    }
-}
-
-impl std::error::Error for LspError {}
 
 pub(crate) trait UrlExt: Sized {
     fn to_vfs_path(&self) -> VfsPath;
@@ -64,26 +57,45 @@ impl UrlExt for Url {
         }
     }
 }
-
-pub fn main_loop(conn: Connection) -> Result<()> {
-    let init_params =
-        conn.initialize(serde_json::to_value(capabilities::server_capabilities()).unwrap())?;
-    tracing::info!("Init params: {}", init_params);
-
-    let init_params = serde_json::from_value::<InitializeParams>(init_params)?;
-
-    let root_path = match init_params
-        .root_uri
-        .as_ref()
-        .and_then(|uri| uri.to_file_path().ok())
-    {
-        Some(path) => path,
-        None => std::env::current_dir()?,
+pub async fn run_server_stdio() -> Result<()> {
+    let concurrency = match std::thread::available_parallelism() {
+        Ok(n) => n,
+        Err(err) => {
+            tracing::error!("Failed to get available parallelism: {err}");
+            1.try_into().expect("1 is not 0")
+        }
     };
+    tracing::info!("Max concurrent requests: {concurrency}");
 
-    let mut server = Server::new(conn.sender.clone(), root_path);
-    server.run(conn.receiver, init_params)?;
+    let mut init_messages = Vec::new();
+    if let Some(err) = PipeStdin::lock().err().or_else(|| PipeStdout::lock().err()) {
+        init_messages.push(ShowMessageParams {
+            typ: MessageType::WARNING,
+            message: format!(
+                "\
+                Invalid stdin/stdout fd mode: {err}. \n\
+                This will become a hard error in the future. \n\
+                Please file an issue with your editor configurations: \n\
+                https://github.com/oxalica/nil/issues
+                ",
+            ),
+        });
+    }
 
-    tracing::info!("Leaving main loop");
-    Ok(())
+    let (frontend, _) = async_lsp::Frontend::new_server(|client| {
+        ServiceBuilder::new()
+            .layer(TracingLayer::default())
+            .layer(MeterLayer::default())
+            .layer(LifecycleLayer::default())
+            // TODO: Use `CatchUnwindLayer`.
+            .layer(ConcurrencyLayer::new(concurrency))
+            .layer(ClientProcessMonitorLayer::new(client.clone()))
+            .service(Server::new_router(client, init_messages))
+    });
+
+    let input = BufReader::new(tokio::io::stdin());
+    let output = tokio::io::stdout();
+    Ok(frontend.run(input, output).await?)
 }
+
+

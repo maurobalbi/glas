@@ -8,13 +8,17 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.68"
 argh = "0.1.10"
+atty = "0.2.14"
 codespan-reporting = "0.11.1"
 crossbeam-channel="0.5.6"
 ide = { path = "../ide" }
 log = "0.4.17"
-lsp-server = "0.7.0"
+async-lsp = "0.0.4"
 lsp-types = "0.94.0"
 serde_json = "1.0.82"
+slab = "0.4.8"
+tokio = { version = "1.27.0", features = ["io-std", "macros", "rt", "sync", "time"] }
+tower = "0.4.13"
 text-size = "1.1.0"
 tracing = { version = "0.1.37", features = ["release_max_level_info"] }
 
@@ -29,5 +33,5 @@ features = [
     "tracing-log",
 ]
 
-[target.'cfg(target_os = "linux")'.dependencies]
-libc = "0.2.137"
+[target.'cfg(unix)'.dependencies]
+rustix = { version = "0.37.17", default-features = false, features = ["fs"] }

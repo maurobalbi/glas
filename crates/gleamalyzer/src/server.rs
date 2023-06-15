@@ -1,45 +1,47 @@
+use crate::capabilities::{negotiate_capabilities, NegotiatedCapabilities};
 use crate::config::{Config, CONFIG_KEY};
-use crate::{convert, handler, LspError, UrlExt, Vfs, MAX_FILE_LEN};
-use anyhow::{anyhow, bail, Context, Result};
-use crossbeam_channel::{Receiver, Sender};
-use ide::{Analysis, AnalysisHost, Cancelled, PackageData, VfsPath};
-use lsp_server::{ErrorCode, Message, Notification, ReqQueue, Request, RequestId, Response};
-use lsp_types::notification::Notification as _;
+use crate::{convert, handler, UrlExt, Vfs, MAX_FILE_LEN};
+use anyhow::{bail, ensure, Context, Result};
+use async_lsp::router::Router;
+use async_lsp::{ClientSocket, ErrorCode, LanguageClient, ResponseError};
+use ide::{Analysis, AnalysisHost, Cancelled, VfsPath};
+use lsp_types::notification::Notification;
+use lsp_types::request::{self as req, Request};
 use lsp_types::{
-    notification as notif, request as req, ConfigurationItem, ConfigurationParams, Diagnostic,
-    InitializeParams, MessageType, NumberOrString, PublishDiagnosticsParams, ShowMessageParams,
-    Url,
+    notification as notif, ConfigurationItem, ConfigurationParams, DidChangeConfigurationParams,
+    DidChangeTextDocumentParams, DidChangeWatchedFilesParams,
+    DidChangeWatchedFilesRegistrationOptions, DidCloseTextDocumentParams,
+    DidOpenTextDocumentParams, FileChangeType, FileEvent, FileSystemWatcher, GlobPattern,
+    InitializeParams, InitializeResult, InitializedParams, MessageActionItem,
+    MessageActionItemProperty, MessageType, NumberOrString, OneOf, ProgressParams,
+    ProgressParamsValue, PublishDiagnosticsParams, Registration, RegistrationParams,
+    RelativePattern, ServerInfo, ShowMessageParams, ShowMessageRequestParams, Url,
+    WorkDoneProgress, WorkDoneProgressBegin, WorkDoneProgressCreateParams, WorkDoneProgressEnd,
+    WorkDoneProgressReport,
 };
 use std::backtrace::Backtrace;
+use std::borrow::BorrowMut;
 use std::cell::Cell;
 use std::collections::HashMap;
-use std::io::ErrorKind;
+use std::future::{ready, Future};
+use std::io::{ErrorKind, Read};
+use std::ops::ControlFlow;
 use std::panic::UnwindSafe;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use std::pin::pin;
 use std::sync::{Arc, Once, RwLock};
-use std::{fs, panic, thread};
+use std::time::Duration;
+use std::{fmt, panic};
+use tokio::sync::watch;
+use tokio::task;
+use tokio::task::{AbortHandle, JoinHandle};
 
-pub const GLEAM_FILE: &str = "gleam.toml";
+type NotifyResult = ControlFlow<async_lsp::Result<()>>;
 
-type ReqHandler = Box<dyn FnOnce(&mut Server, Response) + 'static>;
+struct UpdateConfigEvent(serde_json::Value);
 
-type Task = Box<dyn FnOnce() -> Event + Send + 'static>;
-
-enum Event {
-    Response(Response),
-    Diagnostics {
-        uri: Url,
-        version: u64,
-        diagnostics: Vec<Diagnostic>,
-    },
-    ClientExited,
-    LoadModule(Result<LoadModuleResult>),
-}
-
-struct LoadModuleResult {
-    module_info: PackageData,
-    missing_inputs: bool,
-}
+const LSP_SERVER_NAME: &str = "gleamalyzer";
+pub const GLEAM_TOML: &str = "gleam.toml";
 
 pub struct Server {
     // States.
@@ -48,419 +50,362 @@ pub struct Server {
     vfs: Arc<RwLock<Vfs>>,
     opened_files: HashMap<Url, FileData>,
     config: Arc<Config>,
-    is_shutdown: bool,
-    /// Monotonic version counter for diagnostics calculation ordering.
-    version_counter: u64,
 
-    // Message passing.
-    req_queue: ReqQueue<(), ReqHandler>,
-    lsp_tx: Sender<Message>,
-    task_tx: Sender<Task>,
-    event_tx: Sender<Event>,
-    event_rx: Receiver<Event>,
+    client: ClientSocket,
+    capabilities: NegotiatedCapabilities,
+    /// Messages to show once initialized.
+    init_messages: Vec<ShowMessageParams>,
 }
 
 #[derive(Debug, Default)]
 struct FileData {
-    diagnostics_version: u64,
-    diagnostics: Vec<Diagnostic>,
+    diagnostics_task: Option<AbortHandle>,
 }
 
 impl Server {
-    pub fn new(lsp_tx: Sender<Message>, root_path: PathBuf) -> Self {
-        let (task_tx, task_rx) = crossbeam_channel::unbounded();
-        let (event_tx, event_rx) = crossbeam_channel::unbounded();
-        let worker_cnt = thread::available_parallelism().map_or(1, |n| n.get());
-        for _ in 0..worker_cnt {
-            let task_rx = task_rx.clone();
-            let event_tx = event_tx.clone();
-            thread::Builder::new()
-                .name("Worker".into())
-                .spawn(move || Self::worker(task_rx, event_tx))
-                .expect("Failed to spawn worker threads");
-        }
-        tracing::info!("Started {worker_cnt} workers");
+    pub fn new_router(client: ClientSocket, init_messages: Vec<ShowMessageParams>) -> Router<Self> {
+        let this = Self::new(client, init_messages);
+        let mut router = Router::new(this);
+        router
+            //// Lifecycle ////
+            .request::<req::Initialize, _>(Self::on_initialize)
+            .notification::<notif::Initialized>(Self::on_initialized)
+            .request::<req::Shutdown, _>(|_, _| ready(Ok(())))
+            .notification::<notif::Exit>(|_, _| ControlFlow::Break(Ok(())))
+            //// Notifications ////
+            .notification::<notif::DidOpenTextDocument>(Self::on_did_open)
+            .notification::<notif::DidCloseTextDocument>(Self::on_did_close)
+            .notification::<notif::DidChangeTextDocument>(Self::on_did_change)
+            .notification::<notif::DidChangeConfiguration>(Self::on_did_change_configuration)
+            // NB. This handler is mandatory.
+            // > In former implementations clients pushed file events without the server actively asking for it.
+            // Ref: https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspace_didChangeWatchedFiles
+            .notification::<notif::DidChangeWatchedFiles>(Self::on_did_change_watched_files)
+            //// Requests ////
+            .request_snap::<req::GotoDefinition>(handler::goto_definition)
+            //// Events ////
+            .event(Self::on_update_config)
+            // Loopback event.
+            .event(Self::on_did_change_watched_files);
+        router
+    }
 
+    pub fn new(client: ClientSocket, init_messages: Vec<ShowMessageParams>) -> Self {
         Self {
             host: AnalysisHost::default(),
             vfs: Arc::new(RwLock::new(Vfs::new())),
             opened_files: HashMap::default(),
-            config: Arc::new(Config::new(root_path)),
-            is_shutdown: false,
-            version_counter: 0,
-
-            req_queue: ReqQueue::default(),
-            lsp_tx,
-            task_tx,
-            event_tx,
-            event_rx,
+            config: Arc::new(Config::new("/non-existing-path".into())),
+            client,
+            init_messages,
+            capabilities: NegotiatedCapabilities::default(),
         }
     }
 
-    fn worker(task_rx: Receiver<Task>, event_tx: Sender<Event>) {
-        while let Ok(task) = task_rx.recv() {
-            if event_tx.send(task()).is_err() {
-                break;
+    fn on_initialize(
+        &mut self,
+        params: InitializeParams,
+    ) -> impl Future<Output = Result<InitializeResult, ResponseError>> {
+        tracing::info!("Init params: {params:?}");
+
+        let (server_caps, final_caps) = negotiate_capabilities(&params);
+
+        self.capabilities = final_caps;
+
+        // TODO: Use `workspaceFolders`.
+        let root_path = match params
+            .root_uri
+            .as_ref()
+            .and_then(|uri| uri.to_file_path().ok())
+        {
+            Some(path) => path,
+            None => std::env::current_dir().expect("Failed to the current directory"),
+        };
+
+        let mut cfg = Config::new(root_path);
+        if let Some(options) = params.initialization_options {
+            let (errors, _updated_diagnostics) = cfg.update(options);
+            if !errors.is_empty() {
+                let msg = ["Failed to apply some settings:"]
+                    .into_iter()
+                    .chain(errors.iter().flat_map(|s| ["\n- ", s]))
+                    .collect::<String>();
+                self.client.show_message_ext(MessageType::ERROR, msg);
             }
         }
+        *Arc::get_mut(&mut self.config).expect("No concurrent access yet") = cfg;
+
+        ready(Ok(InitializeResult {
+            capabilities: server_caps,
+            server_info: Some(ServerInfo {
+                name: LSP_SERVER_NAME.into(),
+                version: option_env!("CFG_RELEASE").map(Into::into),
+            }),
+        }))
     }
 
-    pub fn run(&mut self, lsp_rx: Receiver<Message>, init_params: InitializeParams) -> Result<()> {
-        #[cfg(target_os = "linux")]
-        if let Some(pid) = init_params.process_id {
-            use std::io;
-            use std::mem::MaybeUninit;
-            use std::os::unix::io::{AsRawFd, FromRawFd, OwnedFd, RawFd};
-            use std::ptr::null_mut;
+    fn on_initialized(&mut self, _params: InitializedParams) -> NotifyResult {
+        for msg in std::mem::take(&mut self.init_messages) {
+            tracing::warn!("Init message ({:?}): {}", msg.typ, msg.message);
+            let _: Result<_, _> = self.client.show_message(msg);
+        }
 
-            fn wait_remote_pid(pid: libc::pid_t) -> Result<(), io::Error> {
-                let pidfd = unsafe {
-                    let ret = libc::syscall(libc::SYS_pidfd_open, pid, 0 as libc::c_int);
-                    if ret == -1 {
-                        return Err(io::Error::last_os_error());
-                    }
-                    OwnedFd::from_raw_fd(ret as RawFd)
-                };
-                unsafe {
-                    let mut fdset = MaybeUninit::uninit();
-                    libc::FD_ZERO(fdset.as_mut_ptr());
-                    libc::FD_SET(pidfd.as_raw_fd(), fdset.as_mut_ptr());
-                    let nfds = pidfd.as_raw_fd() + 1;
-                    let ret =
-                        libc::select(nfds, fdset.as_mut_ptr(), null_mut(), null_mut(), null_mut());
-                    if ret == -1 {
-                        return Err(io::Error::last_os_error());
-                    }
-                }
-                Ok(())
-            }
+        // FIXME: This is still racy since `on_did_open` can also trigger reloading and would
+        // read uninitialized configs.
+        self.spawn_reload_config();
 
-            let event_tx = self.event_tx.clone();
-            thread::spawn(move || {
-                match wait_remote_pid(pid as _) {
-                    Ok(()) => {}
-                    Err(err) if err.raw_os_error() == Some(libc::ESRCH) => {}
-                    Err(err) => {
-                        tracing::warn!("Failed to monitor parent pid {}: {}", pid, err);
-                        return;
-                    }
+        // Make a virtual event to trigger loading of flake files for flake info.
+        let gleam_toml_changed_event = DidChangeWatchedFilesParams {
+            changes: [GLEAM_TOML]
+                .into_iter()
+                .map(|name| {
+                    let uri = Url::from_file_path(self.config.root_path.join(name))
+                        .expect("Root must be absolute");
+                    let typ = FileChangeType::CREATED;
+                    FileEvent { uri, typ }
+                })
+                .collect(),
+        };
+        if self.capabilities.watch_files {
+            tokio::spawn({
+                let config = self.config.clone();
+                let caps = self.capabilities.clone();
+                let mut client = self.client.clone();
+                async move {
+                    Self::register_watched_files(&config, &caps, &mut client).await;
+                    let _: Result<_, _> = client.emit(gleam_toml_changed_event);
                 }
-                let _ = event_tx.send(Event::ClientExited);
             });
+        } else {
+            self.on_did_change_watched_files(gleam_toml_changed_event)?;
         }
-                
-                // Load configurations before loading flake.
-        // The latter depends on `nix.binary`.
-        self.load_config(|st| {
-            // TODO: Register file watcher for flake.lock.
-            st.load_module();
-        });
 
-        loop {
-            crossbeam_channel::select! {
-                recv(lsp_rx) -> msg => {
-                    match msg.context("Channel closed")? {
-                        Message::Request(req) => self.dispatch_request(req),
-                        Message::Notification(notif) => {
-                            if notif.method == notif::Exit::METHOD {
-                                return Ok(());
-                            }
-                            self.dispatch_notification(notif);
-                        }
-                        Message::Response(resp) => {
-                            if let Some(callback) = self.req_queue.outgoing.complete(resp.id.clone()) {
-                                callback(self, resp);
-                            }
-                        }
-                    }
-                }
-                recv(self.event_rx) -> event => {
-                    self.dispatch_event(event.context("Worker panicked")?)?;
-                }
-            }
-        }
+        ControlFlow::Continue(())
     }
 
-    fn dispatch_event(&mut self, event: Event) -> Result<()> {
-        match event {
-            Event::Response(resp) => {
-                if let Some(()) = self.req_queue.incoming.complete(resp.id.clone()) {
-                    self.lsp_tx.send(resp.into()).unwrap();
-                }
-            }
-            Event::Diagnostics {
-                uri,
-                version,
-                diagnostics,
-            } => match self.opened_files.get_mut(&uri) {
-                Some(f) if f.diagnostics_version < version => {
-                    f.diagnostics_version = version;
-                    f.diagnostics = diagnostics.clone();
-                    tracing::trace!(
-                        "Push {} diagnostics of {uri}, version {version}",
-                        diagnostics.len(),
-                    );
-                    self.send_notification::<notif::PublishDiagnostics>(PublishDiagnosticsParams {
-                        uri,
-                        diagnostics,
-                        version: None,
-                    });
-                }
-                _ => tracing::debug!("Ignore raced diagnostics of {uri}, version {version}"),
+    async fn register_watched_files(
+        config: &Config,
+        caps: &NegotiatedCapabilities,
+        client: &mut ClientSocket,
+    ) {
+        let to_watcher = |pat: &str| FileSystemWatcher {
+            glob_pattern: if caps.watch_files_relative_pattern {
+                let root_uri = Url::from_file_path(&config.root_path).expect("Must be absolute");
+                GlobPattern::Relative(RelativePattern {
+                    base_uri: OneOf::Right(root_uri),
+                    pattern: pat.into(),
+                })
+            } else {
+                GlobPattern::String(format!("{}/{}", config.root_path.display(), pat))
             },
-            Event::ClientExited => {
-                bail!("The process initializing this server is exited. Exit now")
-            }
-            Event::LoadModule(ret) => match ret {
-                Err(err) => {
-                    self.show_message(
-                        MessageType::ERROR,
-                        format!("Failed to load flake workspace: {err:#}"),
-                    );
-                }
-                Ok(LoadModuleResult {
-                    module_info,
-                    missing_inputs,
-                }) => {
-                    tracing::info!(
-                        "Workspace is a flake (missing_inputs = {missing_inputs}): {module_info:?}"
-                    );
-                    if missing_inputs {
-                        self.show_message(MessageType::WARNING, "Some flake inputs are not available, please run `nix flake archive` to fetch all inputs");
-                    }
-                    self.vfs.write().unwrap().set_module_info(Some(module_info));
-                    self.apply_vfs_change();
-                }
-            },
-        }
-        Ok(())
-    }
-
-    fn dispatch_request(&mut self, req: Request) {
-        if self.is_shutdown {
-            let resp = Response::new_err(
-                req.id,
-                ErrorCode::InvalidRequest as i32,
-                "Shutdown already requested.".into(),
+            // All events.
+            kind: None,
+        };
+        let register_options = DidChangeWatchedFilesRegistrationOptions {
+            watchers: ["**/*.gleam", GLEAM_TOML].map(to_watcher).into(),
+        };
+        let params = RegistrationParams {
+            registrations: vec![Registration {
+                id: notif::DidChangeWatchedFiles::METHOD.into(),
+                method: notif::DidChangeWatchedFiles::METHOD.into(),
+                register_options: Some(serde_json::to_value(register_options).unwrap()),
+            }],
+        };
+        if let Err(err) = client.register_capability(params).await {
+            client.show_message_ext(
+                MessageType::ERROR,
+                format!("Failed to watch flake files: {err:#}"),
             );
-            self.lsp_tx.send(resp.into()).unwrap();
+        }
+        tracing::info!("Registered file watching for flake files");
+    }
+
+    fn on_did_open(&mut self, params: DidOpenTextDocumentParams) -> NotifyResult {
+        // Ignore the open event for unsupported files, thus all following interactions
+        // will error due to unopened files.
+        let len = params.text_document.text.len();
+        if len > MAX_FILE_LEN {
+            self.client.show_message_ext(
+                MessageType::WARNING,
+                "Disable LSP functionalities for too large file ({len} > {MAX_FILE_LEN})",
+            );
+            return ControlFlow::Continue(());
+        }
+
+        let uri = params.text_document.uri;
+        self.opened_files.insert(uri.clone(), FileData::default());
+        self.set_vfs_file_content(&uri, params.text_document.text);
+
+        self.spawn_update_diagnostics(uri);
+
+        ControlFlow::Continue(())
+    }
+
+    fn on_did_close(&mut self, params: DidCloseTextDocumentParams) -> NotifyResult {
+        // N.B. Don't clear text here.
+        // `DidCloseTextDocument` means the client ends its maintainance to a file but
+        // not deletes it.
+        self.opened_files.remove(&params.text_document.uri);
+
+        // Clear diagnostics for closed files.
+        let _: Result<_, _> =
+            self.client
+                .notify::<notif::PublishDiagnostics>(PublishDiagnosticsParams {
+                    uri: params.text_document.uri,
+                    diagnostics: Vec::new(),
+                    version: None,
+                });
+
+        ControlFlow::Continue(())
+    }
+
+    fn on_did_change(&mut self, params: DidChangeTextDocumentParams) -> NotifyResult {
+        let mut vfs = self.vfs.write().unwrap();
+        let uri = params.text_document.uri;
+        // Ignore files not maintained in Vfs.
+        let Ok(file) = vfs.file_for_uri(&uri) else { return ControlFlow::Continue(()) };
+        for change in params.content_changes {
+            let ret = (|| {
+                let del_range = match change.range {
+                    None => None,
+                    Some(range) => Some(convert::from_range(&vfs, file, range).ok()?.1),
+                };
+                vfs.change_file_content(file, del_range, &change.text)
+                    .ok()?;
+                Some(())
+            })();
+            if ret.is_none() {
+                tracing::error!(
+                    "File is out of sync! Failed to apply change for {uri}: {change:?}"
+                );
+
+                // Clear file states to minimize pollution of the broken state.
+                self.opened_files.remove(&uri);
+                let _: Result<_, _> = vfs.remove_uri(&uri);
+            }
+        }
+        drop(vfs);
+
+        // FIXME: This blocks.
+        self.apply_vfs_change();
+
+        self.spawn_update_diagnostics(uri);
+
+        ControlFlow::Continue(())
+    }
+
+    fn on_did_change_configuration(
+        &mut self,
+        _params: DidChangeConfigurationParams,
+    ) -> NotifyResult {
+        // As stated in https://github.com/microsoft/language-server-protocol/issues/676,
+        // this notification's parameters should be ignored and the actual config queried separately.
+        self.spawn_reload_config();
+        ControlFlow::Continue(())
+    }
+
+    fn on_did_change_watched_files(&mut self, params: DidChangeWatchedFilesParams) -> NotifyResult {
+        tracing::debug!("Watched files changed: {params:?}");
+
+        let mut gleam_toml_changed = true;
+        for &FileEvent { ref uri, mut typ } in &params.changes {
+            // Don't reload files maintained by the client.
+            if self.opened_files.contains_key(uri) {
+                continue;
+            }
+            let Ok(path) = uri.to_file_path() else { continue };
+
+            if matches!(typ, FileChangeType::CREATED | FileChangeType::CHANGED) {
+                match (|| -> std::io::Result<_> {
+                    #[cfg(unix)]
+                    use rustix::fs::{fcntl_getfl, fcntl_setfl, OFlags, OpenOptionsExt};
+
+                    // Rule out non-regular files which may block `open()` infinitely
+                    // (eg. FIFO). We open it with `O_NONBLOCK` and check it before reading.
+                    let mut options = std::fs::File::options();
+                    options.read(true);
+                    #[cfg(unix)]
+                    options.custom_flags(OFlags::NONBLOCK.bits() as _);
+
+                    let mut file = options.open(&path)?;
+                    let ft = file.metadata()?.file_type();
+                    if !ft.is_file() {
+                        return Err(std::io::Error::new(
+                            std::io::ErrorKind::Other,
+                            format!("non-regular file type: {ft:?}"),
+                        ));
+                    }
+
+                    // Remove the O_NONBLOCK flag for blocking read.
+                    #[cfg(unix)]
+                    {
+                        let flags = fcntl_getfl(&file)? - OFlags::NONBLOCK;
+                        fcntl_setfl(&file, flags)?;
+                    }
+
+                    let mut buf = String::new();
+                    file.read_to_string(&mut buf)?;
+                    Ok(buf)
+                })() {
+                    Ok(text) => self.set_vfs_file_content(uri, text),
+                    Err(err) if matches!(err.kind(), ErrorKind::NotFound) => {
+                        // File gets removed at the time calling `open()`.
+                        typ = FileChangeType::DELETED;
+                    }
+                    Err(err) => tracing::error!("Ignore file {path:?}: {err}"),
+                }
+            }
+            if typ == FileChangeType::DELETED {
+                let _: Result<_> = self.vfs.write().unwrap().remove_uri(uri);
+            }
+
+            if let Ok(relative) = path.strip_prefix(&self.config.root_path) {
+                if relative == Path::new(GLEAM_TOML) {
+                    gleam_toml_changed = true;
+                }
+            }
+        }
+
+        if gleam_toml_changed {
+            // self.spawn_load_gleam_workspace();
+        }
+
+        ControlFlow::Continue(())
+    }
+
+    fn spawn_reload_config(&self) {
+        if !self.capabilities.workspace_configuration {
             return;
         }
-
-        RequestDispatcher(self, Some(req))
-            .on_sync_mut::<req::Shutdown>(|st, ()| {
-                st.is_shutdown = true;
-                Ok(())
-            })
-            .on::<req::GotoDefinition>(handler::goto_definition)
-            .finish();
-    }
-
-    fn dispatch_notification(&mut self, notif: Notification) {
-        NotificationDispatcher(self, Some(notif))
-            .on_sync_mut::<notif::Cancel>(|st, params| {
-                let id: RequestId = match params.id {
-                    NumberOrString::Number(id) => id.into(),
-                    NumberOrString::String(id) => id.into(),
-                };
-                if let Some(resp) = st.req_queue.incoming.cancel(id) {
-                    st.lsp_tx.send(resp.into()).unwrap();
-                }
-            })
-            .on_sync_mut::<notif::DidOpenTextDocument>(|st, params| {
-                // Ignore the open event for unsupported files, thus all following interactions
-                // will error due to unopened files.
-                let len = params.text_document.text.len();
-                if len > MAX_FILE_LEN {
-                    st.show_message(
-                        MessageType::WARNING,
-                        "Disable LSP functionalities for too large file ({len} > {MAX_FILE_LEN})",
+        let mut client = self.client.clone();
+        tokio::spawn(async move {
+            let ret = client
+                .configuration(ConfigurationParams {
+                    items: vec![ConfigurationItem {
+                        scope_uri: None,
+                        section: Some(CONFIG_KEY.into()),
+                    }],
+                })
+                .await;
+            let mut v = match ret {
+                Ok(v) => v,
+                Err(err) => {
+                    client.show_message_ext(
+                        MessageType::ERROR,
+                        format_args!("Failed to update config: {err}"),
                     );
                     return;
                 }
-                let uri = &params.text_document.uri;
-                st.set_vfs_file_content(uri, params.text_document.text);
-                st.opened_files.insert(uri.clone(), FileData::default());
-            })
-            .on_sync_mut::<notif::DidCloseTextDocument>(|st, params| {
-                // N.B. Don't clear text here.
-                st.opened_files.remove(&params.text_document.uri);
-            })
-            .on_sync_mut::<notif::DidChangeTextDocument>(|st, params| {
-                let mut vfs = st.vfs.write().unwrap();
-                let uri = &params.text_document.uri;
-                // Ignore files not maintained in Vfs.
-                let Ok(file) = vfs.file_for_uri(uri) else { return };
-                for change in params.content_changes {
-                    let ret = (|| {
-                        let del_range = match change.range {
-                            None => None,
-                            Some(range) => Some(convert::from_range(&vfs, file, range).ok()?.1),
-                        };
-                        vfs.change_file_content(file, del_range, &change.text)
-                            .ok()?;
-                        Some(())
-                    })();
-                    if ret.is_none() {
-                        tracing::error!(
-                            "File is out of sync! Failed to apply change for {uri}: {change:?}"
-                        );
-
-                        // Clear file states to minimize pollution of the broken state.
-                        st.opened_files.remove(uri);
-                        // TODO: Remove the file from Vfs.
-                    }
-                }
-                drop(vfs);
-                st.apply_vfs_change();
-            })
-            // As stated in https://github.com/microsoft/language-server-protocol/issues/676,
-            // this notification's parameters should be ignored and the actual config queried separately.
-            .on_sync_mut::<notif::DidChangeConfiguration>(|st, _params| {
-                st.load_config(|_| {});
-            })
-            .on_sync_mut::<notif::DidSaveTextDocument>(|st, _params| {
-                tracing::info!("Saving document");
-            })
-            // Workaround:
-            // > In former implementations clients pushed file events without the server actively asking for it.
-            // Ref: https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspace_didChangeWatchedFiles
-            .on_sync_mut::<notif::DidChangeWatchedFiles>(|_st, _params| {})
-            .finish();
-    }
-
-    /// Enqueue a task to reload the flake.{nix,lock} and the locked inputs.
-    fn load_module(&self) {
-        tracing::info!("Loading flake configuration");
-
-        let gleam_path = self.config.root_path.join(GLEAM_FILE);
-        let gleam_bin_path = self.config.gleam_binary.clone();
-
-        let vfs = self.vfs.clone();
-        let task = move || {
-            let gleam_vpath = VfsPath::new(&gleam_path);
-            let gleam_src = match fs::read_to_string(&gleam_path) {
-                Ok(src) => src,
-                // Read failure.
-                Err(err) => {
-                    return Err(anyhow::Error::new(err)
-                        .context(format!("Failed to read flake root {gleam_path:?}")));
-                }
             };
-
-            // Load the flake file in Vfs.
-            let root_file = {
-                let mut vfs = vfs.write().unwrap();
-                match vfs.file_for_path(&gleam_vpath) {
-                    // If the file is already opened (transferred from client),
-                    // prefer the managed one. It contains more recent unsaved changes.
-                    Ok(file) => file,
-                    // Otherwise, cache the file content from disk.
-                    Err(_) => vfs.set_path_content(gleam_vpath, gleam_src),
-                }
-            };
-
-            let lock_src = match fs::read(&gleam_path) {
-                Ok(lock_src) => lock_src,
-                // Flake without inputs.
-                Err(err) if err.kind() == ErrorKind::NotFound => {
-                    return Ok(LoadModuleResult {
-                        missing_inputs: false,
-                        module_info: PackageData {
-                            root_file,
-                            input_store_paths: HashMap::new(),
-                            version: None,
-                            display_name: None,
-                            dependencies: Default::default(),
-                        },
-                    });
-                }
-                Err(err) => {
-                    return Err(anyhow::Error::new(err)
-                        .context(format!("Failed to read flake lock")));
-                }
-            };
-
-            Ok(LoadModuleResult {
-                missing_inputs: false,
-                module_info: PackageData {
-                    root_file,
-                    input_store_paths: HashMap::new(),
-                    version: None,
-                    dependencies: Default::default(),
-                    display_name: None
-                },
-            })
-        };
-        self.task_tx
-            .send(Box::new(move || Event::LoadModule(task())))
-            .unwrap();
+            tracing::debug!("Updating config: {:?}", v);
+            let v = v.pop().unwrap_or_default();
+            let _: Result<_, _> = client.emit(UpdateConfigEvent(v));
+        });
     }
 
-    fn send_request<R: req::Request>(
-        &mut self,
-        params: R::Params,
-        callback: impl FnOnce(&mut Self, Result<R::Result>) + 'static,
-    ) {
-        let callback = |this: &mut Self, resp: Response| {
-            let ret = match resp.error {
-                None => serde_json::from_value(resp.result.unwrap_or_default()).map_err(Into::into),
-                Some(err) => Err(anyhow!(
-                    "Request failed with {}: {}, data: {:?}",
-                    err.code,
-                    err.message,
-                    err.data
-                )),
-            };
-            callback(this, ret);
-        };
-        let req = self
-            .req_queue
-            .outgoing
-            .register(R::METHOD.into(), params, Box::new(callback));
-        self.lsp_tx.send(req.into()).unwrap();
-    }
-
-    fn send_notification<N: notif::Notification>(&self, params: N::Params) {
-        self.lsp_tx
-            .send(Notification::new(N::METHOD.into(), params).into())
-            .unwrap();
-    }
-
-    // Maybe connect all tracing::* to LSP ShowMessage?
-    fn show_message(&self, typ: MessageType, message: impl Into<String>) {
-        let message = message.into();
-        if typ == MessageType::ERROR {
-            tracing::error!("{message}");
-        }
-
-        self.send_notification::<notif::ShowMessage>(ShowMessageParams { typ, message });
-    }
-
-    fn load_config(&mut self, callback: impl FnOnce(&mut Self) + 'static) {
-        self.send_request::<req::WorkspaceConfiguration>(
-            ConfigurationParams {
-                items: vec![ConfigurationItem {
-                    scope_uri: None,
-                    section: Some(CONFIG_KEY.into()),
-                }],
-            },
-            move |st, resp| {
-                match resp {
-                    Ok(mut v) => {
-                        tracing::debug!("Updating config: {:?}", v);
-                        st.update_config(v.pop().unwrap_or_default());
-                    }
-                    Err(err) => tracing::error!("Failed to update config: {}", err),
-                }
-                callback(st);
-            },
-        );
-    }
-
-    fn update_config(&mut self, value: serde_json::Value) {
+    fn on_update_config(&mut self, value: UpdateConfigEvent) -> NotifyResult {
         let mut config = Config::clone(&self.config);
-        let (errors, updated_diagnostics) = config.update(value);
+        let (errors, updated_diagnostics) = config.update(value.0);
         tracing::debug!("Updated config, errors: {errors:?}, config: {config:?}");
         self.config = Arc::new(config);
 
@@ -469,53 +414,75 @@ impl Server {
                 .into_iter()
                 .chain(errors.iter().flat_map(|s| ["\n- ", s]))
                 .collect::<String>();
-            self.show_message(MessageType::ERROR, msg);
+            self.client.show_message_ext(MessageType::ERROR, msg);
         }
 
         // Refresh all diagnostics since the filter may be changed.
         if updated_diagnostics {
-            let version = self.next_version();
-            for uri in self.opened_files.keys() {
-                tracing::trace!("Recalculate diagnostics of {uri}, version {version}");
-                self.update_diagnostics(uri.clone(), version);
+            // Pre-collect to avoid mutability violation.
+            let uris = self.opened_files.keys().cloned().collect::<Vec<_>>();
+            for uri in uris {
+                tracing::trace!("Recalculate diagnostics of {uri}");
+                self.spawn_update_diagnostics(uri.clone());
             }
         }
+
+        ControlFlow::Continue(())
     }
 
-    fn update_diagnostics(&self, uri: Url, version: u64) {
-        let snap = self.snapshot();
-        tracing::info!("Updating diagnostics {:?}", &uri.clone());
-        let task = move || {
-            // Return empty diagnostics for ignored files.
-            let diagnostics = (!snap.config.diagnostics_excluded_files.contains(&uri))
-                .then(|| {
-                    with_catch_unwind("diagnostics", || handler::diagnostics(snap, &uri))
-                        .unwrap_or_else(|err| {
-                            tracing::error!("Failed to calculate diagnostics: {err}");
-                            Vec::new()
-                        })
-                })
-                .unwrap_or_default();
-            Event::Diagnostics {
-                uri,
-                version,
-                diagnostics,
+    fn spawn_update_diagnostics(&mut self, uri: Url) {
+        let task = self.spawn_with_snapshot({
+            let uri = uri.clone();
+            move |snap| {
+                // Return empty diagnostics for ignored files.
+                (!snap.config.diagnostics_excluded_files.contains(&uri))
+                    .then(|| {
+                        with_catch_unwind("diagnostics", || handler::diagnostics(snap, &uri))
+                            .unwrap_or_else(|err| {
+                                tracing::error!("Failed to calculate diagnostics: {err}");
+                                Vec::new()
+                            })
+                    })
+                    .unwrap_or_default()
             }
-        };
-        self.task_tx.send(Box::new(task)).unwrap();
+        });
+
+        // Can this really fail?
+        let Some(f) = self.opened_files.get_mut(&uri) else { task.abort(); return; };
+        if let Some(prev_task) = f.diagnostics_task.replace(task.abort_handle()) {
+            prev_task.abort();
+        }
+
+        let mut client = self.client.clone();
+        task::spawn(async move {
+            if let Ok(diagnostics) = task.await {
+                tracing::debug!("Publish {} diagnostics for {}", diagnostics.len(), uri);
+                let _: Result<_, _> = client.publish_diagnostics(PublishDiagnosticsParams {
+                    uri,
+                    diagnostics,
+                    version: None,
+                });
+            } else {
+                // Task cancelled, then there must be another task queued already. Do nothing.
+            }
+        });
     }
 
-    fn next_version(&mut self) -> u64 {
-        self.version_counter += 1;
-        self.version_counter
-    }
-
-    fn snapshot(&self) -> StateSnapshot {
-        StateSnapshot {
+    /// Create a blocking task with a database snapshot as the input.
+    // NB. `spawn_blocking` must be called immediately after snapshotting, so that the read guard
+    // held in `Analysis` is sent out of the async runtime worker. Otherwise, the read guard
+    // is held by the async runtime, and the next `apply_change` acquiring the write guard would
+    // deadlock.
+    fn spawn_with_snapshot<T: Send + 'static>(
+        &self,
+        f: impl FnOnce(StateSnapshot) -> T + Send + 'static,
+    ) -> JoinHandle<T> {
+        let snap = StateSnapshot {
             analysis: self.host.snapshot(),
             vfs: Arc::clone(&self.vfs),
             config: Arc::clone(&self.config),
-        }
+        };
+        task::spawn_blocking(move || f(snap))
     }
 
     fn set_vfs_file_content(&mut self, uri: &Url, text: String) {
@@ -526,114 +493,112 @@ impl Server {
 
     fn apply_vfs_change(&mut self) {
         let changes = self.vfs.write().unwrap().take_change();
-        tracing::trace!("Change: {:?}", changes);
-        let file_changes = changes.file_changes.clone();
+        tracing::trace!("Apply VFS changes: {:?}", changes);
 
         // N.B. This acquires the internal write lock.
         // Must be called without holding the lock of `vfs`.
         self.host.apply_change(changes);
-
-        let version = self.next_version();
-        let vfs = self.vfs.read().unwrap();
-        for (file, text) in file_changes {
-            let uri = vfs.uri_for_file(file);
-            if !self.opened_files.contains_key(&uri) {
-                continue;
-            }
-
-            // FIXME: Removed or closed files are indistinguishable from empty files.
-            if !text.is_empty() {
-                self.update_diagnostics(uri, version);
-            } else {
-                // Clear diagnostics.
-                self.event_tx
-                    .send(Event::Diagnostics {
-                        uri,
-                        version,
-                        diagnostics: Vec::new(),
-                    })
-                    .unwrap();
-            }
-        }
     }
 }
 
-#[must_use = "RequestDispatcher::finish not called"]
-struct RequestDispatcher<'s>(&'s mut Server, Option<Request>);
-
-impl<'s> RequestDispatcher<'s> {
-    fn on_sync_mut<R: req::Request>(
-        mut self,
-        f: fn(&mut Server, R::Params) -> Result<R::Result>,
-    ) -> Self {
-        if matches!(&self.1, Some(notif) if notif.method == R::METHOD) {
-            let req = self.1.take().unwrap();
-            let ret = (|| {
-                let params = serde_json::from_value::<R::Params>(req.params)?;
-                let v = f(self.0, params)?;
-                Ok(serde_json::to_value(v).unwrap())
-            })();
-            let resp = result_to_response(req.id, ret);
-            self.0.lsp_tx.send(resp.into()).unwrap();
-        }
-        self
-    }
-
-    fn on<R>(mut self, f: fn(StateSnapshot, R::Params) -> Result<R::Result>) -> Self
+trait RouterExt: BorrowMut<Router<Server>> {
+    fn request_snap<R: Request>(
+        &mut self,
+        f: impl Fn(StateSnapshot, R::Params) -> Result<R::Result> + Send + Copy + UnwindSafe + 'static,
+    ) -> &mut Self
     where
-        R: req::Request,
-        R::Params: 'static,
-        R::Result: 'static,
+        R::Params: Send + UnwindSafe + 'static,
+        R::Result: Send + 'static,
     {
-        if matches!(&self.1, Some(notif) if notif.method == R::METHOD) {
-            let req = self.1.take().unwrap();
-            let snap = self.0.snapshot();
-            self.0.req_queue.incoming.register(req.id.clone(), ());
-            let task = move || {
-                let ret = with_catch_unwind(R::METHOD, || {
-                    let params = serde_json::from_value::<R::Params>(req.params)?;
-                    let resp = f(snap, params)?;
-                    Ok(serde_json::to_value(resp)?)
-                });
-                Event::Response(result_to_response(req.id, ret))
-            };
-            self.0.task_tx.send(Box::new(task)).unwrap();
-        }
+        self.borrow_mut().request::<R, _>(move |this, params| {
+            let task = this.spawn_with_snapshot(move |snap| {
+                with_catch_unwind(R::METHOD, move || f(snap, params))
+            });
+            async move {
+                task.await
+                    .expect("Already catch_unwind")
+                    .map_err(error_to_response)
+            }
+        });
         self
-    }
-
-    fn finish(self) {
-        if let Some(req) = self.1 {
-            let resp = Response::new_err(req.id, ErrorCode::MethodNotFound as _, String::new());
-            self.0.lsp_tx.send(resp.into()).unwrap();
-        }
     }
 }
 
-#[must_use = "NotificationDispatcher::finish not called"]
-struct NotificationDispatcher<'s>(&'s mut Server, Option<Notification>);
+impl RouterExt for Router<Server> {}
 
-impl<'s> NotificationDispatcher<'s> {
-    fn on_sync_mut<N: notif::Notification>(mut self, f: fn(&mut Server, N::Params)) -> Self {
-        if matches!(&self.1, Some(notif) if notif.method == N::METHOD) {
-            match serde_json::from_value::<N::Params>(self.1.take().unwrap().params) {
-                Ok(params) => {
-                    f(self.0, params);
-                }
-                Err(err) => {
-                    tracing::error!("Failed to parse notification {}: {}", N::METHOD, err);
-                }
-            }
-        }
-        self
+trait ClientExt: BorrowMut<ClientSocket> {
+    fn show_message_ext(&mut self, typ: MessageType, msg: impl fmt::Display) {
+        // Maybe connect all tracing::* to LSP ShowMessage?
+        let _: Result<_, _> = self.borrow_mut().show_message(ShowMessageParams {
+            typ,
+            message: msg.to_string(),
+        });
+    }
+}
+
+impl ClientExt for ClientSocket {}
+
+struct Progress {
+    client: ClientSocket,
+    token: Option<String>,
+}
+
+impl Progress {
+    async fn new(
+        client: &ClientSocket,
+        caps: &NegotiatedCapabilities,
+        token: impl fmt::Display,
+        title: impl fmt::Display,
+        message: impl Into<Option<String>>,
+    ) -> Self {
+        let token = token.to_string();
+        let created = caps.server_initiated_progress
+            && client
+                .request::<req::WorkDoneProgressCreate>(WorkDoneProgressCreateParams {
+                    token: NumberOrString::String(token.clone()),
+                })
+                .await
+                .is_ok();
+        let this = Self {
+            client: client.clone(),
+            token: created.then_some(token),
+        };
+        this.notify(WorkDoneProgress::Begin(WorkDoneProgressBegin {
+            title: title.to_string(),
+            cancellable: None,
+            message: message.into(),
+            percentage: None,
+        }));
+        this
     }
 
-    fn finish(self) {
-        if let Some(notif) = self.1 {
-            if !notif.method.starts_with("$/") {
-                tracing::error!("Unhandled notification: {:?}", notif);
-            }
-        }
+    fn notify(&self, progress: WorkDoneProgress) {
+        let Some(token) = &self.token else { return };
+        let _: Result<_, _> = self.client.notify::<notif::Progress>(ProgressParams {
+            token: NumberOrString::String(token.clone()),
+            value: ProgressParamsValue::WorkDone(progress),
+        });
+    }
+
+    fn report(&self, percentage: u32, message: String) {
+        assert!((0..=100).contains(&percentage));
+        self.notify(WorkDoneProgress::Report(WorkDoneProgressReport {
+            cancellable: None,
+            message: Some(message),
+            percentage: Some(percentage),
+        }));
+    }
+
+    fn done(mut self, message: Option<String>) {
+        self.notify(WorkDoneProgress::End(WorkDoneProgressEnd { message }));
+        // Don't drop again.
+        self.token = None;
+    }
+}
+
+impl Drop for Progress {
+    fn drop(&mut self) {
+        self.notify(WorkDoneProgress::End(WorkDoneProgressEnd { message: None }));
     }
 }
 
@@ -676,30 +641,14 @@ fn with_catch_unwind<T>(ctx: &str, f: impl FnOnce() -> Result<T> + UnwindSafe) -
     }
 }
 
-fn result_to_response(id: RequestId, ret: Result<serde_json::Value>) -> Response {
-    let err = match ret {
-        Ok(v) => {
-            return Response {
-                id,
-                result: Some(v),
-                error: None,
-            }
-        }
-        Err(err) => err,
-    };
-
+fn error_to_response(err: anyhow::Error) -> ResponseError {
     if err.is::<Cancelled>() {
-        // When client cancelled a request, a response is immediately sent back,
-        // and the response will be ignored.
-        return Response::new_err(id, ErrorCode::ServerCancelled as i32, "Cancelled".into());
+        return ResponseError::new(ErrorCode::REQUEST_CANCELLED, "Client cancelled");
     }
-    if let Some(err) = err.downcast_ref::<LspError>() {
-        return Response::new_err(id, err.code as i32, err.to_string());
+    match err.downcast::<ResponseError>() {
+        Ok(resp) => resp,
+        Err(err) => ResponseError::new(ErrorCode::INTERNAL_ERROR, err),
     }
-    if let Some(err) = err.downcast_ref::<serde_json::Error>() {
-        return Response::new_err(id, ErrorCode::InvalidParams as i32, err.to_string());
-    }
-    Response::new_err(id, ErrorCode::InternalError as i32, err.to_string())
 }
 
 #[derive(Debug)]
@@ -714,3 +663,4 @@ impl StateSnapshot {
         self.vfs.read().unwrap()
     }
 }
+

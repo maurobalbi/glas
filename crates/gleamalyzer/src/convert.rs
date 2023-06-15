@@ -1,7 +1,7 @@
-use crate::{LineMap, LspError, Result, Vfs};
+use crate::{LineMap, Result, Vfs};
+use async_lsp::{ResponseError, ErrorCode};
 use ide::{Diagnostic, FileId, FilePos, FileRange, Severity, DiagnosticKind};
 use lsp::DiagnosticTag;
-use lsp_server::ErrorCode;
 use lsp_types::{
     self as lsp, DiagnosticRelatedInformation, DiagnosticSeverity, Location, NumberOrString,
     Position, PrepareRenameResponse, Range, TextDocumentIdentifier, TextDocumentPositionParams,
@@ -121,11 +121,8 @@ pub(crate) fn to_diagnostics(
     ret
 }
 
-pub(crate) fn to_rename_error(message: String) -> LspError {
-    LspError {
-        code: ErrorCode::InvalidRequest,
-        message,
-    }
+pub(crate) fn to_rename_error(message: String) -> ResponseError {
+    ResponseError::new(ErrorCode::REQUEST_FAILED, message)
 }
 
 pub(crate) fn to_prepare_rename_response(
