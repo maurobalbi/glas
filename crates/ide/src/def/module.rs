@@ -7,7 +7,7 @@ use syntax::{
     AstPtr,
 };
 
-use crate::impl_from;
+use crate::{impl_from, Diagnostic};
 
 /// The item tree of a source file.
 #[derive(Debug, Default, Eq, PartialEq)]
@@ -72,6 +72,8 @@ pub struct ModuleSourceMap {
 
     pub name_map: HashMap<AstPtr<ast::Name>, NameId>,
     pub name_map_rev: ArenaMap<NameId, AstPtr<ast::Name>>,
+
+    pub diagnostics: Vec<Diagnostic>,
 }
 
 impl ModuleSourceMap {
@@ -108,6 +110,10 @@ impl ModuleSourceMap {
 
     pub fn expr_to_def(&self, ptr: AstPtr<ast::Expr>) -> Option<ExprId> {
         self.expr_map.get(&ptr).cloned()
+    }
+
+    pub fn diagnostics(&self) -> &[Diagnostic] {
+        &self.diagnostics
     }
 }
 

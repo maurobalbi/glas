@@ -1,6 +1,6 @@
 use crate::UrlExt;
 use anyhow::{ensure, Context, Result};
-use ide::{Change, FileId, FileSet, PackageGraph, PackageData, SourceRoot, PackageId, VfsPath};
+use ide::{Change, FileId, FileSet, PackageGraph, PackageInfo, SourceRoot, SourceRootId, VfsPath};
 use lsp_types::Url;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -38,9 +38,9 @@ impl Vfs {
         }
     }
 
-    pub fn set_module_info(&mut self, module_info: Option<PackageData>) {
+    pub fn set_package_info(&mut self, package_info: Option<PackageInfo>) {
         self.change.set_package_graph(PackageGraph {
-            nodes: HashMap::from_iter(module_info.map(|info| (PackageId(0), info))),
+            nodes: HashMap::from_iter(package_info.map(|info| (SourceRootId(0), info))),
         });
     }
 

@@ -1,4 +1,5 @@
 use salsa::Durability;
+use smol_str::SmolStr;
 use std::collections::HashMap;
 use std::{fmt, iter};
 use std::path::{Path, PathBuf};
@@ -8,8 +9,9 @@ use syntax::{TextRange, TextSize, SyntaxNode};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct FileId(pub u32);
 
+// The location of a gleam.toml
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct PackageId(pub u32);
+pub struct SourceRootId(pub u32);
 
 /// An path in the virtual filesystem.
 #[cfg(unix)]
@@ -168,23 +170,38 @@ impl SourceRoot {
 
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct PackageGraph {
-    pub nodes: HashMap<PackageId, PackageData>,
+    pub nodes: HashMap<SourceRootId, PackageInfo>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct PackageData {
-    pub root_file: FileId,
-    pub version: Option<String>,
-    pub display_name: Option<String>,
+pub struct PackageInfo {
+    // pub root_file: FileId,
+    // pub version: Option<String>,
+    pub target: Target,
+    pub display_name: String,
     pub dependencies: Vec<Dependency>,
-    pub input_store_paths: HashMap<String, VfsPath>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub enum Target {
+    #[default]
+    Erlang,
+    Javascript
+}
+
+impl From<&str> for Target {
+    fn from(value: &str) -> Self {
+        match value {
+            "javascript" => Self::Javascript,
+            _ => Self::default()
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Dependency {
-    pub package_id: PackageId,
+    pub package_root: SourceRootId,
     pub name: String,
-    prelude: bool,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
@@ -268,19 +285,19 @@ pub trait SourceDatabase {
     fn file_content(&self, file_id: FileId) -> Arc<str>;
 
     #[salsa::input]
-    fn source_root(&self, sid: PackageId) -> Arc<SourceRoot>;
+    fn source_root(&self, sid: SourceRootId) -> Arc<SourceRoot>;
 
-    fn source_root_module_info(&self, sid: PackageId) -> Option<Arc<PackageData>>;
+    fn source_root_package_info(&self, sid: SourceRootId) -> Option<Arc<PackageInfo>>;
 
     #[salsa::input]
-    fn file_source_root(&self, file_id: FileId) -> PackageId;
+    fn file_source_root(&self, file_id: FileId) -> SourceRootId;
 
     #[salsa::input]
     fn package_graph(&self) -> Arc<PackageGraph>;
 
 }
 
-fn source_root_module_info(db: &dyn SourceDatabase, sid: PackageId) -> Option<Arc<PackageData>> {
+fn source_root_package_info(db: &dyn SourceDatabase, sid: SourceRootId) -> Option<Arc<PackageInfo>> {
     db.package_graph().nodes.get(&sid).cloned().map(Arc::new)
 }
 
@@ -314,7 +331,7 @@ impl Change {
         }
         if let Some(roots) = self.roots {
             u32::try_from(roots.len()).expect("Length overflow");
-            for (sid, root) in (0u32..).map(PackageId).zip(roots) {
+            for (sid, root) in (0u32..).map(SourceRootId).zip(roots) {
                 for (fid, _) in root.files() {
                     db.set_file_source_root_with_durability(fid, sid, Durability::HIGH);
                 }

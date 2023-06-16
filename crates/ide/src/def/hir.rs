@@ -1,13 +1,15 @@
 use la_arena::Idx;
 
-use crate::{impl_from, DefDatabase, PackageId};
+use crate::{impl_from, DefDatabase, SourceRootId};
 
-use super::{ module::{FunctionId, Name}, nameres::ModuleScope};
-
+use super::{
+    module::{FunctionId, Name},
+    nameres::ModuleScope,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Package {
-    pub(crate) id: PackageId
+    pub(crate) id: SourceRootId,
 }
 
 impl Package {
@@ -15,8 +17,9 @@ impl Package {
         Vec::new()
     }
 
-    pub fn target(self, db: &dyn DefDatabase) -> Target {
-        return Target::Erlang
+    pub fn target(self, db: &dyn DefDatabase) -> crate::base::Target {
+        db.source_root_package_info(SourceRootId(0))
+            .map_or(crate::base::Target::default(), |s| s.target.clone())
     }
 }
 
@@ -31,10 +34,9 @@ pub struct Module {
     pub(crate) id: ModuleId,
 }
 
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ModuleId {
-    package: PackageId,
+    package: SourceRootId,
     id: Idx<ModuleScope>,
 }
 
@@ -46,15 +48,10 @@ pub enum ModuleDef {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Function {
-    pub(crate) id: FunctionId
+    pub(crate) id: FunctionId,
 }
 
 impl_from!(
     Function
     for ModuleDef
 );
-
-pub enum Target {
-    Javascript,
-    Erlang
-}

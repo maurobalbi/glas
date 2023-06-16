@@ -1,8 +1,8 @@
-use crate::base::SourceDatabaseStorage;
+use crate::base::{SourceDatabaseStorage, Target};
 use crate::def::DefDatabaseStorage;
 use crate::{
-    Change, DefDatabase, FileId, FilePos, FileRange, FileSet, PackageGraph, PackageData, SourceRoot,
-    PackageId, VfsPath,
+    Change, DefDatabase, FileId, FilePos, FileRange, FileSet, PackageGraph, PackageInfo, SourceRoot,
+    SourceRootId, VfsPath,
 };
 use anyhow::{bail, ensure, Context, Result};
 use indexmap::IndexMap;
@@ -43,7 +43,7 @@ impl TestDB {
         }
         change.set_roots(vec![SourceRoot::new_local(file_set)]);
         let package_graph = PackageGraph {
-            nodes: HashMap::from_iter(f.module_info.clone().map(|info| (PackageId(0), info))),
+            nodes: HashMap::from_iter(f.package_info.clone().map(|info| (SourceRootId(0), info))),
         };
         change.set_package_graph(package_graph);
         change.apply(&mut db);
@@ -69,7 +69,7 @@ pub struct Fixture {
     files: IndexMap<VfsPath, String>,
     file_ids: Vec<FileId>,
     markers: Vec<FilePos>,
-    module_info: Option<PackageData>,
+    package_info: Option<PackageInfo>,
 }
 
 impl ops::Index<usize> for Fixture {
@@ -115,16 +115,13 @@ impl Fixture {
                         .and_then(|input| input.split_once('='))
                     {
                         let target = VfsPath::new(target);
-                        this.module_info
-                            .get_or_insert_with(|| PackageData {
-                                root_file: cur_file,
-                                input_store_paths: HashMap::default(),
+                        this.package_info
+                            .get_or_insert_with(|| PackageInfo {
+                                // root_file: cur_file,
                                 dependencies: Default::default(),
-                                version: None,
-                                display_name: None,
-                            })
-                            .input_store_paths
-                            .insert(name.into(), target);
+                                target: Target::default(),
+                                display_name: "Test".into(),
+                            });
                     } else {
                         bail!("Unknow property {prop}");
                     }

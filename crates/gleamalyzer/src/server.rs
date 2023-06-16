@@ -1,10 +1,11 @@
 use crate::capabilities::{negotiate_capabilities, NegotiatedCapabilities};
 use crate::config::{Config, CONFIG_KEY};
 use crate::{convert, handler, UrlExt, Vfs, MAX_FILE_LEN};
-use anyhow::{bail, ensure, Context, Result};
+use anyhow::{bail, Context, Result};
 use async_lsp::router::Router;
 use async_lsp::{ClientSocket, ErrorCode, LanguageClient, ResponseError};
-use ide::{Analysis, AnalysisHost, Cancelled, VfsPath};
+use gleam_interop;
+use ide::{Analysis, AnalysisHost, Cancelled, PackageInfo, VfsPath};
 use lsp_types::notification::Notification;
 use lsp_types::request::{self as req, Request};
 use lsp_types::{
@@ -19,10 +20,13 @@ use lsp_types::{
     WorkDoneProgress, WorkDoneProgressBegin, WorkDoneProgressCreateParams, WorkDoneProgressEnd,
     WorkDoneProgressReport,
 };
+use rustix::io::write;
+use smol_str::SmolStr;
 use std::backtrace::Backtrace;
 use std::borrow::BorrowMut;
 use std::cell::Cell;
 use std::collections::HashMap;
+use std::fmt::Error;
 use std::future::{ready, Future};
 use std::io::{ErrorKind, Read};
 use std::ops::ControlFlow;
@@ -32,16 +36,21 @@ use std::pin::pin;
 use std::sync::{Arc, Once, RwLock};
 use std::time::Duration;
 use std::{fmt, panic};
-use tokio::sync::watch;
 use tokio::task;
 use tokio::task::{AbortHandle, JoinHandle};
+use toml::Table;
 
 type NotifyResult = ControlFlow<async_lsp::Result<()>>;
 
 struct UpdateConfigEvent(serde_json::Value);
+struct SetPackageInfoEvent(Option<PackageInfo>);
 
 const LSP_SERVER_NAME: &str = "gleamalyzer";
 pub const GLEAM_TOML: &str = "gleam.toml";
+pub const MANIFEST_TOML: &str = "gleam.toml";
+const LOAD_WORKSPACE_PROGRESS_TOKEN: &str = "gleamalyzer/loadWorkspaceProgress";
+
+const LOAD_GLEAM_WORKSPACE_DEBOUNCE_DURATION: Duration = Duration::from_millis(100);
 
 pub struct Server {
     // States.
@@ -50,6 +59,9 @@ pub struct Server {
     vfs: Arc<RwLock<Vfs>>,
     opened_files: HashMap<Url, FileData>,
     config: Arc<Config>,
+
+    // Ongoing tasks.
+    load_gleam_workspace_fut: Option<JoinHandle<()>>,
 
     client: ClientSocket,
     capabilities: NegotiatedCapabilities,
@@ -84,6 +96,7 @@ impl Server {
             //// Requests ////
             .request_snap::<req::GotoDefinition>(handler::goto_definition)
             //// Events ////
+            .event(Self::on_set_package_info)
             .event(Self::on_update_config)
             // Loopback event.
             .event(Self::on_did_change_watched_files);
@@ -96,6 +109,9 @@ impl Server {
             vfs: Arc::new(RwLock::new(Vfs::new())),
             opened_files: HashMap::default(),
             config: Arc::new(Config::new("/non-existing-path".into())),
+
+            load_gleam_workspace_fut: None,
+
             client,
             init_messages,
             capabilities: NegotiatedCapabilities::default(),
@@ -154,7 +170,7 @@ impl Server {
         // read uninitialized configs.
         self.spawn_reload_config();
 
-        // Make a virtual event to trigger loading of flake files for flake info.
+        // Make a virtual event to trigger loading of gleam.toml files for package info.
         let gleam_toml_changed_event = DidChangeWatchedFilesParams {
             changes: [GLEAM_TOML]
                 .into_iter()
@@ -214,10 +230,10 @@ impl Server {
         if let Err(err) = client.register_capability(params).await {
             client.show_message_ext(
                 MessageType::ERROR,
-                format!("Failed to watch flake files: {err:#}"),
+                format!("Failed to watch gleam.toml: {err:#}"),
             );
         }
-        tracing::info!("Registered file watching for flake files");
+        tracing::info!("Registered file watching for gleam.toml");
     }
 
     fn on_did_open(&mut self, params: DidOpenTextDocumentParams) -> NotifyResult {
@@ -307,7 +323,7 @@ impl Server {
     fn on_did_change_watched_files(&mut self, params: DidChangeWatchedFilesParams) -> NotifyResult {
         tracing::debug!("Watched files changed: {params:?}");
 
-        let mut gleam_toml_changed = true;
+        let mut gleam_toml_changed = false;
         for &FileEvent { ref uri, mut typ } in &params.changes {
             // Don't reload files maintained by the client.
             if self.opened_files.contains_key(uri) {
@@ -367,9 +383,268 @@ impl Server {
         }
 
         if gleam_toml_changed {
-            // self.spawn_load_gleam_workspace();
+            self.spawn_load_gleam_workspace();
         }
 
+        ControlFlow::Continue(())
+    }
+
+    /// Spawn a task to (re)load the gleam workspace via `gleam.toml`
+    fn spawn_load_gleam_workspace(&mut self) {
+        let fut = task::spawn(Self::load_gleam_workspace(
+            self.vfs.clone(),
+            self.config.clone(),
+            self.capabilities.clone(),
+            self.client.clone(),
+        ));
+        if let Some(prev_fut) = self.load_gleam_workspace_fut.replace(fut) {
+            prev_fut.abort();
+        }
+    }
+
+    async fn load_gleam_workspace(
+        vfs: Arc<RwLock<Vfs>>,
+        config: Arc<Config>,
+        caps: NegotiatedCapabilities,
+        mut client: ClientSocket,
+    ) {
+        // Delay the loading to debounce. Later triggers will cancel previous tasks at here.
+        tokio::time::sleep(LOAD_GLEAM_WORKSPACE_DEBOUNCE_DURATION).await;
+
+        tracing::info!("Loading gleam workspace");
+        let progress = Progress::new(
+            &client,
+            &caps,
+            LOAD_WORKSPACE_PROGRESS_TOKEN,
+            "Loading workspace",
+            "gleam deps download".to_owned(),
+        )
+        .await;
+        let package_info = match Self::load_package_info(&vfs, &config).await {
+            Ok(ret) => {
+                let _: Result<_, _> = client.emit(SetPackageInfoEvent(ret.clone()));
+                ret
+            }
+            Err(err) => {
+                client.show_message_ext(
+                    MessageType::ERROR,
+                    format!("Failed to load gleam workspace: {err:#}"),
+                );
+                return;
+            }
+        };
+        progress.done(None);
+        let Some(package_info) = package_info else { return };
+
+        // let missing_paths = || {
+        //     flake_info
+        //         .input_store_paths
+        //         .iter()
+        //         .filter(|(_, path)| !path.as_path().expect("Must be real paths").exists())
+        // };
+
+        // if missing_paths().next().is_some() {
+        //     tracing::debug!(
+        //         "Missing flake inputs: {:?}",
+        //         missing_paths().collect::<Vec<_>>()
+        //     );
+
+        //     let do_fetch = match config.nix_flake_auto_archive {
+        //         Some(do_fetch) => do_fetch,
+        //         None if caps.client_show_message_request => {
+        //             let ret = client
+        //                 .show_message_request(ShowMessageRequestParams {
+        //                     typ: MessageType::INFO,
+        //                     message: "\
+        //                     Some flake inputs are not available. Fetch them now? \n\
+        //                     You can enable auto-fetch in configurations.\
+        //                 "
+        //                     .into(),
+        //                     actions: Some(vec![
+        //                         MessageActionItem {
+        //                             title: "Fetch".into(),
+        //                             properties: [(
+        //                                 // Matches below.
+        //                                 "ok".into(),
+        //                                 MessageActionItemProperty::Boolean(true),
+        //                             )]
+        //                             .into(),
+        //                         },
+        //                         MessageActionItem {
+        //                             title: "Ignore missing ones".into(),
+        //                             properties: HashMap::new(),
+        //                         },
+        //                     ]),
+        //                 })
+        //                 .await;
+        //             // Matches above.
+        //             matches!(ret, Ok(Some(item)) if item.properties.contains_key("ok"))
+        //         }
+        //         None => {
+        //             client.show_message_ext(
+        //                 MessageType::WARNING,
+        //                 "\
+        //                 Some flake inputs are not available, please run `nix flake archive` to fetch them. \n\
+        //                 Your LSP client doesn't support confirmation. You can enable auto-fetch in configurations.\
+        //                 ",
+        //             );
+        //             false
+        //         }
+        //     };
+
+        //     if do_fetch {
+        //         tracing::info!("Archiving flake");
+        //         let progress = Progress::new(
+        //             &client,
+        //             &caps,
+        //             FLAKE_ARCHIVE_PROGRESS_TOKEN,
+        //             "Fetching flake with inputs",
+        //             "nix flake archive".to_owned(),
+        //         )
+        //         .await;
+        //         let flake_url = FlakeUrl::new_path(&config.root_path);
+        //         let ret = flake_lock::archive(&config.nix_binary, &flake_url)
+        //             .await
+        //             .and_then(|()| {
+        //                 let missing = missing_paths().collect::<Vec<_>>();
+        //                 ensure!(
+        //                     missing.is_empty(),
+        //                     "command succeeded but some paths are still missing: {missing:?}"
+        //                 );
+        //                 Ok(())
+        //             });
+        //         progress.done(None);
+
+        //         if let Err(err) = ret {
+        //             client.show_message_ext(
+        //                 MessageType::ERROR,
+        //                 format_args!("Failed to archiving flake: {err:#}"),
+        //             );
+        //             // Fallthrough and load the rest if possible.
+        //         }
+        //     }
+        // }
+
+        // if let Some((input_name, nixpkgs_path)) = (|| {
+        //     let input_name = config.nix_flake_nixpkgs_input_name.as_ref()?;
+        //     let path = flake_info
+        //         .input_store_paths
+        //         .get(input_name)?
+        //         .as_path()
+        //         .filter(|p| p.exists())?;
+        //     Some((input_name, path))
+        // })() {
+        //     tracing::info!("Evaluating NixOS options from {}", nixpkgs_path.display());
+
+        //     let _progress = Progress::new(
+        //         &client,
+        //         &caps,
+        //         LOAD_NIXOS_OPTIONS_PROGRESS_TOKEN,
+        //         format!("Loading NixOS options from '{input_name}'"),
+        //         None,
+        //     )
+        //     .await;
+
+        //     let ret = nixos_options::eval_all_options(&config.nix_binary, nixpkgs_path)
+        //         .await
+        //         .context("Failed to evaluate NixOS options");
+        //     match ret {
+        //         // Sanity check.
+        //         Ok(opts) if !opts.is_empty() => {
+        //             tracing::info!("Loaded NixOS options ({} top-level options)", opts.len());
+        //             let _: Result<_, _> = client.emit(SetNixosOptionsEvent(opts));
+        //         }
+        //         Ok(_) => tracing::error!("Empty NixOS options?"),
+        //         Err(err) => {
+        //             client.show_message_ext(MessageType::ERROR, format_args!("{err:#}"));
+        //         }
+        //     }
+        // }
+
+        // if config.nix_flake_auto_eval_inputs {
+        //     Self::load_input_flakes(flake_info, &config, &caps, &mut client).await;
+        // }
+    }
+
+    async fn load_package_info(vfs: &RwLock<Vfs>, config: &Config) -> Result<Option<PackageInfo>> {
+        tracing::info!("Downloading deps and loading package info");
+
+        let _: () = gleam_interop::load_package_info()
+            .await
+            .context("Could not load dependencies")?;
+
+        let (manifest_toml, src) = {
+            let vfs = vfs.read().unwrap();
+
+            let manifest_toml_vpath = VfsPath::new(config.root_path.join(MANIFEST_TOML));
+
+            let Ok(manifest_file) = vfs.file_for_path(&manifest_toml_vpath) else { return Ok(None) };
+            let src = vfs.content_for_file(manifest_file);
+            (manifest_file, src)
+        };
+
+        let toml = src.parse::<Table>().unwrap();
+        // tracing::info!("{:#?}", toml);
+
+        let target = toml["target"]
+            .as_str()
+            .context("Only erlang or javascript are valid targets")?
+            .into();
+        let name = toml["name"].as_str().context("No valid name")?.into();
+
+        Ok(Some(PackageInfo {
+            display_name: name,
+            target,
+            dependencies: Vec::new(),
+        }))
+        // let (flake_file, lock_src) = {
+        //     let vfs = vfs.read().unwrap();
+
+        //     let flake_vpath = VfsPath::new(config.root_path.join(FLAKE_FILE));
+        //     // We always load flake.nix when initialized. If there's none in Vfs, there's none.
+        //     let Ok(flake_file) = vfs.file_for_path(&flake_vpath) else { return Ok(None) };
+
+        //     let lock_vpath = VfsPath::new(config.root_path.join(FLAKE_LOCK_FILE));
+        //     let Ok(lock_file) = vfs.file_for_path(&lock_vpath)
+        //     else {
+        //         return Ok(Some(PackageInfo {
+        //             flake_file,
+        //             input_store_paths: HashMap::new(),
+        //             input_flake_outputs: HashMap::new(),
+        //         }));
+        //     };
+        //     let lock_src = vfs.content_for_file(lock_file);
+        //     (flake_file, lock_src)
+        // };
+
+        // let inputs =
+        //     flake_lock::resolve_flake_locked_inputs(&config.nix_binary, lock_src.as_bytes())
+        //         .await
+        //         .context("Failed to resolve flake inputs from lock file")?;
+
+        // // We only need the map for input -> store path.
+        // let input_store_paths = inputs
+        //     .into_iter()
+        //     .map(|(key, input)| (key, VfsPath::new(input.store_path)))
+        //     .collect();
+        // Ok(Some(FlakeInfo {
+        //     flake_file,
+        //     input_store_paths,
+        //     input_flake_outputs: HashMap::new(),
+        // }))
+    }
+
+    fn on_set_package_info(&mut self, info: SetPackageInfoEvent) -> NotifyResult {
+        tracing::debug!("Set package info: {:?}", info.0);
+        self.vfs.write().unwrap().set_package_info(info.0);
+        self.apply_vfs_change();
+
+        // This is currently mostly to get proper diagnostics on startup
+        let uris = self.opened_files.keys().cloned().collect::<Vec<_>>();
+        for uri in uris {
+            tracing::trace!("Recalculate diagnostics of {uri}");
+            self.spawn_update_diagnostics(uri.clone());
+        }
         ControlFlow::Continue(())
     }
 
@@ -663,4 +938,3 @@ impl StateSnapshot {
         self.vfs.read().unwrap()
     }
 }
-

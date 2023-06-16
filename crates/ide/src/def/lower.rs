@@ -1,3 +1,5 @@
+use crate::{Diagnostic, base::Target, DiagnosticKind};
+
 use super::{
     module::{
         Expr, ExprId, Function, FunctionId, Label, ModuleData, ModuleSourceMap, ModuleStatementId,
@@ -7,7 +9,7 @@ use super::{
 };
 use smol_str::SmolStr;
 use syntax::{
-    ast::{self, StatementExpr},
+    ast::{self, StatementExpr, AstNode},
     Parse,
 };
 
@@ -59,6 +61,10 @@ impl LowerCtx<'_> {
         self.source_map.expr_map_rev.insert(id, ptr);
         id
     }
+    
+    fn diagnostic(&mut self, diag: Diagnostic) {
+        self.source_map.diagnostics.push(diag);
+    }
 
     fn lower_module(&mut self, module: ast::SourceFile) -> Vec<ModuleStatementId> {
         module
@@ -68,14 +74,18 @@ impl LowerCtx<'_> {
     }
 
     fn lower_target_group(&mut self, tg: &ast::TargetGroup) -> Vec<ModuleStatementId> {
-        // if let Some(target) = stmnt.target() {
-        //     if target.syntax().to_string() == "javascript" {
-        //         self.diagnostic(Diagnostic::new(
-        //             stmnt.syntax().text_range(),
-        //             DiagnosticKind::InactiveTarget,
-        //         ));
-        //     }
-        // };
+        let package_info = self.db.source_root_package_info(crate::SourceRootId(0));
+        if let (Some(token), Some(package_info)) = (tg.target().and_then(|t| t.token()), package_info) {
+            tracing::info!("TARGET {:?} {:?}", token.text(), package_info.target);
+            if Target::from(token.text()) != package_info.target {
+                 self.diagnostic(Diagnostic::new(
+                    tg.syntax().text_range(),
+                    DiagnosticKind::InactiveTarget,
+                ));
+                return Vec::new();
+            }
+        }
+        
         tg.statements()
             .flat_map(|stmt| self.lower_module_statement(&stmt))
             .collect()
