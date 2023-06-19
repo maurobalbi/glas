@@ -463,7 +463,10 @@ impl Server {
             .into();
         let name = toml["name"].as_str().context("No valid name")?.into();
 
+        
+
         Ok(Some(PackageInfo {
+            root_manifest: manifest_toml,
             display_name: name,
             target,
             dependencies: Vec::new(),

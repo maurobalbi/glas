@@ -175,7 +175,7 @@ pub struct PackageGraph {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PackageInfo {
-    // pub root_file: FileId,
+    pub root_manifest: FileId,
     // pub version: Option<String>,
     pub target: Target,
     pub display_name: String,
@@ -295,10 +295,48 @@ pub trait SourceDatabase {
     #[salsa::input]
     fn package_graph(&self) -> Arc<PackageGraph>;
 
+    fn file_module_name(&self, file_id: FileId) -> Option<SmolStr>;
 }
 
 fn source_root_package_info(db: &dyn SourceDatabase, sid: SourceRootId) -> Option<Arc<PackageInfo>> {
     db.package_graph().nodes.get(&sid).cloned().map(Arc::new)
+}
+
+fn file_module_name(db: &dyn SourceDatabase, file_id: FileId) -> Option<SmolStr> {
+    let sid = db.file_source_root(file_id);
+    let source_root = db.source_root(sid);
+    let root_manifest = db.package_graph().nodes.get(&sid)?.root_manifest;
+
+    let manifest_path = source_root.file_set.path_for_file(root_manifest);
+    let file_path = source_root.file_set.path_for_file(file_id);
+
+    module_name(manifest_path, file_path)
+}
+
+pub(crate) fn module_name(manifest_path: &VfsPath, full_module_path: &VfsPath) -> Option<SmolStr> {
+    // /path/to/project/_build/default/lib/the_package/src/my/module.gleam
+    let module_path = full_module_path.as_path()?;
+    let manifest_path = manifest_path.as_path()?;
+
+    let root_path = manifest_path.parent()?;
+
+    // my/module.gleam
+    let mut module_path = module_path
+        .strip_prefix(root_path)
+        .expect("Stripping package prefix from module path")
+        .to_path_buf();
+
+    // my/module
+    let _ = module_path.set_extension("");
+
+    // Stringify
+    let name = module_path
+        .to_str()
+        .expect("Module name path to str")
+        .to_string();
+
+    // normalise windows paths
+    Some(name.replace("\\", "/").into())
 }
 
 #[derive(Default, Clone, PartialEq, Eq)]

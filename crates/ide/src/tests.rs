@@ -117,7 +117,7 @@ impl Fixture {
                         let target = VfsPath::new(target);
                         this.package_info
                             .get_or_insert_with(|| PackageInfo {
-                                // root_file: cur_file,
+                                root_manifest: cur_file,
                                 dependencies: Default::default(),
                                 target: Target::default(),
                                 display_name: "Test".into(),
