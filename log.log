@@ -7759,3 +7759,493 @@
         ),
     },
 }
+2023-06-19T15:59:29.200884Z  INFO gleamalyzer: Max concurrent requests: 8
+2023-06-19T15:59:29.202458Z DEBUG salsa::lru: green_zone = 0..12    
+2023-06-19T15:59:29.202540Z DEBUG salsa::lru: yellow_zone = 12..37    
+2023-06-19T15:59:29.202561Z DEBUG salsa::lru: red_zone = 37..128    
+2023-06-19T15:59:29.202945Z DEBUG salsa::input: PackageGraphQuery(()) = PackageGraph { nodes: {} } (Durability(1))    
+2023-06-19T15:59:29.203111Z DEBUG salsa::runtime: increment_revision()    
+2023-06-19T15:59:29.203125Z DEBUG salsa::runtime: increment_revision: incremented to R2    
+2023-06-19T15:59:29.207061Z  INFO gleamalyzer::server: Init params: InitializeParams { process_id: Some(6734), root_path: Some("/Users/maurobalbi/Documents/repos/try_gleam"), root_uri: Some(Url { scheme: "file", cannot_be_a_base: false, username: "", password: None, host: None, port: None, path: "/Users/maurobalbi/Documents/repos/try_gleam", query: None, fragment: None }), initialization_options: None, capabilities: ClientCapabilities { workspace: Some(WorkspaceClientCapabilities { apply_edit: Some(true), workspace_edit: Some(WorkspaceEditClientCapabilities { document_changes: Some(true), resource_operations: Some([Create, Rename, Delete]), failure_handling: Some(TextOnlyTransactional), normalizes_line_endings: Some(true), change_annotation_support: Some(ChangeAnnotationWorkspaceEditClientCapabilities { groups_on_label: Some(true) }) }), did_change_configuration: Some(DynamicRegistrationClientCapabilities { dynamic_registration: Some(true) }), did_change_watched_files: Some(DidChangeWatchedFilesClientCapabilities { dynamic_registration: Some(true), relative_pattern_support: None }), symbol: Some(WorkspaceSymbolClientCapabilities { dynamic_registration: Some(true), symbol_kind: Some(SymbolKindCapability { value_set: Some([File, Module, Namespace, Package, Class, Method, Property, Field, Constructor, Enum, Interface, Function, Variable, Constant, String, Number, Boolean, Array, Object, Key, Null, EnumMember, Struct, Event, Operator, TypeParameter]) }), tag_support: Some(TagSupport { value_set: [Deprecated] }), resolve_support: None }), execute_command: Some(DynamicRegistrationClientCapabilities { dynamic_registration: Some(true) }), workspace_folders: Some(true), configuration: Some(true), semantic_tokens: Some(SemanticTokensWorkspaceClientCapabilities { refresh_support: Some(true) }), code_lens: Some(CodeLensWorkspaceClientCapabilities { refresh_support: Some(true) }), file_operations: Some(WorkspaceFileOperationsClientCapabilities { dynamic_registration: Some(true), did_create: Some(true), will_create: Some(true), did_rename: Some(true), will_rename: Some(true), did_delete: Some(true), will_delete: Some(true) }), inline_value: None, inlay_hint: None }), text_document: Some(TextDocumentClientCapabilities { synchronization: Some(TextDocumentSyncClientCapabilities { dynamic_registration: Some(true), will_save: Some(true), will_save_wait_until: Some(true), did_save: Some(true) }), completion: Some(CompletionClientCapabilities { dynamic_registration: Some(true), completion_item: Some(CompletionItemCapability { snippet_support: Some(true), commit_characters_support: Some(true), documentation_format: Some([Markdown, PlainText]), deprecated_support: Some(true), preselect_support: Some(true), tag_support: Some(TagSupport { value_set: [Deprecated] }), insert_replace_support: Some(true), resolve_support: Some(CompletionItemCapabilityResolveSupport { properties: ["documentation", "detail", "additionalTextEdits"] }), insert_text_mode_support: Some(InsertTextModeSupport { value_set: [AsIs, AdjustIndentation] }), label_details_support: None }), completion_item_kind: Some(CompletionItemKindCapability { value_set: Some([Text, Method, Function, Constructor, Field, Variable, Class, Interface, Module, Property, Unit, Value, Enum, Keyword, Snippet, Color, File, Reference, Folder, EnumMember, Constant, Struct, Event, Operator, TypeParameter]) }), context_support: Some(true), insert_text_mode: None, completion_list: None }), hover: Some(HoverClientCapabilities { dynamic_registration: Some(true), content_format: Some([Markdown, PlainText]) }), signature_help: Some(SignatureHelpClientCapabilities { dynamic_registration: Some(true), signature_information: Some(SignatureInformationSettings { documentation_format: Some([Markdown, PlainText]), parameter_information: Some(ParameterInformationSettings { label_offset_support: Some(true) }), active_parameter_support: Some(true) }), context_support: Some(true) }), references: Some(DynamicRegistrationClientCapabilities { dynamic_registration: Some(true) }), document_highlight: Some(DynamicRegistrationClientCapabilities { dynamic_registration: Some(true) }), document_symbol: Some(DocumentSymbolClientCapabilities { dynamic_registration: Some(true), symbol_kind: Some(SymbolKindCapability { value_set: Some([File, Module, Namespace, Package, Class, Method, Property, Field, Constructor, Enum, Interface, Function, Variable, Constant, String, Number, Boolean, Array, Object, Key, Null, EnumMember, Struct, Event, Operator, TypeParameter]) }), hierarchical_document_symbol_support: Some(true), tag_support: Some(TagSupport { value_set: [Deprecated] }) }), formatting: Some(DynamicRegistrationClientCapabilities { dynamic_registration: Some(true) }), range_formatting: Some(DynamicRegistrationClientCapabilities { dynamic_registration: Some(true) }), on_type_formatting: Some(DynamicRegistrationClientCapabilities { dynamic_registration: Some(true) }), declaration: Some(GotoCapability { dynamic_registration: Some(true), link_support: Some(true) }), definition: Some(GotoCapability { dynamic_registration: Some(true), link_support: Some(true) }), type_definition: Some(GotoCapability { dynamic_registration: Some(true), link_support: Some(true) }), implementation: Some(GotoCapability { dynamic_registration: Some(true), link_support: Some(true) }), code_action: Some(CodeActionClientCapabilities { dynamic_registration: Some(true), code_action_literal_support: Some(CodeActionLiteralSupport { code_action_kind: CodeActionKindLiteralSupport { value_set: ["", "quickfix", "refactor", "refactor.extract", "refactor.inline", "refactor.rewrite", "source", "source.organizeImports"] } }), is_preferred_support: Some(true), disabled_support: Some(true), data_support: Some(true), resolve_support: Some(CodeActionCapabilityResolveSupport { properties: ["edit"] }), honors_change_annotations: Some(false) }), code_lens: Some(DynamicRegistrationClientCapabilities { dynamic_registration: Some(true) }), document_link: Some(DocumentLinkClientCapabilities { dynamic_registration: Some(true), tooltip_support: Some(true) }), color_provider: Some(DynamicRegistrationClientCapabilities { dynamic_registration: Some(true) }), rename: Some(RenameClientCapabilities { dynamic_registration: Some(true), prepare_support: Some(true), prepare_support_default_behavior: Some(Identifier), honors_change_annotations: Some(true) }), publish_diagnostics: Some(PublishDiagnosticsClientCapabilities { related_information: Some(true), tag_support: Some(TagSupport { value_set: [Unnecessary, Deprecated] }), version_support: Some(false), code_description_support: Some(true), data_support: Some(true) }), folding_range: Some(FoldingRangeClientCapabilities { dynamic_registration: Some(true), range_limit: Some(5000), line_folding_only: Some(true), folding_range_kind: None, folding_range: None }), selection_range: Some(SelectionRangeClientCapabilities { dynamic_registration: Some(true) }), linked_editing_range: Some(DynamicRegistrationClientCapabilities { dynamic_registration: Some(true) }), call_hierarchy: Some(DynamicRegistrationClientCapabilities { dynamic_registration: Some(true) }), semantic_tokens: Some(SemanticTokensClientCapabilities { dynamic_registration: Some(true), requests: SemanticTokensClientCapabilitiesRequests { range: Some(true), full: Some(Delta { delta: Some(true) }) }, token_types: [SemanticTokenType("namespace"), SemanticTokenType("type"), SemanticTokenType("class"), SemanticTokenType("enum"), SemanticTokenType("interface"), SemanticTokenType("struct"), SemanticTokenType("typeParameter"), SemanticTokenType("parameter"), SemanticTokenType("variable"), SemanticTokenType("property"), SemanticTokenType("enumMember"), SemanticTokenType("event"), SemanticTokenType("function"), SemanticTokenType("method"), SemanticTokenType("macro"), SemanticTokenType("keyword"), SemanticTokenType("modifier"), SemanticTokenType("comment"), SemanticTokenType("string"), SemanticTokenType("number"), SemanticTokenType("regexp"), SemanticTokenType("operator")], token_modifiers: [SemanticTokenModifier("declaration"), SemanticTokenModifier("definition"), SemanticTokenModifier("readonly"), SemanticTokenModifier("static"), SemanticTokenModifier("deprecated"), SemanticTokenModifier("abstract"), SemanticTokenModifier("async"), SemanticTokenModifier("modification"), SemanticTokenModifier("documentation"), SemanticTokenModifier("defaultLibrary")], formats: [TokenFormat("relative")], overlapping_token_support: Some(false), multiline_token_support: Some(false), server_cancel_support: None, augments_syntax_tokens: None }), moniker: None, type_hierarchy: None, inline_value: None, inlay_hint: None }), window: Some(WindowClientCapabilities { work_done_progress: Some(true), show_message: Some(ShowMessageRequestClientCapabilities { message_action_item: Some(MessageActionItemCapabilities { additional_properties_support: Some(true) }) }), show_document: Some(ShowDocumentClientCapabilities { support: true }) }), general: Some(GeneralClientCapabilities { regular_expressions: Some(RegularExpressionsClientCapabilities { engine: "ECMAScript", version: Some("ES2020") }), markdown: Some(MarkdownClientCapabilities { parser: "marked", version: Some("1.1.0"), allowed_tags: None }), stale_request_support: None, position_encodings: None }), experimental: None }, trace: Some(Off), workspace_folders: Some([WorkspaceFolder { uri: Url { scheme: "file", cannot_be_a_base: false, username: "", password: None, host: None, port: None, path: "/Users/maurobalbi/Documents/repos/try_gleam", query: None, fragment: None }, name: "try_gleam" }]), client_info: Some(ClientInfo { name: "Visual Studio Code", version: Some("1.79.0") }), locale: Some("en-gb") }
+2023-06-19T15:59:29.207626Z  INFO request{method="initialize"}: gleamalyzer::meter: respond with ~129 bytes in 2.188875ms
+2023-06-19T15:59:29.207749Z  WARN async_lsp::client_monitor: Unsupported platform to monitor exit of non-child processes, fallback to polling with kill(2)
+2023-06-19T15:59:29.212829Z  INFO notification{method="initialized"}: gleamalyzer::meter: handled notification in 81.125µs
+2023-06-19T15:59:29.213287Z DEBUG notification{method="textDocument/didOpen"}: salsa::runtime: increment_revision()    
+2023-06-19T15:59:29.213314Z DEBUG notification{method="textDocument/didOpen"}: salsa::runtime: increment_revision: incremented to R3    
+2023-06-19T15:59:29.213334Z DEBUG notification{method="textDocument/didOpen"}: salsa::input: FileSourceRootQuery(FileId(0)) = SourceRootId(0) (Durability(2))    
+2023-06-19T15:59:29.213352Z DEBUG notification{method="textDocument/didOpen"}: salsa::runtime: increment_revision()    
+2023-06-19T15:59:29.213367Z DEBUG notification{method="textDocument/didOpen"}: salsa::runtime: increment_revision: incremented to R4    
+2023-06-19T15:59:29.213393Z DEBUG notification{method="textDocument/didOpen"}: salsa::input: SourceRootQuery(SourceRootId(0)) = SourceRoot { file_set: {FileId(0): Path("/Users/maurobalbi/Documents/repos/try_gleam/src/test.gleam")}, is_library: false } (Durability(2))    
+2023-06-19T15:59:29.213413Z DEBUG notification{method="textDocument/didOpen"}: salsa::runtime: increment_revision()    
+2023-06-19T15:59:29.213428Z DEBUG notification{method="textDocument/didOpen"}: salsa::runtime: increment_revision: incremented to R5    
+2023-06-19T15:59:29.213450Z DEBUG notification{method="textDocument/didOpen"}: salsa::input: FileContentQuery(FileId(0)) = "import gleam/int.{InvalidBase}\n\nif erlang {\n  fn bla(b) {\n    let b = b\n\n    b\n  }\n}\n\nif javascript {\n  fn bla(b) {\n    let b = \n    let b = InvalidBase\n    b\n  }\n}\n\nconst bla2 = 1\n\ntype B(a,b) {\n  Bla(a, Int)\n}\n\nfn main(a, b) {\n  bla()\n  bla2\n  let name = 1\n  name\n}\n\n" (Durability(0))    
+2023-06-19T15:59:29.213475Z DEBUG notification{method="textDocument/didOpen"}: salsa::runtime: increment_revision()    
+2023-06-19T15:59:29.213489Z DEBUG notification{method="textDocument/didOpen"}: salsa::runtime: increment_revision: incremented to R6    
+2023-06-19T15:59:29.213543Z  INFO notification{method="textDocument/didOpen"}: gleamalyzer::meter: handled notification in 432.125µs
+2023-06-19T15:59:29.213585Z DEBUG salsa: unwind_if_cancelled: current_revision=R6, pending_revision=R6    
+2023-06-19T15:59:29.213657Z  INFO salsa::derived::slot: ParseQuery(FileId(0)): invoked at R6    
+2023-06-19T15:59:29.213715Z DEBUG salsa::derived::slot: ParseQuery(FileId(0)): read_upgrade(revision_now=R6)    
+2023-06-19T15:59:29.213751Z DEBUG salsa::runtime: DatabaseKeyIndex { group_index: 1, query_index: 0, key_index: 0 }: execute_query_implementation invoked    
+2023-06-19T15:59:29.213807Z  INFO salsa::derived::slot: ParseQuery(FileId(0)): executing query    
+2023-06-19T15:59:29.213820Z DEBUG salsa: unwind_if_cancelled: current_revision=R6, pending_revision=R6    
+2023-06-19T15:59:29.214421Z DEBUG salsa::derived::slot: read_upgrade(ParseQuery(FileId(0))): result.changed_at=R6, result.durability=Durability(0), result.dependencies = Some({DatabaseKeyIndex { group_index: 0, query_index: 0, key_index: 0 }})    
+2023-06-19T15:59:29.214443Z DEBUG salsa::derived::slot: read_upgrade(ParseQuery(FileId(0))): inputs=Tracked {
+    inputs: [
+        file_content(FileId(0)),
+    ],
+}    
+2023-06-19T15:59:29.214470Z DEBUG salsa::lru: record_use(node=ParseQuery(FileId(0)))    
+2023-06-19T15:59:29.214481Z DEBUG salsa::lru: record_use: green_zone=12    
+2023-06-19T15:59:29.214492Z DEBUG salsa::lru: record_use: index=18446744073709551615    
+2023-06-19T15:59:29.214502Z DEBUG salsa::lru: record_use(node=ParseQuery(FileId(0)))    
+2023-06-19T15:59:29.214512Z DEBUG salsa::lru: inserted node ParseQuery(FileId(0)) at 0    
+2023-06-19T15:59:29.214523Z DEBUG salsa::lru: record_use(node=ParseQuery(FileId(0)))    
+2023-06-19T15:59:29.214535Z DEBUG salsa: unwind_if_cancelled: current_revision=R6, pending_revision=R6    
+2023-06-19T15:59:29.214552Z  INFO salsa::derived::slot: SourceMapQuery(FileId(0)): invoked at R6    
+2023-06-19T15:59:29.214564Z DEBUG salsa::derived::slot: SourceMapQuery(FileId(0)): read_upgrade(revision_now=R6)    
+2023-06-19T15:59:29.214598Z DEBUG salsa::runtime: DatabaseKeyIndex { group_index: 1, query_index: 3, key_index: 0 }: execute_query_implementation invoked    
+2023-06-19T15:59:29.214610Z  INFO salsa::derived::slot: SourceMapQuery(FileId(0)): executing query    
+2023-06-19T15:59:29.214621Z DEBUG salsa: unwind_if_cancelled: current_revision=R6, pending_revision=R6    
+2023-06-19T15:59:29.214636Z  INFO salsa::derived::slot: ModuleWithSourceMapQuery(FileId(0)): invoked at R6    
+2023-06-19T15:59:29.214648Z DEBUG salsa::derived::slot: ModuleWithSourceMapQuery(FileId(0)): read_upgrade(revision_now=R6)    
+2023-06-19T15:59:29.214659Z DEBUG salsa::runtime: DatabaseKeyIndex { group_index: 1, query_index: 1, key_index: 0 }: execute_query_implementation invoked    
+2023-06-19T15:59:29.214670Z  INFO salsa::derived::slot: ModuleWithSourceMapQuery(FileId(0)): executing query    
+2023-06-19T15:59:29.214680Z DEBUG salsa: unwind_if_cancelled: current_revision=R6, pending_revision=R6    
+2023-06-19T15:59:29.214691Z  INFO salsa::derived::slot: ParseQuery(FileId(0)): invoked at R6    
+2023-06-19T15:59:29.214702Z DEBUG salsa::derived::slot: ParseQuery(FileId(0)): found memoized value, verified_at=R6, changed_at=R6    
+2023-06-19T15:59:29.214712Z  INFO salsa::derived::slot: ParseQuery(FileId(0)): returning memoized value changed at R6    
+2023-06-19T15:59:29.214723Z DEBUG salsa::lru: record_use(node=ParseQuery(FileId(0)))    
+2023-06-19T15:59:29.214733Z DEBUG salsa::lru: record_use: green_zone=12    
+2023-06-19T15:59:29.214742Z DEBUG salsa::lru: record_use: index=0    
+2023-06-19T15:59:29.214764Z DEBUG salsa: unwind_if_cancelled: current_revision=R6, pending_revision=R6    
+2023-06-19T15:59:29.214781Z  INFO salsa::derived::slot: SourceRootPackageInfoQuery(SourceRootId(0)): invoked at R6    
+2023-06-19T15:59:29.214792Z DEBUG salsa::derived::slot: SourceRootPackageInfoQuery(SourceRootId(0)): read_upgrade(revision_now=R6)    
+2023-06-19T15:59:29.214803Z DEBUG salsa::runtime: DatabaseKeyIndex { group_index: 0, query_index: 2, key_index: 0 }: execute_query_implementation invoked    
+2023-06-19T15:59:29.214818Z  INFO salsa::derived::slot: SourceRootPackageInfoQuery(SourceRootId(0)): executing query    
+2023-06-19T15:59:29.214828Z DEBUG salsa: unwind_if_cancelled: current_revision=R6, pending_revision=R6    
+2023-06-19T15:59:29.214848Z DEBUG salsa::derived::slot: read_upgrade(SourceRootPackageInfoQuery(SourceRootId(0))): result.changed_at=R2, result.durability=Durability(1), result.dependencies = Some({DatabaseKeyIndex { group_index: 0, query_index: 4, key_index: 0 }})    
+2023-06-19T15:59:29.214865Z DEBUG salsa::derived::slot: read_upgrade(SourceRootPackageInfoQuery(SourceRootId(0))): inputs=Tracked {
+    inputs: [
+        package_graph(()),
+    ],
+}    
+2023-06-19T15:59:29.214884Z DEBUG salsa::lru: record_use(node=SourceRootPackageInfoQuery(SourceRootId(0)))    
+2023-06-19T15:59:29.214895Z DEBUG salsa::lru: record_use: green_zone=0    
+2023-06-19T15:59:29.214915Z DEBUG salsa: unwind_if_cancelled: current_revision=R6, pending_revision=R6    
+2023-06-19T15:59:29.214928Z  INFO salsa::derived::slot: SourceRootPackageInfoQuery(SourceRootId(0)): invoked at R6    
+2023-06-19T15:59:29.214938Z DEBUG salsa::derived::slot: SourceRootPackageInfoQuery(SourceRootId(0)): found memoized value, verified_at=R6, changed_at=R2    
+2023-06-19T15:59:29.214949Z  INFO salsa::derived::slot: SourceRootPackageInfoQuery(SourceRootId(0)): returning memoized value changed at R2    
+2023-06-19T15:59:29.214959Z DEBUG salsa::lru: record_use(node=SourceRootPackageInfoQuery(SourceRootId(0)))    
+2023-06-19T15:59:29.214969Z DEBUG salsa::lru: record_use: green_zone=0    
+2023-06-19T15:59:29.215062Z DEBUG salsa: unwind_if_cancelled: current_revision=R6, pending_revision=R6    
+2023-06-19T15:59:29.215076Z  INFO salsa::derived::slot: SourceRootPackageInfoQuery(SourceRootId(0)): invoked at R6    
+2023-06-19T15:59:29.215087Z DEBUG salsa::derived::slot: SourceRootPackageInfoQuery(SourceRootId(0)): found memoized value, verified_at=R6, changed_at=R2    
+2023-06-19T15:59:29.215097Z  INFO salsa::derived::slot: SourceRootPackageInfoQuery(SourceRootId(0)): returning memoized value changed at R2    
+2023-06-19T15:59:29.215107Z DEBUG salsa::lru: record_use(node=SourceRootPackageInfoQuery(SourceRootId(0)))    
+2023-06-19T15:59:29.215117Z DEBUG salsa::lru: record_use: green_zone=0    
+2023-06-19T15:59:29.215184Z DEBUG salsa: unwind_if_cancelled: current_revision=R6, pending_revision=R6    
+2023-06-19T15:59:29.215197Z  INFO salsa::derived::slot: SourceRootPackageInfoQuery(SourceRootId(0)): invoked at R6    
+2023-06-19T15:59:29.215208Z DEBUG salsa::derived::slot: SourceRootPackageInfoQuery(SourceRootId(0)): found memoized value, verified_at=R6, changed_at=R2    
+2023-06-19T15:59:29.215218Z  INFO salsa::derived::slot: SourceRootPackageInfoQuery(SourceRootId(0)): returning memoized value changed at R2    
+2023-06-19T15:59:29.215228Z DEBUG salsa::lru: record_use(node=SourceRootPackageInfoQuery(SourceRootId(0)))    
+2023-06-19T15:59:29.215239Z DEBUG salsa::lru: record_use: green_zone=0    
+2023-06-19T15:59:29.215255Z DEBUG salsa: unwind_if_cancelled: current_revision=R6, pending_revision=R6    
+2023-06-19T15:59:29.215267Z  INFO salsa::derived::slot: SourceRootPackageInfoQuery(SourceRootId(0)): invoked at R6    
+2023-06-19T15:59:29.215276Z DEBUG salsa::derived::slot: SourceRootPackageInfoQuery(SourceRootId(0)): found memoized value, verified_at=R6, changed_at=R2    
+2023-06-19T15:59:29.215286Z  INFO salsa::derived::slot: SourceRootPackageInfoQuery(SourceRootId(0)): returning memoized value changed at R2    
+2023-06-19T15:59:29.215296Z DEBUG salsa::lru: record_use(node=SourceRootPackageInfoQuery(SourceRootId(0)))    
+2023-06-19T15:59:29.215306Z DEBUG salsa::lru: record_use: green_zone=0    
+2023-06-19T15:59:29.215321Z DEBUG salsa: unwind_if_cancelled: current_revision=R6, pending_revision=R6    
+2023-06-19T15:59:29.215333Z  INFO salsa::derived::slot: SourceRootPackageInfoQuery(SourceRootId(0)): invoked at R6    
+2023-06-19T15:59:29.215343Z DEBUG salsa::derived::slot: SourceRootPackageInfoQuery(SourceRootId(0)): found memoized value, verified_at=R6, changed_at=R2    
+2023-06-19T15:59:29.215353Z  INFO salsa::derived::slot: SourceRootPackageInfoQuery(SourceRootId(0)): returning memoized value changed at R2    
+2023-06-19T15:59:29.215355Z DEBUG gleamalyzer::server: Updating config: [Null]
+2023-06-19T15:59:29.215363Z DEBUG salsa::lru: record_use(node=SourceRootPackageInfoQuery(SourceRootId(0)))    
+2023-06-19T15:59:29.215375Z DEBUG salsa::lru: record_use: green_zone=0    
+2023-06-19T15:59:29.215459Z DEBUG salsa::derived::slot: read_upgrade(ModuleWithSourceMapQuery(FileId(0))): result.changed_at=R6, result.durability=Durability(0), result.dependencies = Some({DatabaseKeyIndex { group_index: 1, query_index: 0, key_index: 0 }, DatabaseKeyIndex { group_index: 0, query_index: 2, key_index: 0 }})    
+2023-06-19T15:59:29.215421Z DEBUG event{type_name="gleamalyzer::server::UpdateConfigEvent"}: gleamalyzer::server: Updated config, errors: [], config: Config { root_path: "/Users/maurobalbi/Documents/repos/try_gleam", diagnostics_excluded_files: [], diagnostics_ignored: {}, formatting_command: None, gleam_binary: "gleam" }
+2023-06-19T15:59:29.215477Z DEBUG salsa::derived::slot: read_upgrade(ModuleWithSourceMapQuery(FileId(0))): inputs=Tracked {
+    inputs: [
+        parse(FileId(0)),
+        source_root_package_info(SourceRootId(0)),
+    ],
+}    
+2023-06-19T15:59:29.215499Z DEBUG salsa::lru: record_use(node=ModuleWithSourceMapQuery(FileId(0)))    
+2023-06-19T15:59:29.215509Z DEBUG salsa::lru: record_use: green_zone=0    
+2023-06-19T15:59:29.215523Z DEBUG salsa::derived::slot: read_upgrade(SourceMapQuery(FileId(0))): result.changed_at=R6, result.durability=Durability(0), result.dependencies = Some({DatabaseKeyIndex { group_index: 1, query_index: 1, key_index: 0 }})    
+2023-06-19T15:59:29.215538Z DEBUG salsa::derived::slot: read_upgrade(SourceMapQuery(FileId(0))): inputs=Tracked {
+    inputs: [
+        module_with_source_map(FileId(0)),
+    ],
+}    
+2023-06-19T15:59:29.215554Z DEBUG salsa::lru: record_use(node=SourceMapQuery(FileId(0)))    
+2023-06-19T15:59:29.215565Z DEBUG salsa::lru: record_use: green_zone=0    
+2023-06-19T15:59:29.215604Z DEBUG gleamalyzer::server: Publish 0 diagnostics for file:///Users/maurobalbi/Documents/repos/try_gleam/src/test.gleam
+2023-06-19T15:59:29.216339Z  INFO gleamalyzer::server: Registered file watching for gleam.toml
+2023-06-19T15:59:29.216387Z DEBUG event{type_name="lsp_types::DidChangeWatchedFilesParams"}: gleamalyzer::server: Watched files changed: DidChangeWatchedFilesParams { changes: [FileEvent { uri: Url { scheme: "file", cannot_be_a_base: false, username: "", password: None, host: None, port: None, path: "/Users/maurobalbi/Documents/repos/try_gleam/gleam.toml", query: None, fragment: None }, typ: Created }] }
+2023-06-19T15:59:29.216823Z DEBUG event{type_name="lsp_types::DidChangeWatchedFilesParams"}: salsa::runtime: increment_revision()    
+2023-06-19T15:59:29.216843Z DEBUG event{type_name="lsp_types::DidChangeWatchedFilesParams"}: salsa::runtime: increment_revision: incremented to R7    
+2023-06-19T15:59:29.216861Z DEBUG event{type_name="lsp_types::DidChangeWatchedFilesParams"}: salsa::input: FileSourceRootQuery(FileId(0)) = SourceRootId(0) (Durability(2))    
+2023-06-19T15:59:29.216877Z DEBUG event{type_name="lsp_types::DidChangeWatchedFilesParams"}: salsa::runtime: increment_revision()    
+2023-06-19T15:59:29.216893Z DEBUG event{type_name="lsp_types::DidChangeWatchedFilesParams"}: salsa::runtime: increment_revision: incremented to R8    
+2023-06-19T15:59:29.216913Z DEBUG event{type_name="lsp_types::DidChangeWatchedFilesParams"}: salsa::input: FileSourceRootQuery(FileId(1)) = SourceRootId(0) (Durability(2))    
+2023-06-19T15:59:29.216929Z DEBUG event{type_name="lsp_types::DidChangeWatchedFilesParams"}: salsa::runtime: increment_revision()    
+2023-06-19T15:59:29.216943Z DEBUG event{type_name="lsp_types::DidChangeWatchedFilesParams"}: salsa::runtime: increment_revision: incremented to R9    
+2023-06-19T15:59:29.216961Z DEBUG event{type_name="lsp_types::DidChangeWatchedFilesParams"}: salsa::input: SourceRootQuery(SourceRootId(0)) = SourceRoot { file_set: {FileId(0): Path("/Users/maurobalbi/Documents/repos/try_gleam/src/test.gleam"), FileId(1): Path("/Users/maurobalbi/Documents/repos/try_gleam/gleam.toml")}, is_library: false } (Durability(2))    
+2023-06-19T15:59:29.216981Z DEBUG event{type_name="lsp_types::DidChangeWatchedFilesParams"}: salsa::runtime: increment_revision()    
+2023-06-19T15:59:29.216995Z DEBUG event{type_name="lsp_types::DidChangeWatchedFilesParams"}: salsa::runtime: increment_revision: incremented to R10    
+2023-06-19T15:59:29.217017Z DEBUG event{type_name="lsp_types::DidChangeWatchedFilesParams"}: salsa::input: FileContentQuery(FileId(1)) = "name = \"try_gleam\"\nversion = \"1.0.0\"\ntarget = \"javascript\"\n\n[dependencies]\ngleam_stdlib = \"~> 0.28\"\ngleeunit = \"~> 0.10\"\ngliew = \"~> 0.1.0\"" (Durability(0))    
+2023-06-19T15:59:29.217038Z DEBUG event{type_name="lsp_types::DidChangeWatchedFilesParams"}: salsa::runtime: increment_revision()    
+2023-06-19T15:59:29.217052Z DEBUG event{type_name="lsp_types::DidChangeWatchedFilesParams"}: salsa::runtime: increment_revision: incremented to R11    
+2023-06-19T15:59:29.319352Z  INFO gleamalyzer::server: Loading gleam workspace
+2023-06-19T15:59:29.322728Z  INFO gleamalyzer::server: Downloading deps and loading package info
+2023-06-19T15:59:29.367781Z DEBUG event{type_name="gleamalyzer::server::SetPackageInfoEvent"}: gleamalyzer::server: Set package info: Some(PackageInfo { target: Javascript, display_name: "try_gleam", dependencies: [] })
+2023-06-19T15:59:29.367831Z DEBUG event{type_name="gleamalyzer::server::SetPackageInfoEvent"}: salsa::runtime: increment_revision()    
+2023-06-19T15:59:29.367853Z DEBUG event{type_name="gleamalyzer::server::SetPackageInfoEvent"}: salsa::runtime: increment_revision: incremented to R12    
+2023-06-19T15:59:29.367879Z DEBUG event{type_name="gleamalyzer::server::SetPackageInfoEvent"}: salsa::input: PackageGraphQuery(()) = PackageGraph { nodes: {SourceRootId(0): PackageInfo { target: Javascript, display_name: "try_gleam", dependencies: [] }} } (Durability(1))    
+2023-06-19T15:59:29.367899Z DEBUG event{type_name="gleamalyzer::server::SetPackageInfoEvent"}: salsa::runtime: increment_revision()    
+2023-06-19T15:59:29.367913Z DEBUG event{type_name="gleamalyzer::server::SetPackageInfoEvent"}: salsa::runtime: increment_revision: incremented to R13    
+2023-06-19T15:59:29.368003Z DEBUG salsa: unwind_if_cancelled: current_revision=R13, pending_revision=R13    
+2023-06-19T15:59:29.368026Z  INFO salsa::derived::slot: ParseQuery(FileId(0)): invoked at R13    
+2023-06-19T15:59:29.368040Z DEBUG salsa::derived::slot: ParseQuery(FileId(0)): found memoized value, verified_at=R6, changed_at=R6    
+2023-06-19T15:59:29.368053Z DEBUG salsa::derived::slot: ParseQuery(FileId(0)): read_upgrade(revision_now=R13)    
+2023-06-19T15:59:29.368063Z DEBUG salsa::derived::slot: ParseQuery(FileId(0)): found memoized value, verified_at=R6, changed_at=R6    
+2023-06-19T15:59:29.368076Z DEBUG salsa::derived::slot: validate_memoized_value: verified_at=R6, revision_now=R13, inputs=Tracked {
+    inputs: [
+        DatabaseKeyIndex {
+            group_index: 0,
+            query_index: 0,
+            key_index: 0,
+        },
+    ],
+}    
+2023-06-19T15:59:29.368092Z DEBUG salsa::derived::slot: check_durability(last_changed=R13 <= verified_at=R6) = false    
+2023-06-19T15:59:29.368105Z DEBUG salsa::input: maybe_changed_since(slot=FileContentQuery(FileId(0)), revision=R6)    
+2023-06-19T15:59:29.368114Z DEBUG salsa::input: maybe_changed_since: changed_at = R6    
+2023-06-19T15:59:29.368126Z  INFO salsa::derived::slot: ParseQuery(FileId(0)): validated old memoized value    
+2023-06-19T15:59:29.368146Z DEBUG salsa::lru: record_use(node=ParseQuery(FileId(0)))    
+2023-06-19T15:59:29.368156Z DEBUG salsa::lru: record_use: green_zone=12    
+2023-06-19T15:59:29.368169Z DEBUG salsa::lru: record_use: index=0    
+2023-06-19T15:59:29.368184Z DEBUG salsa: unwind_if_cancelled: current_revision=R13, pending_revision=R13    
+2023-06-19T15:59:29.368195Z  INFO salsa::derived::slot: SourceMapQuery(FileId(0)): invoked at R13    
+2023-06-19T15:59:29.368205Z DEBUG salsa::derived::slot: SourceMapQuery(FileId(0)): found memoized value, verified_at=R6, changed_at=R6    
+2023-06-19T15:59:29.368214Z DEBUG salsa::derived::slot: SourceMapQuery(FileId(0)): read_upgrade(revision_now=R13)    
+2023-06-19T15:59:29.368223Z DEBUG salsa::derived::slot: SourceMapQuery(FileId(0)): found memoized value, verified_at=R6, changed_at=R6    
+2023-06-19T15:59:29.368234Z DEBUG salsa::derived::slot: validate_memoized_value: verified_at=R6, revision_now=R13, inputs=Tracked {
+    inputs: [
+        DatabaseKeyIndex {
+            group_index: 1,
+            query_index: 1,
+            key_index: 0,
+        },
+    ],
+}    
+2023-06-19T15:59:29.368247Z DEBUG salsa::derived::slot: check_durability(last_changed=R13 <= verified_at=R6) = false    
+2023-06-19T15:59:29.368259Z DEBUG salsa: unwind_if_cancelled: current_revision=R13, pending_revision=R13    
+2023-06-19T15:59:29.368267Z DEBUG salsa::derived::slot: maybe_changed_since(ModuleWithSourceMapQuery(FileId(0))) called with revision=R6, revision_now=R13    
+2023-06-19T15:59:29.368277Z DEBUG salsa::derived::slot: check_durability(last_changed=R13 <= verified_at=R6) = false    
+2023-06-19T15:59:29.368287Z DEBUG salsa::derived::slot: ModuleWithSourceMapQuery(FileId(0)): read_upgrade(revision_now=R13)    
+2023-06-19T15:59:29.368296Z DEBUG salsa::derived::slot: ModuleWithSourceMapQuery(FileId(0)): found memoized value, verified_at=R6, changed_at=R6    
+2023-06-19T15:59:29.368306Z DEBUG salsa::derived::slot: validate_memoized_value: verified_at=R6, revision_now=R13, inputs=Tracked {
+    inputs: [
+        DatabaseKeyIndex {
+            group_index: 1,
+            query_index: 0,
+            key_index: 0,
+        },
+        DatabaseKeyIndex {
+            group_index: 0,
+            query_index: 2,
+            key_index: 0,
+        },
+    ],
+}    
+2023-06-19T15:59:29.368319Z DEBUG salsa::derived::slot: check_durability(last_changed=R13 <= verified_at=R6) = false    
+2023-06-19T15:59:29.368348Z DEBUG salsa: unwind_if_cancelled: current_revision=R13, pending_revision=R13    
+2023-06-19T15:59:29.368357Z DEBUG salsa::derived::slot: maybe_changed_since(ParseQuery(FileId(0))) called with revision=R6, revision_now=R13    
+2023-06-19T15:59:29.368367Z DEBUG salsa::derived::slot: maybe_changed_since(ParseQuery(FileId(0))): false since up-to-date memo that changed at R6    
+2023-06-19T15:59:29.368377Z DEBUG salsa: unwind_if_cancelled: current_revision=R13, pending_revision=R13    
+2023-06-19T15:59:29.368386Z DEBUG salsa::derived::slot: maybe_changed_since(SourceRootPackageInfoQuery(SourceRootId(0))) called with revision=R6, revision_now=R13    
+2023-06-19T15:59:29.368395Z DEBUG salsa::derived::slot: check_durability(last_changed=R13 <= verified_at=R6) = false    
+2023-06-19T15:59:29.368404Z DEBUG salsa::derived::slot: SourceRootPackageInfoQuery(SourceRootId(0)): read_upgrade(revision_now=R13)    
+2023-06-19T15:59:29.368413Z DEBUG salsa::derived::slot: SourceRootPackageInfoQuery(SourceRootId(0)): found memoized value, verified_at=R6, changed_at=R2    
+2023-06-19T15:59:29.368424Z DEBUG salsa::derived::slot: validate_memoized_value: verified_at=R6, revision_now=R13, inputs=Tracked {
+    inputs: [
+        DatabaseKeyIndex {
+            group_index: 0,
+            query_index: 4,
+            key_index: 0,
+        },
+    ],
+}    
+2023-06-19T15:59:29.368435Z DEBUG salsa::derived::slot: check_durability(last_changed=R13 <= verified_at=R6) = false    
+2023-06-19T15:59:29.368446Z DEBUG salsa::input: maybe_changed_since(slot=PackageGraphQuery(()), revision=R6)    
+2023-06-19T15:59:29.368455Z DEBUG salsa::input: maybe_changed_since: changed_at = R13    
+2023-06-19T15:59:29.368463Z DEBUG salsa::derived::slot: validate_memoized_value: `DatabaseKeyIndex { group_index: 0, query_index: 4, key_index: 0 }` may have changed    
+2023-06-19T15:59:29.368473Z DEBUG salsa::runtime: DatabaseKeyIndex { group_index: 0, query_index: 2, key_index: 0 }: execute_query_implementation invoked    
+2023-06-19T15:59:29.368486Z  INFO salsa::derived::slot: SourceRootPackageInfoQuery(SourceRootId(0)): executing query    
+2023-06-19T15:59:29.368500Z DEBUG salsa: unwind_if_cancelled: current_revision=R13, pending_revision=R13    
+2023-06-19T15:59:29.368524Z DEBUG salsa::derived::slot: read_upgrade(SourceRootPackageInfoQuery(SourceRootId(0))): result.changed_at=R13, result.durability=Durability(1), result.dependencies = Some({DatabaseKeyIndex { group_index: 0, query_index: 4, key_index: 0 }})    
+2023-06-19T15:59:29.368543Z DEBUG salsa::derived::slot: read_upgrade(SourceRootPackageInfoQuery(SourceRootId(0))): inputs=Tracked {
+    inputs: [
+        package_graph(()),
+    ],
+}    
+2023-06-19T15:59:29.368567Z DEBUG salsa::derived::slot: maybe_changed_since(SourceRootPackageInfoQuery(SourceRootId(0)): true since (recomputed) value changed at R13    
+2023-06-19T15:59:29.368577Z DEBUG salsa::derived::slot: validate_memoized_value: `DatabaseKeyIndex { group_index: 0, query_index: 2, key_index: 0 }` may have changed    
+2023-06-19T15:59:29.368586Z DEBUG salsa::runtime: DatabaseKeyIndex { group_index: 1, query_index: 1, key_index: 0 }: execute_query_implementation invoked    
+2023-06-19T15:59:29.368596Z  INFO salsa::derived::slot: ModuleWithSourceMapQuery(FileId(0)): executing query    
+2023-06-19T15:59:29.368606Z DEBUG salsa: unwind_if_cancelled: current_revision=R13, pending_revision=R13    
+2023-06-19T15:59:29.368616Z  INFO salsa::derived::slot: ParseQuery(FileId(0)): invoked at R13    
+2023-06-19T15:59:29.368625Z DEBUG salsa::derived::slot: ParseQuery(FileId(0)): found memoized value, verified_at=R13, changed_at=R6    
+2023-06-19T15:59:29.368635Z  INFO salsa::derived::slot: ParseQuery(FileId(0)): returning memoized value changed at R6    
+2023-06-19T15:59:29.368645Z DEBUG salsa::lru: record_use(node=ParseQuery(FileId(0)))    
+2023-06-19T15:59:29.368653Z DEBUG salsa::lru: record_use: green_zone=12    
+2023-06-19T15:59:29.368662Z DEBUG salsa::lru: record_use: index=0    
+2023-06-19T15:59:29.368691Z DEBUG salsa: unwind_if_cancelled: current_revision=R13, pending_revision=R13    
+2023-06-19T15:59:29.368704Z  INFO salsa::derived::slot: SourceRootPackageInfoQuery(SourceRootId(0)): invoked at R13    
+2023-06-19T15:59:29.368713Z DEBUG salsa::derived::slot: SourceRootPackageInfoQuery(SourceRootId(0)): found memoized value, verified_at=R13, changed_at=R13    
+2023-06-19T15:59:29.368723Z  INFO salsa::derived::slot: SourceRootPackageInfoQuery(SourceRootId(0)): returning memoized value changed at R13    
+2023-06-19T15:59:29.368732Z DEBUG salsa::lru: record_use(node=SourceRootPackageInfoQuery(SourceRootId(0)))    
+2023-06-19T15:59:29.368741Z DEBUG salsa::lru: record_use: green_zone=0    
+2023-06-19T15:59:29.368761Z DEBUG salsa: unwind_if_cancelled: current_revision=R13, pending_revision=R13    
+2023-06-19T15:59:29.368771Z  INFO salsa::derived::slot: SourceRootPackageInfoQuery(SourceRootId(0)): invoked at R13    
+2023-06-19T15:59:29.368780Z DEBUG salsa::derived::slot: SourceRootPackageInfoQuery(SourceRootId(0)): found memoized value, verified_at=R13, changed_at=R13    
+2023-06-19T15:59:29.368789Z  INFO salsa::derived::slot: SourceRootPackageInfoQuery(SourceRootId(0)): returning memoized value changed at R13    
+2023-06-19T15:59:29.368798Z DEBUG salsa::lru: record_use(node=SourceRootPackageInfoQuery(SourceRootId(0)))    
+2023-06-19T15:59:29.368806Z DEBUG salsa::lru: record_use: green_zone=0    
+2023-06-19T15:59:29.368824Z  INFO ide::def::lower: TARGET "erlang" Javascript
+2023-06-19T15:59:29.368839Z DEBUG salsa: unwind_if_cancelled: current_revision=R13, pending_revision=R13    
+2023-06-19T15:59:29.368849Z  INFO salsa::derived::slot: SourceRootPackageInfoQuery(SourceRootId(0)): invoked at R13    
+2023-06-19T15:59:29.368858Z DEBUG salsa::derived::slot: SourceRootPackageInfoQuery(SourceRootId(0)): found memoized value, verified_at=R13, changed_at=R13    
+2023-06-19T15:59:29.368867Z  INFO salsa::derived::slot: SourceRootPackageInfoQuery(SourceRootId(0)): returning memoized value changed at R13    
+2023-06-19T15:59:29.368876Z DEBUG salsa::lru: record_use(node=SourceRootPackageInfoQuery(SourceRootId(0)))    
+2023-06-19T15:59:29.368886Z DEBUG salsa::lru: record_use: green_zone=0    
+2023-06-19T15:59:29.368898Z  INFO ide::def::lower: TARGET "javascript" Javascript
+2023-06-19T15:59:29.368970Z DEBUG salsa: unwind_if_cancelled: current_revision=R13, pending_revision=R13    
+2023-06-19T15:59:29.368983Z  INFO salsa::derived::slot: SourceRootPackageInfoQuery(SourceRootId(0)): invoked at R13    
+2023-06-19T15:59:29.368992Z DEBUG salsa::derived::slot: SourceRootPackageInfoQuery(SourceRootId(0)): found memoized value, verified_at=R13, changed_at=R13    
+2023-06-19T15:59:29.369001Z  INFO salsa::derived::slot: SourceRootPackageInfoQuery(SourceRootId(0)): returning memoized value changed at R13    
+2023-06-19T15:59:29.369010Z DEBUG salsa::lru: record_use(node=SourceRootPackageInfoQuery(SourceRootId(0)))    
+2023-06-19T15:59:29.369019Z DEBUG salsa::lru: record_use: green_zone=0    
+2023-06-19T15:59:29.369033Z DEBUG salsa: unwind_if_cancelled: current_revision=R13, pending_revision=R13    
+2023-06-19T15:59:29.369043Z  INFO salsa::derived::slot: SourceRootPackageInfoQuery(SourceRootId(0)): invoked at R13    
+2023-06-19T15:59:29.369052Z DEBUG salsa::derived::slot: SourceRootPackageInfoQuery(SourceRootId(0)): found memoized value, verified_at=R13, changed_at=R13    
+2023-06-19T15:59:29.369061Z  INFO salsa::derived::slot: SourceRootPackageInfoQuery(SourceRootId(0)): returning memoized value changed at R13    
+2023-06-19T15:59:29.369070Z DEBUG salsa::lru: record_use(node=SourceRootPackageInfoQuery(SourceRootId(0)))    
+2023-06-19T15:59:29.369079Z DEBUG salsa::lru: record_use: green_zone=0    
+2023-06-19T15:59:29.369092Z DEBUG salsa: unwind_if_cancelled: current_revision=R13, pending_revision=R13    
+2023-06-19T15:59:29.369103Z  INFO salsa::derived::slot: SourceRootPackageInfoQuery(SourceRootId(0)): invoked at R13    
+2023-06-19T15:59:29.369112Z DEBUG salsa::derived::slot: SourceRootPackageInfoQuery(SourceRootId(0)): found memoized value, verified_at=R13, changed_at=R13    
+2023-06-19T15:59:29.369122Z  INFO salsa::derived::slot: SourceRootPackageInfoQuery(SourceRootId(0)): returning memoized value changed at R13    
+2023-06-19T15:59:29.369131Z DEBUG salsa::lru: record_use(node=SourceRootPackageInfoQuery(SourceRootId(0)))    
+2023-06-19T15:59:29.369139Z DEBUG salsa::lru: record_use: green_zone=0    
+2023-06-19T15:59:29.369222Z DEBUG salsa::derived::slot: read_upgrade(ModuleWithSourceMapQuery(FileId(0))): result.changed_at=R13, result.durability=Durability(0), result.dependencies = Some({DatabaseKeyIndex { group_index: 1, query_index: 0, key_index: 0 }, DatabaseKeyIndex { group_index: 0, query_index: 2, key_index: 0 }})    
+2023-06-19T15:59:29.369238Z DEBUG salsa::derived::slot: read_upgrade(ModuleWithSourceMapQuery(FileId(0))): inputs=Tracked {
+    inputs: [
+        parse(FileId(0)),
+        source_root_package_info(SourceRootId(0)),
+    ],
+}    
+2023-06-19T15:59:29.369262Z DEBUG salsa::derived::slot: maybe_changed_since(ModuleWithSourceMapQuery(FileId(0)): true since (recomputed) value changed at R13    
+2023-06-19T15:59:29.369273Z DEBUG salsa::derived::slot: validate_memoized_value: `DatabaseKeyIndex { group_index: 1, query_index: 1, key_index: 0 }` may have changed    
+2023-06-19T15:59:29.369282Z DEBUG salsa::runtime: DatabaseKeyIndex { group_index: 1, query_index: 3, key_index: 0 }: execute_query_implementation invoked    
+2023-06-19T15:59:29.369292Z  INFO salsa::derived::slot: SourceMapQuery(FileId(0)): executing query    
+2023-06-19T15:59:29.369301Z DEBUG salsa: unwind_if_cancelled: current_revision=R13, pending_revision=R13    
+2023-06-19T15:59:29.369312Z  INFO salsa::derived::slot: ModuleWithSourceMapQuery(FileId(0)): invoked at R13    
+2023-06-19T15:59:29.369322Z DEBUG salsa::derived::slot: ModuleWithSourceMapQuery(FileId(0)): found memoized value, verified_at=R13, changed_at=R13    
+2023-06-19T15:59:29.369331Z  INFO salsa::derived::slot: ModuleWithSourceMapQuery(FileId(0)): returning memoized value changed at R13    
+2023-06-19T15:59:29.369340Z DEBUG salsa::lru: record_use(node=ModuleWithSourceMapQuery(FileId(0)))    
+2023-06-19T15:59:29.369349Z DEBUG salsa::lru: record_use: green_zone=0    
+2023-06-19T15:59:29.369363Z DEBUG salsa::derived::slot: read_upgrade(SourceMapQuery(FileId(0))): result.changed_at=R13, result.durability=Durability(0), result.dependencies = Some({DatabaseKeyIndex { group_index: 1, query_index: 1, key_index: 0 }})    
+2023-06-19T15:59:29.369375Z DEBUG salsa::derived::slot: read_upgrade(SourceMapQuery(FileId(0))): inputs=Tracked {
+    inputs: [
+        module_with_source_map(FileId(0)),
+    ],
+}    
+2023-06-19T15:59:29.369394Z DEBUG salsa::lru: record_use(node=SourceMapQuery(FileId(0)))    
+2023-06-19T15:59:29.369403Z DEBUG salsa::lru: record_use: green_zone=0    
+2023-06-19T15:59:29.369450Z DEBUG gleamalyzer::server: Publish 1 diagnostics for file:///Users/maurobalbi/Documents/repos/try_gleam/src/test.gleam
+2023-06-19T15:59:30.033216Z  INFO notification{method="$/setTrace"}: gleamalyzer::meter: handled notification in 5.417µs
+2023-06-19T15:59:30.916191Z  INFO notification{method="$/setTrace"}: gleamalyzer::meter: handled notification in 4.666µs
+2023-06-19T15:59:30.930513Z  INFO notification{method="$/setTrace"}: gleamalyzer::meter: handled notification in 4.958µs
+2023-06-19T15:59:30.978999Z  INFO notification{method="$/setTrace"}: gleamalyzer::meter: handled notification in 5.125µs
+2023-06-19T15:59:30.993231Z  INFO notification{method="$/setTrace"}: gleamalyzer::meter: handled notification in 4.625µs
+2023-06-19T15:59:31.057989Z  INFO notification{method="$/setTrace"}: gleamalyzer::meter: handled notification in 8.792µs
+2023-06-19T15:59:33.444842Z DEBUG salsa: unwind_if_cancelled: current_revision=R13, pending_revision=R13    
+2023-06-19T15:59:33.444914Z  INFO salsa::derived::slot: ParseQuery(FileId(0)): invoked at R13    
+2023-06-19T15:59:33.444932Z DEBUG salsa::derived::slot: ParseQuery(FileId(0)): found memoized value, verified_at=R13, changed_at=R6    
+2023-06-19T15:59:33.444947Z  INFO salsa::derived::slot: ParseQuery(FileId(0)): returning memoized value changed at R6    
+2023-06-19T15:59:33.444959Z DEBUG salsa::lru: record_use(node=ParseQuery(FileId(0)))    
+2023-06-19T15:59:33.444970Z DEBUG salsa::lru: record_use: green_zone=12    
+2023-06-19T15:59:33.444981Z DEBUG salsa::lru: record_use: index=0    
+2023-06-19T15:59:33.445034Z DEBUG salsa: unwind_if_cancelled: current_revision=R13, pending_revision=R13    
+2023-06-19T15:59:33.445049Z  INFO salsa::derived::slot: SourceMapQuery(FileId(0)): invoked at R13    
+2023-06-19T15:59:33.445061Z DEBUG salsa::derived::slot: SourceMapQuery(FileId(0)): found memoized value, verified_at=R13, changed_at=R13    
+2023-06-19T15:59:33.445071Z  INFO salsa::derived::slot: SourceMapQuery(FileId(0)): returning memoized value changed at R13    
+2023-06-19T15:59:33.445082Z DEBUG salsa::lru: record_use(node=SourceMapQuery(FileId(0)))    
+2023-06-19T15:59:33.445092Z DEBUG salsa::lru: record_use: green_zone=0    
+2023-06-19T15:59:33.445109Z DEBUG salsa: unwind_if_cancelled: current_revision=R13, pending_revision=R13    
+2023-06-19T15:59:33.445133Z  INFO salsa::derived::slot: NameResolutionQuery(FileId(0)): invoked at R13    
+2023-06-19T15:59:33.445146Z DEBUG salsa::derived::slot: NameResolutionQuery(FileId(0)): read_upgrade(revision_now=R13)    
+2023-06-19T15:59:33.445167Z DEBUG salsa::runtime: DatabaseKeyIndex { group_index: 1, query_index: 5, key_index: 0 }: execute_query_implementation invoked    
+2023-06-19T15:59:33.445182Z  INFO salsa::derived::slot: NameResolutionQuery(FileId(0)): executing query    
+2023-06-19T15:59:33.445192Z DEBUG salsa: unwind_if_cancelled: current_revision=R13, pending_revision=R13    
+2023-06-19T15:59:33.445210Z  INFO salsa::derived::slot: ModuleQuery(FileId(0)): invoked at R13    
+2023-06-19T15:59:33.445222Z DEBUG salsa::derived::slot: ModuleQuery(FileId(0)): read_upgrade(revision_now=R13)    
+2023-06-19T15:59:33.445234Z DEBUG salsa::runtime: DatabaseKeyIndex { group_index: 1, query_index: 2, key_index: 0 }: execute_query_implementation invoked    
+2023-06-19T15:59:33.445245Z  INFO salsa::derived::slot: ModuleQuery(FileId(0)): executing query    
+2023-06-19T15:59:33.445256Z DEBUG salsa: unwind_if_cancelled: current_revision=R13, pending_revision=R13    
+2023-06-19T15:59:33.445267Z  INFO salsa::derived::slot: ModuleWithSourceMapQuery(FileId(0)): invoked at R13    
+2023-06-19T15:59:33.445278Z DEBUG salsa::derived::slot: ModuleWithSourceMapQuery(FileId(0)): found memoized value, verified_at=R13, changed_at=R13    
+2023-06-19T15:59:33.445289Z  INFO salsa::derived::slot: ModuleWithSourceMapQuery(FileId(0)): returning memoized value changed at R13    
+2023-06-19T15:59:33.445300Z DEBUG salsa::lru: record_use(node=ModuleWithSourceMapQuery(FileId(0)))    
+2023-06-19T15:59:33.445310Z DEBUG salsa::lru: record_use: green_zone=0    
+2023-06-19T15:59:33.445329Z DEBUG salsa::derived::slot: read_upgrade(ModuleQuery(FileId(0))): result.changed_at=R13, result.durability=Durability(0), result.dependencies = Some({DatabaseKeyIndex { group_index: 1, query_index: 1, key_index: 0 }})    
+2023-06-19T15:59:33.445350Z DEBUG salsa::derived::slot: read_upgrade(ModuleQuery(FileId(0))): inputs=Tracked {
+    inputs: [
+        module_with_source_map(FileId(0)),
+    ],
+}    
+2023-06-19T15:59:33.445378Z DEBUG salsa::lru: record_use(node=ModuleQuery(FileId(0)))    
+2023-06-19T15:59:33.445389Z DEBUG salsa::lru: record_use: green_zone=0    
+2023-06-19T15:59:33.445402Z DEBUG salsa: unwind_if_cancelled: current_revision=R13, pending_revision=R13    
+2023-06-19T15:59:33.445420Z  INFO salsa::derived::slot: ScopesQuery(FileId(0)): invoked at R13    
+2023-06-19T15:59:33.445432Z DEBUG salsa::derived::slot: ScopesQuery(FileId(0)): read_upgrade(revision_now=R13)    
+2023-06-19T15:59:33.445443Z DEBUG salsa::runtime: DatabaseKeyIndex { group_index: 1, query_index: 4, key_index: 0 }: execute_query_implementation invoked    
+2023-06-19T15:59:33.445454Z  INFO salsa::derived::slot: ScopesQuery(FileId(0)): executing query    
+2023-06-19T15:59:33.445465Z DEBUG salsa: unwind_if_cancelled: current_revision=R13, pending_revision=R13    
+2023-06-19T15:59:33.445477Z  INFO salsa::derived::slot: ModuleQuery(FileId(0)): invoked at R13    
+2023-06-19T15:59:33.445487Z DEBUG salsa::derived::slot: ModuleQuery(FileId(0)): found memoized value, verified_at=R13, changed_at=R13    
+2023-06-19T15:59:33.445498Z  INFO salsa::derived::slot: ModuleQuery(FileId(0)): returning memoized value changed at R13    
+2023-06-19T15:59:33.445508Z DEBUG salsa::lru: record_use(node=ModuleQuery(FileId(0)))    
+2023-06-19T15:59:33.445517Z DEBUG salsa::lru: record_use: green_zone=0    
+2023-06-19T15:59:33.445551Z  INFO ide::def::nameres: SCOPE: Idx::<ScopeData>(1)
+2023-06-19T15:59:33.445571Z  INFO ide::def::nameres: SCOPE: Idx::<ScopeData>(3)
+2023-06-19T15:59:33.445588Z DEBUG salsa::derived::slot: read_upgrade(ScopesQuery(FileId(0))): result.changed_at=R13, result.durability=Durability(0), result.dependencies = Some({DatabaseKeyIndex { group_index: 1, query_index: 2, key_index: 0 }})    
+2023-06-19T15:59:33.445604Z DEBUG salsa::derived::slot: read_upgrade(ScopesQuery(FileId(0))): inputs=Tracked {
+    inputs: [
+        module(FileId(0)),
+    ],
+}    
+2023-06-19T15:59:33.445622Z DEBUG salsa::lru: record_use(node=ScopesQuery(FileId(0)))    
+2023-06-19T15:59:33.445632Z DEBUG salsa::lru: record_use: green_zone=0    
+2023-06-19T15:59:33.445644Z  INFO ide::def::nameres: Scopes: ModuleScope {
+    scopes: Arena {
+        len: 5,
+        data: [
+            ScopeData {
+                parent: None,
+                kind: Definitions(
+                    {
+                        "bla": Idx::<Name>(0),
+                        "main": Idx::<Name>(3),
+                    },
+                ),
+            },
+            ScopeData {
+                parent: Some(
+                    Idx::<ScopeData>(0),
+                ),
+                kind: Definitions(
+                    {
+                        "b": Idx::<Name>(1),
+                    },
+                ),
+            },
+            ScopeData {
+                parent: Some(
+                    Idx::<ScopeData>(1),
+                ),
+                kind: Definitions(
+                    {
+                        "b": Idx::<Name>(2),
+                    },
+                ),
+            },
+            ScopeData {
+                parent: Some(
+                    Idx::<ScopeData>(0),
+                ),
+                kind: Definitions(
+                    {
+                        "a": Idx::<Name>(4),
+                        "b": Idx::<Name>(5),
+                    },
+                ),
+            },
+            ScopeData {
+                parent: Some(
+                    Idx::<ScopeData>(3),
+                ),
+                kind: Definitions(
+                    {
+                        "name": Idx::<Name>(6),
+                    },
+                ),
+            },
+        ],
+    },
+    scope_by_expr: ArenaMap {
+        v: [
+            Some(
+                Idx::<ScopeData>(1),
+            ),
+            Some(
+                Idx::<ScopeData>(2),
+            ),
+            Some(
+                Idx::<ScopeData>(1),
+            ),
+            Some(
+                Idx::<ScopeData>(3),
+            ),
+            Some(
+                Idx::<ScopeData>(3),
+            ),
+            Some(
+                Idx::<ScopeData>(3),
+            ),
+            Some(
+                Idx::<ScopeData>(3),
+            ),
+            Some(
+                Idx::<ScopeData>(4),
+            ),
+            Some(
+                Idx::<ScopeData>(3),
+            ),
+        ],
+        _ty: PhantomData<la_arena::Idx<ide::def::module::Expr>>,
+    },
+}
+2023-06-19T15:59:33.445762Z DEBUG salsa::derived::slot: read_upgrade(NameResolutionQuery(FileId(0))): result.changed_at=R13, result.durability=Durability(0), result.dependencies = Some({DatabaseKeyIndex { group_index: 1, query_index: 2, key_index: 0 }, DatabaseKeyIndex { group_index: 1, query_index: 4, key_index: 0 }})    
+2023-06-19T15:59:33.445779Z DEBUG salsa::derived::slot: read_upgrade(NameResolutionQuery(FileId(0))): inputs=Tracked {
+    inputs: [
+        module(FileId(0)),
+        scopes(FileId(0)),
+    ],
+}    
+2023-06-19T15:59:33.445798Z DEBUG salsa::lru: record_use(node=NameResolutionQuery(FileId(0)))    
+2023-06-19T15:59:33.445809Z DEBUG salsa::lru: record_use: green_zone=0    
+2023-06-19T15:59:33.446671Z  INFO request{method="textDocument/definition"}: gleamalyzer::meter: respond with ~154 bytes in 2.051083ms
+2023-06-19T15:59:50.699686Z DEBUG salsa: unwind_if_cancelled: current_revision=R13, pending_revision=R13    
+2023-06-19T15:59:50.699801Z  INFO salsa::derived::slot: ParseQuery(FileId(0)): invoked at R13    
+2023-06-19T15:59:50.699833Z DEBUG salsa::derived::slot: ParseQuery(FileId(0)): found memoized value, verified_at=R13, changed_at=R6    
+2023-06-19T15:59:50.699863Z  INFO salsa::derived::slot: ParseQuery(FileId(0)): returning memoized value changed at R6    
+2023-06-19T15:59:50.699887Z DEBUG salsa::lru: record_use(node=ParseQuery(FileId(0)))    
+2023-06-19T15:59:50.699908Z DEBUG salsa::lru: record_use: green_zone=12    
+2023-06-19T15:59:50.699928Z DEBUG salsa::lru: record_use: index=0    
+2023-06-19T15:59:50.700005Z DEBUG salsa: unwind_if_cancelled: current_revision=R13, pending_revision=R13    
+2023-06-19T15:59:50.700030Z  INFO salsa::derived::slot: SourceMapQuery(FileId(0)): invoked at R13    
+2023-06-19T15:59:50.700050Z DEBUG salsa::derived::slot: SourceMapQuery(FileId(0)): found memoized value, verified_at=R13, changed_at=R13    
+2023-06-19T15:59:50.700069Z  INFO salsa::derived::slot: SourceMapQuery(FileId(0)): returning memoized value changed at R13    
+2023-06-19T15:59:50.700087Z DEBUG salsa::lru: record_use(node=SourceMapQuery(FileId(0)))    
+2023-06-19T15:59:50.700105Z DEBUG salsa::lru: record_use: green_zone=0    
+2023-06-19T15:59:50.700133Z DEBUG salsa: unwind_if_cancelled: current_revision=R13, pending_revision=R13    
+2023-06-19T15:59:50.700154Z  INFO salsa::derived::slot: NameResolutionQuery(FileId(0)): invoked at R13    
+2023-06-19T15:59:50.700173Z DEBUG salsa::derived::slot: NameResolutionQuery(FileId(0)): found memoized value, verified_at=R13, changed_at=R13    
+2023-06-19T15:59:50.700191Z  INFO salsa::derived::slot: NameResolutionQuery(FileId(0)): returning memoized value changed at R13    
+2023-06-19T15:59:50.700209Z DEBUG salsa::lru: record_use(node=NameResolutionQuery(FileId(0)))    
+2023-06-19T15:59:50.700227Z DEBUG salsa::lru: record_use: green_zone=0    
+2023-06-19T15:59:50.700445Z  INFO request{method="textDocument/definition"}: gleamalyzer::meter: respond with ~154 bytes in 1.115709ms

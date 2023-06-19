@@ -8,8 +8,8 @@ use text_size::TextRange;
 use tracing_subscriber::fmt::writer::BoxMakeWriter;
 use tracing_subscriber::EnvFilter;
 
-const LOG_FILTER_ENV: &str = "NIL_LOG";
-const LOG_PATH_ENV: &str = "NIL_LOG_PATH";
+const LOG_FILTER_ENV: &str = "GLEAM_LOG";
+const LOG_PATH_ENV: &str = "GLEAM_LOG_PATH";
 const BACKTRACE_ENV: &str = "RUST_BACKTRACE";
 
 #[derive(Debug, FromArgs)]
