@@ -4,7 +4,7 @@ mod goto_definition;
 
 use crate::base::SourceDatabaseStorage;
 use crate::def::DefDatabaseStorage;
-use crate::{Change, Diagnostic, FileId, FileSet, FilePos, SourceRoot, VfsPath};
+use crate::{Change, Diagnostic, FileId, FileSet, FilePos, SourceRoot, VfsPath, ModuleMap};
 use salsa::{Database, Durability, ParallelDatabase};
 use std::fmt;
 use syntax::TextRange;
@@ -79,7 +79,7 @@ impl AnalysisHost {
         change.change_file(file, src.into());
         let mut file_set = FileSet::default();
         file_set.insert(file, VfsPath::new(format!("/main.gleam"))); // Hack
-        change.set_roots(vec![SourceRoot::new_local(file_set)]);
+        change.set_roots_and_map(vec![SourceRoot::new_local(file_set, "/".into())], ModuleMap::default());
         let mut this = Self::new();
         this.apply_change(change);
         (this, file)

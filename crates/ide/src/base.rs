@@ -101,6 +101,31 @@ impl From<&'_ Path> for VfsPath {
     }
 }
 
+#[derive(Debug, Default, Eq, PartialEq, Clone)]
+pub struct ModuleMap {
+    module_names: HashMap<FileId, SmolStr>,
+    files: HashMap<SmolStr, FileId>
+}
+
+impl ModuleMap {
+    pub fn insert(&mut self, file: FileId, module_name: SmolStr) -> Option<FileId> {
+        self.module_names.insert(file, module_name.clone());
+        self.files.insert(module_name, file)
+    }
+
+    pub fn file_for_module_name(&self, name: SmolStr) -> Option<FileId> {
+        self.files.get(&name).copied()
+    }
+
+    pub fn module_name_for_file(&self, file: FileId) -> Option<SmolStr> {
+        self.module_names.get(&file).cloned()
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = (FileId, &'_ SmolStr)> + ExactSizeIterator + '_ {
+        self.module_names.iter().map(|(&file, path)| (file, path))
+    }
+}
+
 /// A set of [`VfsPath`]s identified by [`FileId`]s.
 #[derive(Default, Clone, PartialEq, Eq)]
 pub struct FileSet {
@@ -143,16 +168,17 @@ impl fmt::Debug for FileSet {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SourceRoot {
     file_set: FileSet,
+    root_path: PathBuf,
     pub is_library: bool,
 }
 
 impl SourceRoot {
-    pub fn new_local(file_set: FileSet) -> Self {
-        Self { file_set, is_library: false}
+    pub fn new_local(file_set: FileSet, root_path: PathBuf ) -> Self {
+        Self { file_set, root_path,  is_library: false}
     }
 
-    pub fn new_library(file_set: FileSet) -> SourceRoot {
-        SourceRoot { is_library: true, file_set }
+    pub fn new_library(file_set: FileSet, root_path: PathBuf) -> SourceRoot {
+        SourceRoot { is_library: true, root_path, file_set }
     }
 
     pub fn file_for_path(&self, path: &VfsPath) -> Option<FileId> {
@@ -295,54 +321,19 @@ pub trait SourceDatabase {
     #[salsa::input]
     fn package_graph(&self) -> Arc<PackageGraph>;
 
-    fn file_module_name(&self, file_id: FileId) -> Option<SmolStr>;
+    #[salsa::input]
+    fn module_map(&self) -> Arc<ModuleMap>;
 }
 
 fn source_root_package_info(db: &dyn SourceDatabase, sid: SourceRootId) -> Option<Arc<PackageInfo>> {
     db.package_graph().nodes.get(&sid).cloned().map(Arc::new)
 }
 
-fn file_module_name(db: &dyn SourceDatabase, file_id: FileId) -> Option<SmolStr> {
-    let sid = db.file_source_root(file_id);
-    let source_root = db.source_root(sid);
-    let root_manifest = db.package_graph().nodes.get(&sid)?.root_manifest;
-
-    let manifest_path = source_root.file_set.path_for_file(root_manifest);
-    let file_path = source_root.file_set.path_for_file(file_id);
-
-    module_name(manifest_path, file_path)
-}
-
-pub(crate) fn module_name(manifest_path: &VfsPath, full_module_path: &VfsPath) -> Option<SmolStr> {
-    // /path/to/project/_build/default/lib/the_package/src/my/module.gleam
-    let module_path = full_module_path.as_path()?;
-    let manifest_path = manifest_path.as_path()?;
-
-    let root_path = manifest_path.parent()?;
-
-    // my/module.gleam
-    let mut module_path = module_path
-        .strip_prefix(root_path)
-        .expect("Stripping package prefix from module path")
-        .to_path_buf();
-
-    // my/module
-    let _ = module_path.set_extension("");
-
-    // Stringify
-    let name = module_path
-        .to_str()
-        .expect("Module name path to str")
-        .to_string();
-
-    // normalise windows paths
-    Some(name.replace("\\", "/").into())
-}
-
 #[derive(Default, Clone, PartialEq, Eq)]
 pub struct Change {
     pub package_graph: Option<PackageGraph>,
     pub roots: Option<Vec<SourceRoot>>,
+    pub module_map: Option<ModuleMap>,
     pub file_changes: Vec<(FileId, Arc<str>)>,
 }
 
@@ -355,8 +346,9 @@ impl Change {
         self.package_graph = Some(graph);
     }
 
-    pub fn set_roots(&mut self, roots: Vec<SourceRoot>) {
+    pub fn set_roots_and_map(&mut self, roots: Vec<SourceRoot>, module_map: ModuleMap) {
         self.roots = Some(roots);
+        self.module_map = Some(module_map);
     }
 
     pub fn change_file(&mut self, file_id: FileId, content: Arc<str>) {
@@ -375,6 +367,9 @@ impl Change {
                 }
                 db.set_source_root_with_durability(sid, Arc::new(root), Durability::HIGH);
             }
+        }
+        if let Some(module_map) = self.module_map {
+            db.set_module_map_with_durability(Arc::new(module_map), Durability::HIGH)
         }
         for (file_id, content) in self.file_changes {
             db.set_file_content_with_durability(file_id, content, Durability::LOW);

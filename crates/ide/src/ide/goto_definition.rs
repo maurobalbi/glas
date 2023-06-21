@@ -18,6 +18,7 @@ pub(crate) fn goto_definition(
     let tok = best_token_at_offset(&parse, pos)?;
     let source_map = db.source_map(file_id);
 
+    tracing::info!("Module name: {:?}", db.module_map().module_name_for_file(file_id));
     //If tok.parent is field access or tuple access, it will be necessary to infer type first
     if matches!(
         tok.parent()?.kind(),

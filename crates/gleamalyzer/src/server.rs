@@ -5,7 +5,7 @@ use anyhow::{bail, Context, Result};
 use async_lsp::router::Router;
 use async_lsp::{ClientSocket, ErrorCode, LanguageClient, ResponseError};
 use gleam_interop;
-use ide::{Analysis, AnalysisHost, Cancelled, PackageInfo, VfsPath};
+use ide::{Analysis, AnalysisHost, Cancelled, FileSet, PackageInfo, SourceRoot, VfsPath, ModuleMap};
 use lsp_types::notification::Notification;
 use lsp_types::request::{self as req, Request};
 use lsp_types::{
@@ -31,7 +31,7 @@ use std::future::{ready, Future};
 use std::io::{ErrorKind, Read};
 use std::ops::ControlFlow;
 use std::panic::UnwindSafe;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::pin::pin;
 use std::sync::{Arc, Once, RwLock};
 use std::time::Duration;
@@ -39,15 +39,16 @@ use std::{fmt, panic};
 use tokio::task;
 use tokio::task::{AbortHandle, JoinHandle};
 use toml::Table;
+use walkdir::WalkDir;
 
 type NotifyResult = ControlFlow<async_lsp::Result<()>>;
 
 struct UpdateConfigEvent(serde_json::Value);
-struct SetPackageInfoEvent(Option<PackageInfo>);
+struct SetPackageInfoEvent(Option<(PackageInfo, Vec<PathBuf>)>);
 
 const LSP_SERVER_NAME: &str = "gleamalyzer";
 pub const GLEAM_TOML: &str = "gleam.toml";
-pub const MANIFEST_TOML: &str = "gleam.toml";
+pub const MANIFEST_TOML: &str = "manifest.toml";
 const LOAD_WORKSPACE_PROGRESS_TOKEN: &str = "gleamalyzer/loadWorkspaceProgress";
 
 const LOAD_GLEAM_WORKSPACE_DEBOUNCE_DURATION: Duration = Duration::from_millis(100);
@@ -63,6 +64,7 @@ pub struct Server {
     // Ongoing tasks.
     load_gleam_workspace_fut: Option<JoinHandle<()>>,
 
+    source_root_config: Vec<PathBuf>,
     client: ClientSocket,
     capabilities: NegotiatedCapabilities,
     /// Messages to show once initialized.
@@ -112,6 +114,7 @@ impl Server {
 
             load_gleam_workspace_fut: None,
 
+            source_root_config: Vec::new(),
             client,
             init_messages,
             capabilities: NegotiatedCapabilities::default(),
@@ -138,7 +141,9 @@ impl Server {
             None => std::env::current_dir().expect("Failed to the current directory"),
         };
 
-        let mut cfg = Config::new(root_path);
+        self.source_root_config = vec![root_path.clone()];
+
+        let mut cfg = Config::new(root_path.clone());
         if let Some(options) = params.initialization_options {
             let (errors, _updated_diagnostics) = cfg.update(options);
             if !errors.is_empty() {
@@ -408,7 +413,7 @@ impl Server {
         caps: NegotiatedCapabilities,
         mut client: ClientSocket,
     ) {
-        // Delay the loading to debounce. Later triggers will cancel previous tasks at here.
+        // Delay the loading to debounce. Later triggers will cancel previous tasks.
         tokio::time::sleep(LOAD_GLEAM_WORKSPACE_DEBOUNCE_DURATION).await;
 
         tracing::info!("Loading gleam workspace");
@@ -417,13 +422,16 @@ impl Server {
             &caps,
             LOAD_WORKSPACE_PROGRESS_TOKEN,
             "Loading workspace",
-            "gleam deps download".to_owned(),
+            "Downloading deps".to_owned(),
         )
         .await;
-        let package_info = match Self::load_package_info(&vfs, &config).await {
+        match Self::load_packages(&vfs, &config).await {
             Ok(ret) => {
-                let _: Result<_, _> = client.emit(SetPackageInfoEvent(ret.clone()));
-                ret
+                let ret_info = ret
+                    .as_ref()
+                    .map(|r: &(PackageInfo, Vec<PathBuf>)| r.0.clone());
+                let _: Result<_, _> = client.emit(SetPackageInfoEvent(ret));
+                ret_info
             }
             Err(err) => {
                 client.show_message_ext(
@@ -434,48 +442,119 @@ impl Server {
             }
         };
         progress.done(None);
-        let Some(package_info) = package_info else { return };
     }
 
-    async fn load_package_info(vfs: &RwLock<Vfs>, config: &Config) -> Result<Option<PackageInfo>> {
+    async fn load_packages(
+        vfs: &RwLock<Vfs>,
+        config: &Config,
+    ) -> Result<Option<(PackageInfo, Vec<PathBuf>)>> {
         tracing::info!("Downloading deps and loading package info");
 
         let _: () = gleam_interop::load_package_info()
             .await
             .context("Could not load dependencies")?;
 
-        let (manifest_toml, src) = {
+        let (gleam_file, gleam_src) = {
             let vfs = vfs.read().unwrap();
 
-            let manifest_toml_vpath = VfsPath::new(config.root_path.join(MANIFEST_TOML));
+            let manifest_toml_vpath = VfsPath::new(config.root_path.join(GLEAM_TOML));
 
-            let Ok(manifest_file) = vfs.file_for_path(&manifest_toml_vpath) else { return Ok(None) };
-            let src = vfs.content_for_file(manifest_file);
-            (manifest_file, src)
+            let Ok(gleam_file) = vfs.file_for_path(&manifest_toml_vpath) else { return Ok(None) };
+            let src = vfs.content_for_file(gleam_file);
+            (gleam_file, src)
         };
 
-        let toml = src.parse::<Table>().unwrap();
-        // tracing::info!("{:#?}", toml);
+        let manifest_src = std::fs::read_to_string(config.root_path.join(MANIFEST_TOML));
 
-        let target = toml["target"]
+        let gleam_toml = gleam_src.parse::<Table>().unwrap();
+        tracing::info!("{:#?}", gleam_toml);
+
+        let target = gleam_toml["target"]
             .as_str()
-            .context("Only erlang or javascript are valid targets")?
+            .context("Only the strings (\"javascript\", \"erlang\") are valid targets")?
             .into();
-        let name = toml["name"].as_str().context("No valid name")?.into();
+        let name = gleam_toml["name"].as_str().context("No valid name")?.into();
 
-        
+        let mut package_roots = vec![config.root_path.clone()];
+        let package_dir = config.root_path.join("build/packages");
+        if let Some(deps) = &manifest_src
+            .ok()
+            .and_then(|src| src.parse::<Table>().ok())
+            .and_then(|t| {
+                let p = t["packages"].clone();
+                p.as_array().cloned()
+            })
+        {
+            for dep in deps {
+                if let Some(name) = dep["name"].as_str() {
+                    package_roots.push(package_dir.join(name));
+                }
+            }
+            // tracing::info!("{:#?}", deps);
+        };
 
-        Ok(Some(PackageInfo {
-            root_manifest: manifest_toml,
-            display_name: name,
-            target,
-            dependencies: Vec::new(),
-        }))
+        for package in &package_roots {
+            Self::load_package_files(vfs, package);
+        }
+
+        Ok(Some((
+            PackageInfo {
+                root_manifest: gleam_file,
+                display_name: name,
+                target,
+                dependencies: Vec::new(),
+            },
+            package_roots,
+        )))
+    }
+
+    fn load_package_files(vfs: &RwLock<Vfs>, root_path: &std::path::PathBuf) {
+        let walkdir = WalkDir::new(root_path)
+            .follow_links(true)
+            .into_iter()
+            .filter_entry(|entry| {
+                if !entry.file_type().is_dir() {
+                    return true;
+                }
+                root_path == entry.path()
+                    || (entry.depth() == 1 && (entry.path().ends_with("src"))
+                        || entry.path().ends_with("test"))
+                    || entry.depth() > 1
+            });
+        let files = walkdir.filter_map(|it| it.ok()).filter_map(|entry| {
+            let is_file = entry.file_type().is_file();
+            if !is_file {
+                return None;
+            }
+            let entry_path = entry.into_path();
+            if let Some(ext) = entry_path.extension() {
+                if ext == "gleam" {
+                    return Some(entry_path);
+                }
+            }
+            None
+        });
+        let mut vfs = vfs.write().unwrap();
+        for file in files {
+            if let Some(src) = std::fs::read_to_string(file.clone()).ok() {
+                vfs.set_path_content(VfsPath::from(file), src);
+            }
+        }
     }
 
     fn on_set_package_info(&mut self, info: SetPackageInfoEvent) -> NotifyResult {
-        tracing::debug!("Set package info: {:?}", info.0);
-        self.vfs.write().unwrap().set_package_info(info.0);
+        tracing::debug!("Set package info: {:#?}", info.0);
+        self.vfs
+            .write()
+            .unwrap()
+            .set_package_info(info.0.as_ref().map(|i| i.0.clone()));
+
+        let roots = info
+            .0
+            .map(|i| i.1.clone())
+            .unwrap_or_else(|| vec![self.config.root_path.clone()]);
+        self.source_root_config = roots;
+
         self.apply_vfs_change();
 
         // This is currently mostly to get proper diagnostics on startup
@@ -606,13 +685,99 @@ impl Server {
     }
 
     fn apply_vfs_change(&mut self) {
-        let changes = self.vfs.write().unwrap().take_change();
-        tracing::trace!("Apply VFS changes: {:?}", changes);
+        let mut vfs = self.vfs.write().unwrap();
+        let changes = vfs.take_change();
 
+        let (root_sets, module_map) = Self::lower_vfs(&mut vfs, self.source_root_config.clone());
+        vfs.set_roots_and_map(root_sets, module_map);
+        drop(vfs);
+
+        tracing::trace!("Apply VFS changes: {:?}", changes);
         // N.B. This acquires the internal write lock.
         // Must be called without holding the lock of `vfs`.
         self.host.apply_change(changes);
     }
+
+    fn lower_vfs(vfs: &mut Vfs, source_root_config: Vec<PathBuf>) -> (Vec<SourceRoot>, ModuleMap) {
+        let mut module_map = ModuleMap::default();
+
+        let mut prefix_to_paths = HashMap::new();
+
+        let mut prefix_components = Vec::new();
+
+        for prefix in &source_root_config {
+            prefix_components.push(prefix.components().collect::<Vec<_>>())
+        }
+
+        //sorting by length matches the longest prefix first
+        prefix_components.sort_by(|a, b| b.len().cmp(&a.len()));
+
+        for (file_id, file_path) in vfs.iter() {
+            if let Some(path_components) = file_path.as_path() {
+                let path_components: Vec<_> = path_components.components().collect();
+
+                for prefix_components in &prefix_components {
+                    if prefix_components.len() > path_components.len() {
+                        continue;
+                    }
+
+                    let matching_prefix = prefix_components
+                        .iter()
+                        .zip(path_components.iter())
+                        .all(|(prefix_comp, path_comp)| prefix_comp == path_comp);
+
+                    if matching_prefix {
+                        let prefix = prefix_components.iter().collect::<PathBuf>();
+
+                        if let Some(module_name) =
+                            file_path.as_path().and_then(|mpath| module_name(&prefix, mpath))
+                        {
+                            module_map.insert(file_id, module_name); // Todo: Report error if insert returns an 
+                        }
+
+                        prefix_to_paths
+                            .entry(prefix)
+                            .or_insert_with(FileSet::default)
+                            .insert(file_id, file_path.to_owned());
+
+                        break;
+                    }
+                }
+            }
+        }
+        let source_roots = prefix_to_paths
+            .into_iter()
+            .enumerate()
+            .map(|(i, (path, set))| {
+                if i == 0 {
+                    SourceRoot::new_local(set, path)
+                } else {
+                    SourceRoot::new_library(set, path)
+                }
+            })
+            .collect();
+        (source_roots, module_map)
+    }
+}
+
+pub(crate) fn module_name(root_path: &PathBuf, module_path: &Path) -> Option<SmolStr> {
+    // my/module.gleam
+    let mut module_path = module_path
+        .strip_prefix(root_path)
+        .expect("Stripping package prefix from module path")
+        .to_path_buf();
+
+    // my/module
+    let _ = module_path.set_extension("");
+
+    // Stringify
+    let name = module_path
+        .to_str()
+        .expect("Module name path to str")
+        .to_string();
+
+    // normalise windows paths
+    Some(name.replace("\\", "/").into())
 }
 
 trait RouterExt: BorrowMut<Router<Server>> {

@@ -1,6 +1,6 @@
 use crate::UrlExt;
 use anyhow::{ensure, Context, Result};
-use ide::{Change, FileId, FileSet, PackageGraph, PackageInfo, SourceRoot, SourceRootId, VfsPath};
+use ide::{Change, FileId, FileSet, PackageGraph, PackageInfo, SourceRoot, SourceRootId, VfsPath, ModuleMap};
 use lsp_types::Url;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -14,7 +14,6 @@ use text_size::{TextRange, TextSize};
 pub struct Vfs {
     files: Slab<(Arc<str>, Arc<LineMap>)>,
     local_file_set: FileSet,
-    root_changed: bool,
     change: Change,
 }
 
@@ -22,7 +21,6 @@ impl fmt::Debug for Vfs {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Vfs")
             .field("file_cnt", &self.files.len())
-            .field("root_changed", &self.root_changed)
             .field("change", &self.change)
             .finish_non_exhaustive()
     }
@@ -33,7 +31,6 @@ impl Vfs {
         Self {
             files: Slab::new(),
             local_file_set: FileSet::default(),
-            root_changed: false,
             change: Change::default(),
         }
     }
@@ -44,6 +41,11 @@ impl Vfs {
         });
     }
 
+    pub fn set_roots_and_map(&mut self, roots: Vec<SourceRoot>, module_map: ModuleMap) {
+        self.change.set_roots_and_map(roots, module_map);
+    }
+    
+
     pub fn set_path_content(&mut self, path: VfsPath, text: String) -> FileId {
         let (text, line_map) = LineMap::normalize(text);
         let text = <Arc<str>>::from(text);
@@ -52,14 +54,12 @@ impl Vfs {
             Some(file) => {
                 self.files[file.0 as usize] = (text.clone(), line_map);
                 self.change.change_file(file, text);
-                self.root_changed = true;
                 file
             }
             None => {
                 let next_entry = self.files.vacant_entry();
                 let file = FileId(next_entry.key().try_into().expect("Length overflow"));
                 self.local_file_set.insert(file, path);
-                self.root_changed = true;
                 next_entry.insert((text.clone(), line_map));
                 self.change.change_file(file, text);
                 file
@@ -125,13 +125,7 @@ impl Vfs {
     }
 
     pub fn take_change(&mut self) -> Change {
-        let mut change = mem::take(&mut self.change);
-        if mem::take(&mut self.root_changed) {
-            change.set_roots(vec![SourceRoot::new_local(
-                self.local_file_set.clone(),
-            )]);
-        }
-        change
+      mem::take(&mut self.change)
     }
 
     pub fn content_for_file(&self, file: FileId) -> Arc<str> {
@@ -140,6 +134,10 @@ impl Vfs {
 
     pub fn line_map_for_file(&self, file: FileId) -> Arc<LineMap> {
         self.files[file.0 as usize].1.clone()
+    }
+    
+    pub fn iter(&mut self) -> impl Iterator<Item = (FileId, &VfsPath)> + '_ {
+        self.local_file_set.iter()
     }
 }
 

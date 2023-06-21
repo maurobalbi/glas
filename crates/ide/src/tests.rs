@@ -2,7 +2,7 @@ use crate::base::{SourceDatabaseStorage, Target};
 use crate::def::DefDatabaseStorage;
 use crate::{
     Change, DefDatabase, FileId, FilePos, FileRange, FileSet, PackageGraph, PackageInfo, SourceRoot,
-    SourceRootId, VfsPath,
+    SourceRootId, VfsPath, ModuleMap,
 };
 use anyhow::{bail, ensure, Context, Result};
 use indexmap::IndexMap;
@@ -41,7 +41,7 @@ impl TestDB {
             file_set.insert(file, path.clone());
             change.change_file(file, text.to_owned().into());
         }
-        change.set_roots(vec![SourceRoot::new_local(file_set)]);
+        change.set_roots_and_map(vec![SourceRoot::new_local(file_set, "/test".into())], ModuleMap::default());
         let package_graph = PackageGraph {
             nodes: HashMap::from_iter(f.package_info.clone().map(|info| (SourceRootId(0), info))),
         };
@@ -120,7 +120,7 @@ impl Fixture {
                                 root_manifest: cur_file,
                                 dependencies: Default::default(),
                                 target: Target::default(),
-                                display_name: "Test".into(),
+                                display_name: "Test".into()
                             });
                     } else {
                         bail!("Unknow property {prop}");
