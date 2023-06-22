@@ -181,6 +181,14 @@ enums! {
         VarType,
         TupleType,
         TypeNameRef,
+        TypeApplication,
+    },
+    Pattern {
+        PatternVariable,
+        TypeNameRef,
+        PatternConstructorApplication,
+        PatternTuple,
+        AlternativePattern,
     },
 }
 
@@ -368,6 +376,14 @@ asts! {
         annotation: TypeExpr,
         body: Expr,
     },
+    HOLE = Hole {
+        pub fn token(&self) -> Option<SyntaxToken> {
+            self.0.children_with_tokens().find_map(NodeOrToken::into_token)
+        }
+    },
+    LIST = List {
+        elements: [Expr],
+    },
     STMT_EXPR = StmtExpr {
         expr: Expr,
     },
@@ -381,6 +397,16 @@ asts! {
     TYPE_NAME_REF = TypeNameRef {
       constructor: TypeName,
       module: ModuleName,
+    },
+    TYPE_APPLICATION = TypeApplication {
+        type_constructor: TypeNameRef,
+        arg_list: TypeArgList,
+    },
+    TYPE_ARG_LIST = TypeArgList {
+        args: [TypeArg],
+    },
+    TYPE_ARG = TypeArg {
+        arg: TypeExpr,
     },
     TUPLE_TYPE = TupleType{
       field_types: [TypeExpr],
@@ -399,6 +425,33 @@ asts! {
         pub fn token(&self) -> Option<SyntaxToken> {
             self.0.children_with_tokens().find_map(NodeOrToken::into_token)
         }
+    },
+    CASE = Case {
+        subjects: [Expr],
+        clauses: [Clause],
+    },
+    CLAUSE = Clause {
+        patterns: [Pattern],
+        body: Expr,
+    },
+    ALTERNATIVE_PATTERN = AlternativePattern {
+        patterns: [Pattern],
+    },
+    PATTERN_VARIABLE = PatternVariable {
+        name: Name,
+    },
+    PATTERN_CONSTRUCTOR_APPLICATION = PatternConstructorApplication {
+        type_constructor: TypeNameRef,
+        arg_list: PatternConstructorArgList,
+    },
+    PATTERN_CONSTRUCTOR_ARG_LIST = PatternConstructorArgList {
+        args: [PatternConstructorArg],
+    },
+    PATTERN_CONSTRUCTOR_ARG = PatternConstructorArg {
+        args: Pattern,
+    },
+    PATTERN_TUPLE = PatternTuple {
+        field_patterns: [Pattern],
     },
 }
 
@@ -439,11 +492,14 @@ mod tests {
     #[test]
     fn assert() {
         let e = crate::parse_file(
-            "
-                
-
-                fn main(a, b,) {abc(abc(a,b,)}
-            ",
+            "fn main(a, b) {
+                case bla() {
+                  Cat -> }
+                }
+                bla()
+                let name = 1
+                name + 2
+              }",
         );
         for error in e.errors() {
             println!("{}", error);
@@ -631,7 +687,7 @@ mod tests {
         e.annotation().unwrap().syntax().should_eq("Int");
         e.body().unwrap().syntax().should_eq("1")
     }
-    
+
     #[test]
     fn call_expr() {
         let e = parse::<StmtExpr>("fn a() { abc(name: 1, 2) }");
@@ -645,9 +701,64 @@ mod tests {
                 first.value().unwrap().syntax().should_eq("1");
                 args.next().unwrap().syntax().should_eq("2");
             }
-            _ => panic!()
+            _ => panic!(),
         }
     }
 
+    #[test]
+    fn case_expr() {
+        let e = parse::<Case>("fn a() { case wobble, 1 + 7 { Cat, Dog -> 1 }}");
+        let mut subs = e.subjects().into_iter();
+        subs.next().unwrap().syntax().should_eq("wobble");
+        subs.next().unwrap().syntax().should_eq("1 + 7");
+        assert!(subs.next().is_none());
+        let mut clauses = e.clauses().into_iter();
+        clauses.next().unwrap().syntax().should_eq("Cat, Dog -> 1")
+    }
 
+    #[test]
+    fn clause() {
+        let c = parse::<Clause>(
+            "fn a() { 
+                    case wobble, 1 + 7 
+                    { 
+                        Bird | Snake, a -> 2
+                        Cat, Dog -> 1 
+                    }}",
+        );
+        c.syntax().should_eq("Bird | Snake, a -> 2");
+        c.body().unwrap().syntax().should_eq("2");
+        let mut pats = c.patterns().into_iter();
+        pats.next().unwrap().syntax().should_eq("Bird | Snake");
+        pats.next().unwrap().syntax().should_eq("a");
+    }
+
+    #[test]
+    fn pattern() {
+        let p = parse::<AlternativePattern>(
+            "fn a() { 
+                    case wobble, 1 + 7 
+                    { 
+                        int.Bla(Some(a)) -> 2
+                    }}",
+        );
+        p.syntax().should_eq("int.Bla(Some(a))");
+        let pattern =
+            PatternConstructorApplication::cast(p.patterns().next().unwrap().syntax().clone())
+                .unwrap();
+        pattern
+            .arg_list()
+            .unwrap()
+            .args()
+            .into_iter()
+            .next()
+            .unwrap()
+            .syntax()
+            .should_eq("Some(a)");
+        pattern
+            .type_constructor()
+            .unwrap()
+            .syntax()
+            .should_eq("int.Bla");
+    }
 }

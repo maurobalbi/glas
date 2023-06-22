@@ -17,7 +17,3 @@ rust-version = "1.67"
 # Disabling debug info speeds up builds a bunch,
 # and we don't rely on it for debugging that much.
 debug = 2
-
-[workspace.dependencies]
-# gleam = { path = "./crates/syntax", version="0.28.2" }
-gleam = { path = "../gleam/compiler-core", version = "0.30.0-dev" }

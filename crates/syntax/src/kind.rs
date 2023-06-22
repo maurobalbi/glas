@@ -145,6 +145,12 @@ def! {
     #[token("*.")]
     STAR_DOT = ["*."],
 
+    #[token("/.")]
+    SLASH_DOT = ["/."],
+
+    #[token("%")]
+    PERCENT = ["%"],
+
     #[token("<.")]
     LESS_DOT = ["<."],
 
@@ -197,7 +203,7 @@ def! {
     GT_GT = [">>"],
 
     #[token("|>")]
-    PIPE = ["|>"],
+    VBAR_GT = ["|>"],
 
     #[token(".")]
     DOT = ["."],
@@ -284,6 +290,7 @@ def! {
     FUNCTION,
     FN_BODY,
     LABEL,
+    HOLE,
     SOURCE_FILE,
     MODULE_NAME,
     MODULE_CONSTANT,
@@ -314,6 +321,16 @@ def! {
     STATEMENTS,
     CONSTANT_TUPLE,
     CONSTANT_LIST,
+    PIPE,
+    CASE,
+    CLAUSE,
+    ALTERNATIVE_PATTERN,
+    PATTERN_VARIABLE,
+    PATTERN_TUPLE,
+    PATTERN_CONSTRUCTOR_APPLICATION,
+    PATTERN_CONSTRUCTOR_ARG_LIST,
+    PATTERN_CONSTRUCTOR_ARG,
+    LIST,
     RECORD,
     BITSTRING,
 
