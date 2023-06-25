@@ -12,7 +12,7 @@ use crate::{DefDatabase, FileId};
 use super::{
     module::{
         Expr, ExprId, FunctionId, ModuleData, ModuleStatementId, Name, NameId, Statement,
-        Visibility,
+        Visibility, Pattern, PatternId,
     },
 };
 
@@ -132,6 +132,9 @@ impl ModuleScope {
                 self.traverse_expr_stmts(module, stmts, scope);
             }
             Expr::Call { func, args } => {
+                for arg in args {
+                    self.traverse_expr(module, *arg, scope);
+                }
                 self.traverse_expr(module, *func, scope);
             }
             _ => {}
@@ -142,10 +145,11 @@ impl ModuleScope {
         let mut scope = scope;
         for stmt in stmts {
             match stmt {
-                Statement::Let { name, body } => {
+                Statement::Let { pattern, body } => {
                     tracing::info!("SCOPE: {:#?}", scope);
                     self.traverse_expr(module, *body, scope);
-                    let defs = [(module[*name].text.clone(), *name)].into_iter().collect();
+                    let mut defs = HashMap::new();
+                    self.collect_pattern(module, pattern, &mut defs);
                     scope = self.scopes.alloc(ScopeData {
                         parent: Some(scope),
                         kind: ScopeKind::Definitions(defs),
@@ -155,6 +159,16 @@ impl ModuleScope {
                     self.traverse_expr(module, *expr, scope);
                 }
             }
+        }
+    }
+
+    fn collect_pattern(&self, module: &ModuleData, pattern: &PatternId, defs: &mut HashMap<SmolStr, Idx<Name>>) {
+        let pattern = &module[*pattern];
+        match pattern {
+            Pattern::Variable { name } => {
+                defs.insert(module[*name].text.clone().into(), (*name).clone());
+            },
+            Pattern::Record { args } => todo!(),
         }
     }
     //      self.scope_by_expr.insert(expr, scope);

@@ -372,7 +372,7 @@ asts! {
         }
     },
     STMT_LET = StmtLet {
-        name: Name,
+        pattern: Pattern,
         annotation: TypeExpr,
         body: Expr,
     },
@@ -494,9 +494,9 @@ mod tests {
         let e = crate::parse_file(
             "fn main(a, b) {
                 case bla() {
-                  Cat -> }
+                  Cat -> 1
                 }
-                bla()
+                bla(a)
                 let name = 1
                 name + 2
               }",

@@ -26,14 +26,15 @@ pub(crate) fn goto_definition(
     ) {
         return None;
     }
-
     // Refactor to build make module map / data with exprs / other definitions. Its way to much work to use defbodies for no reason!
-
     if ast::NameRef::can_cast(tok.parent()?.kind()) {
         let expr_ptr = ast::Expr::cast(tok.parent()?)?;
+
         let ptr = AstPtr::new(&expr_ptr);
         let expr_id = source_map.expr_for_node(ptr)?;
+
         let name_res = db.name_resolution(file_id);
+        // tracing::info!("Name_res: {:#?}", name_res);
         let targets = match name_res.get(expr_id)? {
             ResolveResult::Definition(name) => {
                 source_map.node_for_name(*name).map(|ptr| {

@@ -1,15 +1,15 @@
-use crate::{Diagnostic, base::Target, DiagnosticKind};
+use crate::{base::Target, Diagnostic, DiagnosticKind};
 
 use super::{
     module::{
         Expr, ExprId, Function, FunctionId, Label, ModuleData, ModuleSourceMap, ModuleStatementId,
-        Name, NameId, NameKind, Param, Statement,
+        Name, NameId, NameKind, Param, Pattern, PatternId, Statement,
     },
     AstPtr, DefDatabase, FileId,
 };
 use smol_str::SmolStr;
 use syntax::{
-    ast::{self, StatementExpr, AstNode},
+    ast::{self, AstNode, StatementExpr},
     Parse,
 };
 
@@ -55,13 +55,26 @@ impl LowerCtx<'_> {
         id
     }
 
+    fn missing_name(&mut self, kind: NameKind) -> NameId {
+        self.module_data.names.alloc(Name {
+            text: "[missing name]".into(),
+            kind,
+        })
+    }
+
     fn alloc_expr(&mut self, expr: Expr, ptr: AstPtr<ast::Expr>) -> ExprId {
         let id = self.module_data.exprs.alloc(expr);
         self.source_map.expr_map.insert(ptr.clone(), id);
         self.source_map.expr_map_rev.insert(id, ptr);
         id
     }
-    
+    fn alloc_pattern(&mut self, pattern: Pattern, ptr: AstPtr<ast::Pattern>) -> PatternId {
+        let id = self.module_data.patterns.alloc(pattern);
+        self.source_map.pattern_map.insert(ptr.clone(), id);
+        self.source_map.pattern_map_rev.insert(id, ptr);
+        id
+    }
+
     fn diagnostic(&mut self, diag: Diagnostic) {
         self.source_map.diagnostics.push(diag);
     }
@@ -75,17 +88,19 @@ impl LowerCtx<'_> {
 
     fn lower_target_group(&mut self, tg: &ast::TargetGroup) -> Vec<ModuleStatementId> {
         let package_info = self.db.source_root_package_info(crate::SourceRootId(0));
-        if let (Some(token), Some(package_info)) = (tg.target().and_then(|t| t.token()), package_info) {
+        if let (Some(token), Some(package_info)) =
+            (tg.target().and_then(|t| t.token()), package_info)
+        {
             tracing::info!("TARGET {:?} {:?}", token.text(), package_info.target);
             if Target::from(token.text()) != package_info.target {
-                 self.diagnostic(Diagnostic::new(
+                self.diagnostic(Diagnostic::new(
                     tg.syntax().text_range(),
                     DiagnosticKind::InactiveTarget,
                 ));
                 return Vec::new();
             }
         }
-        
+
         tg.statements()
             .flat_map(|stmt| self.lower_module_statement(&stmt))
             .collect()
@@ -162,22 +177,33 @@ impl LowerCtx<'_> {
             }
             ast::Expr::Block(defs) => {
                 let mut stmts = Vec::new();
-                
-                defs
-                    .expressions()
+
+                defs.expressions()
                     .into_iter()
                     .for_each(|a| self.lower_expr_stmt(&mut stmts, a));
                 self.alloc_expr(Expr::Block { stmts: stmts }, ptr)
             }
             ast::Expr::ExprCall(call) => {
                 let func = self.lower_expr_opt(call.func());
+                let mut arg_ids = Vec::new();
+                if let Some(args) = call.arguments() {
+                    for arg in args.args() {
+                        arg_ids.push(self.lower_expr_opt(arg.value()));
+                    }
+                }
 
-                self.alloc_expr(Expr::Call {func, args: Vec::new()}, ptr)
+                self.alloc_expr(
+                    Expr::Call {
+                        func,
+                        args: arg_ids,
+                    },
+                    ptr,
+                )
             }
             _ => self.alloc_expr(Expr::Missing, ptr),
         }
     }
-    
+
     fn lower_expr_opt(&mut self, expr: Option<ast::Expr>) -> ExprId {
         if let Some(expr) = expr {
             return self.lower_expr(expr);
@@ -189,27 +215,48 @@ impl LowerCtx<'_> {
     fn lower_expr_stmt(&mut self, statements: &mut Vec<Statement>, ast: ast::StatementExpr) {
         match ast {
             StatementExpr::StmtLet(stmt) => {
-                if let (Some(expr), Some(name)) = (stmt.body(), stmt.name()) {
+                if let (Some(expr), Some(pattern)) = (stmt.body(), stmt.pattern()) {
                     let expr_id = self.lower_expr(expr);
-                    if let Some(token) = name.token() {
-                        let name = self.alloc_name(
-                            token.text().into(),
-                            NameKind::Let,
-                            AstPtr::new(&name),
-                        );
-                        statements.push(Statement::Let {
-                            name,
-                            body: expr_id,
-                        });
-                    }
+                    let pattern = self.lower_pattern(pattern);
+                    statements.push(Statement::Let {
+                        pattern,
+                        body: expr_id,
+                    });
                 }
             }
             StatementExpr::StmtExpr(expr) => {
                 if let Some(expr) = expr.expr() {
                     let expr_id = self.lower_expr(expr);
-                    statements.push(Statement::Expr { expr: expr_id});
+                    statements.push(Statement::Expr { expr: expr_id });
                 }
             }
+        }
+    }
+
+    fn lower_pattern(&mut self, pattern: ast::Pattern) -> PatternId {
+        let ptr = AstPtr::new(&pattern);
+        match pattern {
+            ast::Pattern::PatternVariable(var) => {
+                let name = self.lower_name_opt(NameKind::Pattern, var.name());
+                self.alloc_pattern(Pattern::Variable { name }, ptr)
+            }
+            ast::Pattern::TypeNameRef(_) => todo!(),
+            ast::Pattern::PatternConstructorApplication(_) => todo!(),
+            ast::Pattern::PatternTuple(_) => todo!(),
+            ast::Pattern::AlternativePattern(_) => todo!(),
+        }
+    }
+
+    fn lower_name_opt(&mut self, kind: NameKind, name: Option<ast::Name>) -> NameId {
+        match name {
+            Some(name) => {
+                let ptr = AstPtr::new(&name);
+                let text = name
+                    .token()
+                    .map_or_else(|| "[missing text]".into(), |t| t.text().into());
+                self.alloc_name(text, kind, ptr)
+            }
+            None => self.missing_name(kind),
         }
     }
 }

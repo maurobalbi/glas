@@ -3,7 +3,7 @@ use std::{collections::HashMap, ops};
 use la_arena::{Arena, ArenaMap, Idx};
 use smol_str::SmolStr;
 use syntax::{
-    ast::{self, BinaryOpKind},
+    ast::{self, BinaryOpKind, TypeNameRef},
     AstPtr,
 };
 
@@ -14,6 +14,7 @@ use crate::{impl_from, Diagnostic};
 pub struct ModuleData {
     pub functions: Arena<Function>,
     pub params: Arena<Param>,
+    pub patterns: Arena<Pattern>,
     pub exprs: Arena<Expr>,
     pub names: Arena<Name>,
 }
@@ -22,6 +23,7 @@ impl ModuleData {
     pub fn shink_to_fit(&mut self) {
         self.functions.shrink_to_fit();
         self.params.shrink_to_fit();
+        self.patterns.shrink_to_fit();
         self.exprs.shrink_to_fit();
         self.names.shrink_to_fit();
     }
@@ -38,6 +40,10 @@ impl ModuleData {
 
     pub fn names(&self) -> impl Iterator<Item = (NameId, &'_ Name)> + ExactSizeIterator + '_ {
         self.names.iter()
+    }
+    
+    pub fn patterns(&self) -> impl Iterator<Item = (PatternId, &'_ Pattern)> + ExactSizeIterator + '_ {
+        self.patterns.iter()
     }
 }
 
@@ -62,6 +68,13 @@ impl ops::Index<ExprId> for ModuleData {
     }
 }
 
+impl ops::Index<PatternId> for ModuleData {
+    type Output = Pattern;
+    fn index(&self, index: PatternId) -> &Self::Output {
+        &self.patterns[index]
+    }
+}
+
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct ModuleSourceMap {
     pub expr_map: HashMap<AstPtr<ast::Expr>, ExprId>,
@@ -72,6 +85,9 @@ pub struct ModuleSourceMap {
 
     pub name_map: HashMap<AstPtr<ast::Name>, NameId>,
     pub name_map_rev: ArenaMap<NameId, AstPtr<ast::Name>>,
+
+    pub pattern_map: HashMap<AstPtr<ast::Pattern>, PatternId>,
+    pub pattern_map_rev: ArenaMap<PatternId, AstPtr<ast::Pattern>>,
 
     pub diagnostics: Vec<Diagnostic>,
 }
@@ -86,6 +102,9 @@ impl ModuleSourceMap {
 
         self.name_map.shrink_to_fit();
         self.name_map_rev.shrink_to_fit();
+        
+        self.pattern_map.shrink_to_fit();
+        self.pattern_map_rev.shrink_to_fit();
     }
 
     pub fn expr_for_node(&self, node: AstPtr<ast::Expr>) -> Option<ExprId> {
@@ -106,10 +125,6 @@ impl ModuleSourceMap {
 
     pub fn fn_to_def(&self, ptr: AstPtr<ast::Function>) -> Option<FunctionId> {
         self.fn_map.get(&ptr).cloned()
-    }
-
-    pub fn expr_to_def(&self, ptr: AstPtr<ast::Expr>) -> Option<ExprId> {
-        self.expr_map.get(&ptr).cloned()
     }
 
     pub fn diagnostics(&self) -> &[Diagnostic] {
@@ -153,7 +168,7 @@ pub enum Visibility {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Statement {
     Let {
-        name: NameId, // Should be pattern 
+        pattern: PatternId, // Should be pattern 
         // type_ann: Type
         body: ExprId
     },
@@ -182,6 +197,19 @@ pub enum Expr {
     NameRef(SmolStr),
 }
 
+pub type PatternId = Idx<Pattern>;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Pattern {
+    // Missing,
+    Variable {
+        name: NameId,
+    },
+    Record {
+        args: Vec<PatternId>
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Literal {
     Int(i64),
@@ -200,7 +228,7 @@ pub struct Name {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum NameKind {
     Function,
-    Let,
+    Pattern,
     Param,
     PatField,
 }
