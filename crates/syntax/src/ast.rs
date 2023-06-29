@@ -156,6 +156,7 @@ enums! {
         ModuleConstant,
         Import,
         Function,
+        CustomType,
     },
     ConstantExpr {
         Literal,
@@ -165,8 +166,10 @@ enums! {
     StatementExpr {
         StmtLet,
         StmtExpr,
+        StmtUse,
     },
     Expr {
+        BitString,
         Literal,
         Block,
         NameRef,
@@ -189,12 +192,20 @@ enums! {
         PatternConstructorApplication,
         PatternTuple,
         AlternativePattern,
+        Literal,
+    },
+    TypeNameOrName {
+        Name,
+        TypeName,
     },
 }
 
 asts! {
     BLOCK = Block {
         expressions: [StatementExpr],
+    },
+    BIT_STRING = BitString {
+
     },
     BINARY_OP = BinaryOp {
         lhs: Expr,
@@ -338,8 +349,8 @@ asts! {
         }
     },
     UNQUALIFIED_IMPORT = UnqualifiedImport {
-      name: Name,
-      as_name[1]: Name,
+      name: TypeNameOrName,
+      as_name[1]: TypeNameOrName,
     },
     PARAM = Param {
         // pat: Pat,
@@ -371,11 +382,6 @@ asts! {
             self.op_details().map(|t| t.1)
         }
     },
-    STMT_LET = StmtLet {
-        pattern: Pattern,
-        annotation: TypeExpr,
-        body: Expr,
-    },
     HOLE = Hole {
         pub fn token(&self) -> Option<SyntaxToken> {
             self.0.children_with_tokens().find_map(NodeOrToken::into_token)
@@ -387,6 +393,19 @@ asts! {
     STMT_EXPR = StmtExpr {
         expr: Expr,
     },
+    STMT_LET = StmtLet {
+        pattern: Pattern,
+        annotation: TypeExpr,
+        body: Expr,
+    },
+    STMT_USE = StmtUse {
+        assignments: [UseAssignment],
+        expr: Expr,
+    },
+    USE_ASSIGNMENT = UseAssignment {
+        pattern: Pattern,
+        annotation: TypeExpr,
+    },
     TARGET_GROUP = TargetGroup {
         target: Target,
         statements: [ModuleStatement],
@@ -395,8 +414,8 @@ asts! {
         elements: [ConstantExpr],
     },
     TYPE_NAME_REF = TypeNameRef {
-      constructor: TypeName,
-      module: ModuleName,
+        module: ModuleName,
+        constructor: TypeName,
     },
     TYPE_APPLICATION = TypeApplication {
         type_constructor: TypeNameRef,
@@ -453,12 +472,15 @@ asts! {
     PATTERN_TUPLE = PatternTuple {
         field_patterns: [Pattern],
     },
+    PATTERN_LIST = PatternList {
+        elements: [Pattern],
+    },
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{tests::{parse}, ast};
+    use crate::{ast, tests::parse};
 
     trait HasSyntaxNode {
         fn has_syntax_node(&self) -> &SyntaxNode;
@@ -484,15 +506,24 @@ mod tests {
 
     #[test]
     fn apply() {
-        let e = parse::<Param>("fn main(a b: Int) -> fn(Int) -> Int {}");
-        println!("{:?}", e.name().unwrap().token().unwrap().text());
+        let e = parse::<Block>("fn main() { 1 }");
+        println!(
+            "{:?}",
+            ast::StmtExpr::cast(e.expressions().next().unwrap().syntax().clone())
+                .unwrap()
+                .expr()
+        );
         // println!("{:?}", e.statements().next().unwrap().syntax());
     }
 
     #[test]
     fn assert() {
         let e = crate::parse_module(
-            "fn main() { 1 }",
+            "fn a() { 
+                use manager: Int, a <- result.try(
+                    start_manager()
+                )
+                }",
         );
         for error in e.errors() {
             println!("{}", error);
@@ -667,6 +698,17 @@ mod tests {
     }
 
     #[test]
+    fn type_application() {
+        let e = parse::<CustomTypeVariant>("type Bla { Bla2(#(Int)) }");
+        e.field_list()
+            .iter()
+            .next()
+            .unwrap()
+            .syntax()
+            .should_eq("#(Int)");
+    }
+
+    #[test]
     fn unary_op() {
         let e = parse::<UnaryOp>("fn a() { -1 }");
         assert_eq!(e.op_kind(), Some(UnaryOpKind::Negate));
@@ -683,7 +725,7 @@ mod tests {
 
     #[test]
     fn call_expr() {
-        let e = parse::<StmtExpr>("fn a() { abc(name: 1, 2) }");
+        let e = parse::<StmtExpr>("fn main() { abc(name: 1, 2) }");
         match e.expr().unwrap() {
             Expr::ExprCall(expr) => {
                 expr.syntax().should_eq("abc(name: 1, 2)");
@@ -733,6 +775,11 @@ mod tests {
     }
 
     #[test]
+    fn bit_string() {
+        let b = parse::<BitString>("fn a() { <<a:size(0)>> <<a:8, rest:bit_string>> }");
+    }
+
+    #[test]
     fn pattern() {
         let p = parse::<AlternativePattern>(
             "fn a() { 
@@ -759,5 +806,17 @@ mod tests {
             .unwrap()
             .syntax()
             .should_eq("int.Bla");
+    }
+
+    #[test]
+    fn use_() {
+        let p = parse::<StmtUse>(
+            "fn a() { 
+                use manager: Int, a <- result.try(
+                    start_manager()
+                )
+            }",
+        );
+        p.assignments().into_iter().next().unwrap().syntax().should_eq("manager: Int");
     }
 }

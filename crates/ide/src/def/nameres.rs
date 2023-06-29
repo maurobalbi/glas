@@ -1,19 +1,13 @@
-use std::{
-    collections::{HashMap},
-    iter, ops,
-    sync::Arc,
-};
+use std::{collections::HashMap, iter, ops, sync::Arc};
 
 use la_arena::{Arena, ArenaMap, Idx};
 use smol_str::SmolStr;
 
 use crate::{DefDatabase, FileId};
 
-use super::{
-    module::{
-        Expr, ExprId, FunctionId, ModuleData, ModuleStatementId, Name, NameId, Statement,
-        Visibility, Pattern, PatternId,
-    },
+use super::module::{
+    Expr, ExprId, FunctionId, ModuleData, ModuleStatementId, Name, NameId, Pattern, PatternId,
+    Statement, Visibility,
 };
 
 // #[derive(Debug, Default, PartialEq, Eq)]
@@ -162,16 +156,32 @@ impl ModuleScope {
                 Statement::Expr { expr, .. } => {
                     self.traverse_expr(module, *expr, scope);
                 }
+                Statement::Use { patterns, expr } => {
+                    self.traverse_expr(module, *expr, scope);
+                    let mut defs = HashMap::new();
+                    for pattern in patterns {
+                        self.collect_pattern(module, pattern, &mut defs);
+                    }
+                    scope = self.scopes.alloc(ScopeData {
+                        parent: Some(scope),
+                        kind: ScopeKind::Definitions(defs),
+                    })
+                }
             }
         }
     }
 
-    fn collect_pattern(&self, module: &ModuleData, pattern: &PatternId, defs: &mut HashMap<SmolStr, Idx<Name>>) {
+    fn collect_pattern(
+        &self,
+        module: &ModuleData,
+        pattern: &PatternId,
+        defs: &mut HashMap<SmolStr, Idx<Name>>,
+    ) {
         let pattern = &module[*pattern];
         match pattern {
             Pattern::Variable { name } => {
                 defs.insert(module[*name].text.clone().into(), (*name).clone());
-            },
+            }
             Pattern::Record { args } => todo!(),
         }
     }

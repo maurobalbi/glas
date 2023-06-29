@@ -173,6 +173,10 @@ pub enum Statement {
         // type_ann: Type
         body: ExprId
     },
+    Use {
+        patterns: Vec<PatternId>,
+        expr: ExprId,
+    },
     Expr {
         expr: ExprId
     }

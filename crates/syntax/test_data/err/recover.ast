@@ -11,7 +11,8 @@ SOURCE_FILE@0..30
       COLON@7..8 ":"
       WHITESPACE@8..9 " "
       TYPE_NAME_REF@9..12
-        U_IDENT@9..12 "Int"
+        TYPE_NAME@9..12
+          U_IDENT@9..12 "Int"
       WHITESPACE@12..13 " "
       LITERAL@13..14
         INTEGER@13..14 "1"

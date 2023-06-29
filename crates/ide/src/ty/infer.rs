@@ -64,8 +64,7 @@ pub(crate) fn infer(db: &dyn TyDatabase, file: FileId) -> Arc<InferenceResult> {
         table,
     };
 
-    let func = module.functions().next();
-    if let Some((idx, func)) = func {
+    for (_, func) in module.functions() {
         let placeholder_ty = ctx.ty_for_name(func.name);
         let ty = ctx.infer_function(func);
         ctx.unify_var(placeholder_ty, ty);
@@ -120,6 +119,7 @@ impl<'db> InferCtx<'db> {
                 self.infer_expr(body)
             }
             Statement::Expr { expr } => self.infer_expr(expr),
+            Statement::Use { patterns, expr } => todo![]
         }
     }
 
@@ -164,7 +164,20 @@ impl<'db> InferCtx<'db> {
                     }
                 }
             }
-            Expr::Call { func, args } => todo!(),
+            Expr::Call { func, args } => {
+                let mut arg_tys = Vec::new();
+                for arg in args {
+                    let param_ty = self.new_ty_var();
+                    arg_tys.push(param_ty);
+                    let arg_ty = self.infer_expr(*arg);
+                    self.unify_var(arg_ty, param_ty)
+                }
+                let ret_ty = self.new_ty_var();
+                let fun_ty = self.infer_expr(*func);
+                tracing::info!("{:?}", fun_ty);
+                self.unify_var_ty(fun_ty, Ty::Function{params: arg_tys, return_: ret_ty});
+                ret_ty
+            },
             Expr::NameRef(_) => match self.nameres.get(e) {
                 None => self.new_ty_var(),
                 Some(res) => match res {
@@ -189,7 +202,19 @@ impl<'db> InferCtx<'db> {
     fn unify(&mut self, lhs: Ty, rhs: Ty) -> Ty {
         match (lhs, rhs) {
             (Ty::Unknown, other) | (other, Ty::Unknown) => other,
-            (lhs, _) => lhs,
+            (Ty::Function{params: params1, return_: ret1} ,Ty::Function { params: params2, return_:ret2 }) => {
+                for (p1, p2) in params1.clone().into_iter().zip(params2.into_iter()) {
+                    self.unify_var(p1, p2)
+                }
+                self.unify_var(ret1.clone(), ret2);
+                Ty::Function { params: params1, return_: ret1 }
+            }
+            (lhs, rhs) => {
+                if lhs != rhs {
+                    tracing::info!("ERROR: {:?} {:?}", lhs, rhs);
+                };
+                lhs
+            },
         }
     }
 

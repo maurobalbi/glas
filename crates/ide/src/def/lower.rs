@@ -9,7 +9,7 @@ use super::{
 };
 use smol_str::SmolStr;
 use syntax::{
-    ast::{self, AstNode, StatementExpr, LiteralKind},
+    ast::{self, AstNode, StatementExpr, LiteralKind, UseAssignment},
     Parse,
 };
 
@@ -91,7 +91,6 @@ impl LowerCtx<'_> {
         if let (Some(token), Some(package_info)) =
             (tg.target().and_then(|t| t.token()), package_info)
         {
-            tracing::info!("TARGET {:?} {:?}", token.text(), package_info.target);
             if Target::from(token.text()) != package_info.target {
                 self.diagnostic(Diagnostic::new(
                     tg.syntax().text_range(),
@@ -240,6 +239,18 @@ impl LowerCtx<'_> {
                     statements.push(Statement::Expr { expr: expr_id });
                 }
             }
+            StatementExpr::StmtUse(use_) => {
+                if let Some(expr) = use_.expr() {
+                    let mut patterns = Vec::new();
+                    for assignment in use_.assignments() {
+                        if let Some(pattern) = assignment.pattern() {
+                            patterns.push(self.lower_pattern(pattern));
+                        }
+                    }
+                    let expr_id = self.lower_expr(expr);
+                    statements.push(Statement::Use {patterns, expr: expr_id});
+                }
+            },
         }
     }
 
@@ -262,6 +273,7 @@ impl LowerCtx<'_> {
                 let name = self.lower_name_opt(NameKind::Pattern, var.name());
                 self.alloc_pattern(Pattern::Variable { name }, ptr)
             }
+            ast::Pattern::Literal(_) => todo!(),
             ast::Pattern::TypeNameRef(_) => todo!(),
             ast::Pattern::PatternConstructorApplication(_) => todo!(),
             ast::Pattern::PatternTuple(_) => todo!(),

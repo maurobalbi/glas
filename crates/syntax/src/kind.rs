@@ -256,9 +256,6 @@ def! {
     #[token("todo")]
     TODO_KW = ["todo"],
 
-    #[token("try")]
-    TRY_KW = ["try"],
-
     #[token("type")]
     TYPE_KW = ["type"],
 
@@ -273,10 +270,14 @@ def! {
     // Nodes
     ANNOTATION,
     STMT_EXPR,
+    STMT_LET,
+    STMT_USE,
+    USE_ASSIGNMENT,
     TUPLE,
     BLOCK,
     EXPR_CALL,
     ARG,
+    BIT_STRING,
     ARG_LIST,
     UNARY_OP,
     BINARY_OP,
@@ -285,7 +286,6 @@ def! {
     FIELD_NAME,
     NAME_REF,
     LITERAL,
-    STMT_LET,
     IMPORT,
     FUNCTION,
     FN_BODY,
@@ -327,6 +327,7 @@ def! {
     ALTERNATIVE_PATTERN,
     PATTERN_VARIABLE,
     PATTERN_TUPLE,
+    PATTERN_LIST,
     PATTERN_CONSTRUCTOR_APPLICATION,
     PATTERN_CONSTRUCTOR_ARG_LIST,
     PATTERN_CONSTRUCTOR_ARG,

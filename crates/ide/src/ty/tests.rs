@@ -63,5 +63,19 @@ fn check_all_expect(src: &str, expect_ty: Ty, expect: Expect) {
 #[traced_test]
 #[test] 
 fn let_in() {
-    check_all("fn main(a, b) { a + 1 }", expect![["123"]])
+    check_all("fn main(a, b) { a + 1 }", expect![[r#"
+        main: Function { params: [Int, Unknown], return_: Int }
+        a: Int
+        b: Unknown
+    "#]])
+}
+
+#[traced_test]
+#[test] 
+fn use_() {
+    check_all(" fn main(a) { bla() + 1 } fn bla() { 1.1 }", expect![[r#"
+        main: Function { params: [Int, Unknown], return_: Int }
+        a: Int
+        b: Unknown
+    "#]])
 }

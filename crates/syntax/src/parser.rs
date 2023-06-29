@@ -1,6 +1,6 @@
 use std::cell::Cell;
 
-use crate::ast::{AstNode, SourceFile};
+use crate::ast::{AstNode, SourceFile, TypeName};
 use crate::lexer::{GleamLexer, LexToken};
 use crate::token_set::TokenSet;
 use crate::SyntaxKind::{self, *};
@@ -15,22 +15,22 @@ const STMT_RECOVERY: TokenSet = TokenSet::new(&[
     T!["pub"],
     T!["if"],
 ]);
+const STMT_EXPR_RECOVERY: TokenSet = TokenSet::new(&[T!["let"], T!["use"]]).union(STMT_RECOVERY);
 
 const PARAM_LIST_RECOVERY: TokenSet = TokenSet::new(&[T!["->"], T!["{"]]).union(STMT_RECOVERY);
 const GENERIC_PARAM_LIST_RECOVERY: TokenSet =
     TokenSet::new(&[T!["{"], T!["="]]).union(STMT_RECOVERY);
 const IMPORT_RECOVERY: TokenSet = TokenSet::new(&[T!["as"]]).union(STMT_RECOVERY);
-const CONST_RECOVERY: TokenSet = TokenSet::new(&[T!["="]]).union(STMT_RECOVERY);
+const PATTERN_RECOVERY: TokenSet = TokenSet::new(&[T!["->"], T!["="]]).union(STMT_RECOVERY);
 
-const VARIANT_FIELD_FIRST: TokenSet = TokenSet::new(&[U_IDENT, IDENT]);
-
-const CLAUSE_FIRST: TokenSet = TokenSet::new(&[
+const PATTERN_FIRST: TokenSet = TokenSet::new(&[
     IDENT,
     U_IDENT,
     DISCARD_IDENT,
     INTEGER,
     FLOAT,
     STRING,
+    T!["<<"],
     T!["["],
     T!["#"],
     T!["-"],
@@ -331,14 +331,13 @@ fn statements_block(p: &mut Parser) {
 
 fn statement(p: &mut Parser) {
     let m = p.start_node();
-    let is_pub = p.at(T!["pub"]);
-    if is_pub {
-        p.expect(T!["pub"]);
-    }
+    //parse attribute
+    let is_pub = p.eat(T!["pub"]);
+
     match p.nth(0) {
         T!["const"] => module_const(p, m),
         T!["fn"] => {
-            function(p, m, false);
+                function(p, m, false);
         }
         T!["import"] => {
             if is_pub {
@@ -432,7 +431,7 @@ fn custom_type_variant(p: &mut Parser) {
         p.expect(T!["("]);
         let f = p.start_node();
         while !p.at(T![")"]) && !p.eof() {
-            if p.at_any(VARIANT_FIELD_FIRST) {
+            if p.at_any(TYPE_FIRST) {
                 type_variant_field(p);
                 if !p.at(T![")"]) {
                     p.expect(T![","]);
@@ -543,7 +542,7 @@ fn block(p: &mut Parser) -> MarkClosed {
     while !p.at(T!["}"]) && !p.eof() {
         match p.nth(0) {
             T!["let"] => stmt_let(p),
-            //   T!["use"] => stmt_use(p)
+            T!["use"] => stmt_use(p),
             _ => {
                 if p.at_any(EXPR_FIRST) {
                     stmt_expr(p)
@@ -559,6 +558,38 @@ fn block(p: &mut Parser) -> MarkClosed {
     }
     p.expect(T!["}"]);
     p.finish_node(m, BLOCK)
+}
+
+fn stmt_use(p: &mut Parser) {
+    assert!(p.at(T!["use"]));
+    let m = p.start_node();
+    p.expect(T!["use"]);
+    while !p.at(T!["<-"]) && !p.eof() {
+        if p.at_any(PATTERN_FIRST) {
+            let pat_m = p.start_node();
+            pattern(p);
+            if p.eat(T![":"]) {
+                type_expr(p);
+            }
+            p.finish_node(pat_m, USE_ASSIGNMENT);
+            if !p.at(T!["<-"]) {
+                p.expect(T![","]);
+            }
+        }
+        else {
+            if p.at_any(STMT_EXPR_RECOVERY) {
+                break;
+            }
+            p.bump_with_error(ErrorKind::ExpectedIdentifier);
+        }
+    }
+    p.expect(T!["<-"]);
+    if p.at_any(EXPR_FIRST) {
+        expr(p);
+    } else {
+       p.error(ErrorKind::ExpectedExpression);
+    }
+    p.finish_node(m, STMT_USE);
 }
 
 fn stmt_expr(p: &mut Parser) {
@@ -581,7 +612,11 @@ fn stmt_let(p: &mut Parser) {
     }
 
     p.expect(T!["="]);
-    expr(p);
+    if p.at_any(EXPR_FIRST) {
+        expr(p);
+    } else {
+       p.error(ErrorKind::ExpectedExpression);
+    }
     p.finish_node(m, STMT_LET);
 }
 
@@ -677,6 +712,7 @@ fn expr_unit(p: &mut Parser) -> Option<MarkClosed> {
             p.bump();
             p.finish_node(m, HOLE)
         }
+        T!["<<"] => bit_string(p),
         T!["{"] => block(p),
         T!["#"] => tuple(p),
         T!["["] => list(p),
@@ -688,6 +724,21 @@ fn expr_unit(p: &mut Parser) -> Option<MarkClosed> {
         _ => return None,
     };
     Some(res)
+}
+
+// ToDo: Parse bit string correctly
+fn bit_string(p: &mut Parser<'_>) -> MarkClosed {
+    assert!(p.at(T!["<<"]));
+    p.expect(T!["<<"]);
+    let m = p.start_node();
+    while !p.at(T![">>"]) && !p.eof() {
+        p.bump();
+        if p.at_any(STMT_RECOVERY) {
+            break;
+        }
+    }
+    p.expect(T![">>"]);
+    p.finish_node(m, BIT_STRING)
 }
 
 fn case(p: &mut Parser) -> MarkClosed {
@@ -710,10 +761,10 @@ fn case(p: &mut Parser) -> MarkClosed {
     p.expect(T!["{"]);
 
     while !p.at(T!["}"]) && !p.eof() {
-        if p.at_any(CLAUSE_FIRST) {
+        if p.at_any(PATTERN_FIRST) {
             clause(p);
         } else {
-            if p.at_any(EXPR_FIRST) {
+            if p.at_any(EXPR_FIRST.union(STMT_RECOVERY)) {
                 break;
             }
             p.bump_with_error(ErrorKind::ExpectedExpression)
@@ -727,13 +778,13 @@ fn case(p: &mut Parser) -> MarkClosed {
 fn clause(p: &mut Parser) {
     let m = p.start_node();
     while !p.at(T!["->"]) && !p.eof() {
-        if p.at_any(CLAUSE_FIRST) {
+        if p.at_any(PATTERN_FIRST) {
             alternative_pattern(p);
             if !p.at(T!["->"]) && !p.at(T!["if"]) {
                 p.expect(T![","]);
             }
         } else {
-            if p.at_any(EXPR_FIRST) {
+            if p.at_any(PATTERN_RECOVERY) {
                 break;
             }
             p.bump_with_error(ErrorKind::ExpectedExpression)
@@ -757,7 +808,7 @@ fn clause(p: &mut Parser) {
 fn alternative_pattern(p: &mut Parser) {
     let m = p.start_node();
     while !p.at(T!["->"]) && !p.at(T![","]) && !p.eof() {
-        if p.at_any(CLAUSE_FIRST) {
+        if p.at_any(PATTERN_FIRST) {
             pattern(p);
             if p.at(T!["|"]) {
                 p.expect(T!["|"])
@@ -773,6 +824,8 @@ fn alternative_pattern(p: &mut Parser) {
 }
 
 fn pattern(p: &mut Parser) {
+    let mut parse_application = false;
+
     let res = match p.nth(0) {
         // variable definition or qualified constructor type
         IDENT => {
@@ -784,15 +837,22 @@ fn pattern(p: &mut Parser) {
                 p.finish_node(m, PATTERN_VARIABLE);
                 return;
             }
+
+            parse_application = true;
             p.finish_node(n, MODULE_NAME);
             p.expect(T!["."]);
+            let t = p.start_node();
             p.expect(U_IDENT);
+            p.finish_node(t, TYPE_NAME);
             p.finish_node(m, TYPE_NAME_REF)
         }
         // constructor
         U_IDENT => {
+            parse_application = true;
             let m = p.start_node();
+            let t = p.start_node();
             p.expect(U_IDENT);
+            p.finish_node(t, TYPE_NAME);
             p.finish_node(m, TYPE_NAME_REF)
         }
         DISCARD_IDENT => {
@@ -800,13 +860,23 @@ fn pattern(p: &mut Parser) {
             p.bump();
             p.finish_node(m, HOLE)
         }
-        // tuple
-        T!("#") => {
-            pattern_tuple(p);
-            return;
+        INTEGER | FLOAT | STRING => {
+            let m = p.start_node();
+            p.bump();
+            p.finish_node(m, LITERAL)
         }
+        T!["<<"] => bit_string(p),
+        T!["["] => pattern_list(p),
+        T!["-"] => todo!("unary"),
+        // tuple
+        T!("#") => pattern_tuple(p),
         _ => return,
     };
+
+    if !parse_application {
+        return;
+    }
+
     match p.nth(0) {
         T!["("] => {
             let m = p.start_node_before(res);
@@ -817,16 +887,39 @@ fn pattern(p: &mut Parser) {
     }
 }
 
+fn pattern_list(p: &mut Parser<'_>) -> MarkClosed {
+    assert!(p.at(T!["["]));
+    let m = p.start_node();
+
+    p.expect(T!["["]);
+    while !p.at(T!["]"]) && !p.eof() {
+        if p.at_any(PATTERN_FIRST) {
+            pattern(p);
+            if !p.at(T!["]"]) {
+                p.expect(T![","]);
+            }
+        } else {
+            if p.at_any(STMT_RECOVERY) {
+                break;
+            }
+            p.bump_with_error(ErrorKind::ExpectedExpression)
+        }
+    }
+    p.expect(T!["]"]);
+
+    p.finish_node(m, PATTERN_LIST)
+}
+
 fn pattern_constructor_arg_list(p: &mut Parser) {
     assert!(p.at(T!["("]));
     let m = p.start_node();
 
     p.expect(T!["("]);
     while !p.at(T![")"]) && !p.eof() {
-        if p.at_any(CLAUSE_FIRST) {
+        if p.at_any(PATTERN_FIRST) {
             pattern_constructor_arg(p);
         } else {
-            if p.at_any(EXPR_FIRST) {
+            if p.at_any(STMT_RECOVERY) {
                 break;
             }
             p.bump_with_error(ErrorKind::ExpectedExpression)
@@ -839,7 +932,7 @@ fn pattern_constructor_arg_list(p: &mut Parser) {
 
 fn pattern_constructor_arg(p: &mut Parser) {
     let m = p.start_node();
-    if !p.at_any(CLAUSE_FIRST) {
+    if !p.at_any(PATTERN_FIRST) {
         p.error(ErrorKind::ExpectedExpression);
     }
     pattern(p);
@@ -855,13 +948,13 @@ fn pattern_tuple(p: &mut Parser) -> MarkClosed {
     p.expect(T!["#"]);
     p.expect(T!["("]);
     while !p.eof() && !p.at(T![")"]) {
-        if p.at_any(CLAUSE_FIRST) {
+        if p.at_any(PATTERN_FIRST) {
             pattern(p);
             if !p.at(T![")"]) {
                 p.expect(T![","]);
             }
         } else {
-            if p.at_any(CLAUSE_FIRST) {
+            if p.at_any(PATTERN_FIRST) {
                 break;
             }
             p.bump_with_error(ErrorKind::ExpectedExpression)
@@ -1035,7 +1128,9 @@ fn type_name(p: &mut Parser) -> MarkClosed {
 fn type_name_ref(p: &mut Parser) -> MarkClosed {
     assert!(p.at(U_IDENT));
     let m = p.start_node();
+    let t = p.start_node();
     p.expect(U_IDENT);
+    p.finish_node(t, TYPE_NAME);
     p.finish_node(m, TYPE_NAME_REF)
 }
 
@@ -1147,6 +1242,7 @@ fn type_arg(p: &mut Parser) {
 }
 
 fn type_expr(p: &mut Parser) {
+    let mut type_application = false;
     let res = match p.nth(0) {
         T!["fn"] => fn_type(p),
         // type variable or constructor type
@@ -1159,22 +1255,30 @@ fn type_expr(p: &mut Parser) {
                 p.finish_node(m, TYPE_NAME_REF);
                 return;
             }
+
+            type_application = true;
             p.expect(T!["."]);
+            let t = p.start_node();
             p.expect(U_IDENT);
+            p.finish_node(t, TYPE_NAME);
             p.finish_node(m, TYPE_NAME_REF)
         }
         // constructor
-        U_IDENT => type_name_ref(p),
+        U_IDENT => {
+            type_application = true;
+            type_name_ref(p)
+        },
         // tuple
-        T!("#") => {
-            tuple_type(p);
-            return;
-        }
+        T!("#") => tuple_type(p),
         _ => {
-            // p.bump_with_error(ErrorKind::ExpectedType);
             return;
+            // p.bump_with_error(ErrorKind::ExpectedType);
         }
     };
+    if !type_application {
+        return;
+    }
+
     match p.nth(0) {
         T!["("] => {
             let m = p.start_node_before(res);

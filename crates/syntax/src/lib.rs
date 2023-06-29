@@ -52,6 +52,7 @@ pub enum ErrorKind {
     OpaqueAlias,
     ExpectedPattern,
     UnexpectedLabel,
+    ExpectedBitString,
 }
 
 impl fmt::Display for ErrorKind {
@@ -72,7 +73,8 @@ impl fmt::Display for ErrorKind {
             Self::ExpectedParameter => "Expected a parameter",
             Self::OpaqueAlias => "Type alias can't be opaque",
             Self::ExpectedPattern => "Expected Pattern",
-            Self::UnexpectedLabel => "Label not allowed in anonymous function"
+            Self::UnexpectedLabel => "Label not allowed in anonymous function",
+            Self::ExpectedBitString => "Expected bit string expression"
         }
         .fmt(f)
     }
