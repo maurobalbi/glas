@@ -25,7 +25,7 @@ pub type PreorderWithTokens = rowan::api::PreorderWithTokens<GleamLanguage>;
 pub type SyntaxNodePtr = rowan::ast::SyntaxNodePtr<GleamLanguage>;
 
 pub use self::kind::SyntaxKind;
-pub use self::parser::{parse_file, Parse};
+pub use self::parser::{parse_module, Parse};
 pub use self::ptr::{AstPtr};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

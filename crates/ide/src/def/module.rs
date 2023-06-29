@@ -1,6 +1,7 @@
 use std::{collections::HashMap, ops};
 
 use la_arena::{Arena, ArenaMap, Idx};
+use ordered_float::OrderedFloat;
 use smol_str::SmolStr;
 use syntax::{
     ast::{self, BinaryOpKind, TypeNameRef},
@@ -188,7 +189,7 @@ pub enum Expr {
     Binary {
         left: ExprId,
         right: ExprId,
-        op: BinaryOpKind,
+        op: Option<BinaryOpKind>,
     },
     Call {
         func: ExprId,
@@ -213,7 +214,7 @@ pub enum Pattern {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Literal {
     Int(i64),
-    Float(SmolStr),
+    Float(OrderedFloat<f64>),
     String(SmolStr),
 }
 

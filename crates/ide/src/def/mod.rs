@@ -14,10 +14,8 @@ use syntax::{AstPtr, Parse };
 
 pub use syntax::ast::{AstNode, BinaryOpKind as BinaryOp, Expr, UnaryOpKind as UnaryOp};
 
-use self::module::{ModuleData, ModuleSourceMap};
-use self::nameres::{NameResolution, ModuleScope};
-
-pub use self::nameres::{ResolveResult};
+pub use self::module::{ModuleData, ModuleSourceMap};
+pub use self::nameres::{ResolveResult, NameResolution, ModuleScope};
 
 #[salsa::query_group(DefDatabaseStorage)]
 pub trait DefDatabase: SourceDatabase {
@@ -38,7 +36,7 @@ pub trait DefDatabase: SourceDatabase {
 
 fn parse(db: &dyn DefDatabase, file_id: FileId) -> Parse {
     let content = db.file_content(file_id);
-    syntax::parse_file(&content)
+    syntax::parse_module(&content)
 }
 
 fn module_with_source_map(db: &dyn DefDatabase, file_id: FileId) -> (Arc<ModuleData>, Arc<ModuleSourceMap>){

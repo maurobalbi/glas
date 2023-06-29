@@ -137,6 +137,10 @@ impl ModuleScope {
                 }
                 self.traverse_expr(module, *func, scope);
             }
+            Expr::Binary { left, right, op } => {
+                self.traverse_expr(module, *left, scope);
+                self.traverse_expr(module, *right, scope);
+            }
             _ => {}
         }
     }

@@ -458,7 +458,7 @@ asts! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::parse;
+    use crate::{tests::{parse}, ast};
 
     trait HasSyntaxNode {
         fn has_syntax_node(&self) -> &SyntaxNode;
@@ -491,15 +491,8 @@ mod tests {
 
     #[test]
     fn assert() {
-        let e = crate::parse_file(
-            "fn main(a, b) {
-                case bla() {
-                  Cat -> 1
-                }
-                bla(a)
-                let name = 1
-                name + 2
-              }",
+        let e = crate::parse_module(
+            "fn main() { 1 }",
         );
         for error in e.errors() {
             println!("{}", error);
@@ -703,6 +696,12 @@ mod tests {
             }
             _ => panic!(),
         }
+    }
+
+    #[test]
+    fn literal() {
+        let e = parse::<Literal>("fn a() { 1 }");
+        assert_eq!(e.kind(), Some(LiteralKind::Int));
     }
 
     #[test]

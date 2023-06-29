@@ -1,5 +1,6 @@
 use crate::base::{SourceDatabaseStorage, Target};
 use crate::def::DefDatabaseStorage;
+use crate::ty::TyDatabaseStorage;
 use crate::{
     Change, DefDatabase, FileId, FilePos, FileRange, FileSet, PackageGraph, PackageInfo, SourceRoot,
     SourceRootId, VfsPath, ModuleMap,
@@ -15,7 +16,7 @@ use crate::DEFAULT_IMPORT_FILE;
 
 pub const MARKER_INDICATOR: char = '$';
 
-#[salsa::database(SourceDatabaseStorage, DefDatabaseStorage)]
+#[salsa::database(SourceDatabaseStorage, DefDatabaseStorage, TyDatabaseStorage)]
 #[derive(Default)]
 pub struct TestDB {
     storage: salsa::Storage<Self>,

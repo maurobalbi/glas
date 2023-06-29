@@ -22,3 +22,6 @@ How i think Rust analyzer loads on startup
  - uses Entry struct to load all *.rs files into vfs
  - partitions the files into filesets with common sourceroot
  - adds all changes to salsa db on apply_change
+
+ModuleInterfaces
+ - Add deps field to check if module forms cycle

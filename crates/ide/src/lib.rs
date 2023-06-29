@@ -2,6 +2,7 @@ mod base;
 mod def;
 mod diagnostic;
 mod ide;
+mod ty;
 
 #[cfg(test)]
 mod tests;
@@ -13,8 +14,9 @@ pub use base::{
     Change, FileId, FilePos, FileRange, FileSet, InFile, PackageGraph, PackageInfo, SourceDatabase,
     SourceRoot, SourceRootId, VfsPath, ModuleMap
 };
-pub use def::DefDatabase;
+pub use def::{DefDatabase,ModuleData};
 pub use diagnostic::{Diagnostic, DiagnosticKind, Severity};
+pub use ty::{InferenceResult, TyDatabase};
 
 /// Generates `From` impls for `Enum E { Foo(Foo), Bar(Bar) }` enums
 #[macro_export]

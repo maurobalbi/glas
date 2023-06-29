@@ -3,13 +3,13 @@ use crate::{base::Target, Diagnostic, DiagnosticKind};
 use super::{
     module::{
         Expr, ExprId, Function, FunctionId, Label, ModuleData, ModuleSourceMap, ModuleStatementId,
-        Name, NameId, NameKind, Param, Pattern, PatternId, Statement,
+        Name, NameId, NameKind, Param, Pattern, PatternId, Statement, Literal,
     },
     AstPtr, DefDatabase, FileId,
 };
 use smol_str::SmolStr;
 use syntax::{
-    ast::{self, AstNode, StatementExpr},
+    ast::{self, AstNode, StatementExpr, LiteralKind},
     Parse,
 };
 
@@ -200,6 +200,16 @@ impl LowerCtx<'_> {
                     ptr,
                 )
             }
+            ast::Expr::BinaryOp(e) => {
+                let left = self.lower_expr_opt(e.lhs());
+                let op = e.op_kind();
+                let right = self.lower_expr_opt(e.rhs());
+                self.alloc_expr(Expr::Binary{op, left, right}, ptr)
+            }
+            ast::Expr::Literal(lit) => {
+                let lit = self.lower_literal(lit);
+                self.alloc_expr(lit.map_or(Expr::Missing, Expr::Literal), ptr)
+            }
             _ => self.alloc_expr(Expr::Missing, ptr),
         }
     }
@@ -231,6 +241,18 @@ impl LowerCtx<'_> {
                 }
             }
         }
+    }
+
+    fn lower_literal(&mut self, lit: ast::Literal) -> Option<Literal> {
+        let kind = lit.kind()?;
+        let tok = lit.token().unwrap();
+        let text = tok.text();
+
+        Some(match kind {
+            LiteralKind::Int => Literal::Int(text.parse::<i64>().ok()?),
+            LiteralKind::Float => Literal::Float(text.parse::<f64>().unwrap().into()),
+            LiteralKind::String => Literal::String(text.into()),
+        })
     }
 
     fn lower_pattern(&mut self, pattern: ast::Pattern) -> PatternId {

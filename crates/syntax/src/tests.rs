@@ -1,4 +1,4 @@
-use crate::{parse_file, GleamLanguage};
+use crate::{parse_module, GleamLanguage, ast};
 use expect_test::expect_file;
 use rowan::ast::AstNode;
 use std::fmt::Write;
@@ -7,7 +7,7 @@ use std::path::Path;
 
 #[track_caller]
 pub fn parse<N: AstNode<Language = GleamLanguage>>(src: &str) -> N {
-    let parse = crate::parse_file(src);
+    let parse = crate::parse_module(src);
     assert!(parse.errors().is_empty());
     parse.syntax_node().descendants().find_map(N::cast).unwrap()
 }
@@ -32,7 +32,7 @@ fn run_test(dir: &Path, ok: bool) {
 
         println!("Parsing {}", path.display());
 
-        let ast = parse_file(&src);
+        let ast = parse_module(&src);
         let mut got = String::new();
         for err in ast.errors() {
             writeln!(got, "{:?}: {:?}", err.range, err.kind).unwrap();

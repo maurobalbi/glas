@@ -80,7 +80,7 @@ impl Parse {
     }
 }
 
-pub fn parse_file(src: &str) -> Parse {
+pub fn parse_module(src: &str) -> Parse {
     assert!(src.len() < u32::MAX as usize);
     let tokens_raw: Vec<_> = GleamLexer::new(src).collect();
     let tokens = tokens_raw
