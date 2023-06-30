@@ -5,7 +5,9 @@ use anyhow::{bail, Context, Result};
 use async_lsp::router::Router;
 use async_lsp::{ClientSocket, ErrorCode, LanguageClient, ResponseError};
 use gleam_interop;
-use ide::{Analysis, AnalysisHost, Cancelled, FileSet, PackageInfo, SourceRoot, VfsPath, ModuleMap};
+use ide::{
+    Analysis, AnalysisHost, Cancelled, FileSet, ModuleMap, PackageInfo, SourceRoot, VfsPath,
+};
 use lsp_types::notification::Notification;
 use lsp_types::request::{self as req, Request};
 use lsp_types::{
@@ -686,10 +688,11 @@ impl Server {
 
     fn apply_vfs_change(&mut self) {
         let mut vfs = self.vfs.write().unwrap();
-        let changes = vfs.take_change();
-
+        
         let (root_sets, module_map) = Self::lower_vfs(&mut vfs, self.source_root_config.clone());
         vfs.set_roots_and_map(root_sets, module_map);
+
+        let changes = vfs.take_change();
         drop(vfs);
 
         tracing::trace!("Apply VFS changes: {:?}", changes);
@@ -729,10 +732,11 @@ impl Server {
                     if matching_prefix {
                         let prefix = prefix_components.iter().collect::<PathBuf>();
 
-                        if let Some(module_name) =
-                            file_path.as_path().and_then(|mpath| module_name(&prefix, mpath))
+                        if let Some(module_name) = file_path
+                            .as_path()
+                            .and_then(|mpath| module_name(&prefix, mpath))
                         {
-                            module_map.insert(file_id, module_name); // Todo: Report error if insert returns an 
+                            module_map.insert(file_id, module_name); // Todo: Report error if insert returns an fileid
                         }
 
                         prefix_to_paths
@@ -769,6 +773,8 @@ pub(crate) fn module_name(root_path: &PathBuf, module_path: &Path) -> Option<Smo
 
     // my/module
     let _ = module_path.set_extension("");
+
+    let module_path: PathBuf = module_path.components().skip(1).collect();
 
     // Stringify
     let name = module_path

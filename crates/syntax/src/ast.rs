@@ -1,3 +1,5 @@
+use std::any::type_name;
+
 use crate::SyntaxKind::{self, *};
 use crate::{GleamLanguage, SyntaxNode, SyntaxToken};
 use rowan::ast::support::{child, children};
@@ -198,6 +200,15 @@ enums! {
         Name,
         TypeName,
     },
+}
+
+impl TypeNameOrName {
+    pub fn token(&self) -> Option<SyntaxToken> {
+        match self {
+            TypeNameOrName::Name(name) => name.token(),
+            TypeNameOrName::TypeName(type_name) => type_name.token(),
+        }
+    }
 }
 
 asts! {
@@ -479,6 +490,8 @@ asts! {
 
 #[cfg(test)]
 mod tests {
+    use smol_str::SmolStr;
+
     use super::*;
     use crate::{ast, tests::parse};
 
@@ -654,6 +667,12 @@ mod tests {
     fn import_qualified_as() {
         let e = parse::<Import>("import aa/a.{m as a, M as A} as e");
 
+        let str = e
+            .module_path()
+            .filter_map(|t| Some(format!("{}", t.token()?.text())))
+            .collect::<Vec<_>>()
+            .join("/");
+        assert_eq!(str, "");
         e.as_name().unwrap().syntax().should_eq("e");
     }
 
@@ -817,6 +836,11 @@ mod tests {
                 )
             }",
         );
-        p.assignments().into_iter().next().unwrap().syntax().should_eq("manager: Int");
+        p.assignments()
+            .into_iter()
+            .next()
+            .unwrap()
+            .syntax()
+            .should_eq("manager: Int");
     }
 }
