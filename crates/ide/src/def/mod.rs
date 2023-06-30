@@ -41,7 +41,7 @@ fn parse(db: &dyn DefDatabase, file_id: FileId) -> Parse {
 
 fn module_with_source_map(db: &dyn DefDatabase, file_id: FileId) -> (Arc<ModuleData>, Arc<ModuleSourceMap>){
     let parse = db.parse(file_id);
-    let (mut item_data, mut source_map) = lower::lower(db, file_id, parse);
+    let (mut item_data, mut source_map) = lower::lower(db,  parse);
     item_data.shink_to_fit();
     source_map.shrink_to_fit();
     (Arc::new(item_data), Arc::new(source_map))
@@ -54,16 +54,3 @@ fn source_map(db: &dyn DefDatabase, file_id: FileId) -> Arc<ModuleSourceMap> {
 fn module(db: &dyn DefDatabase, file_id: FileId) -> Arc<ModuleData> {
     db.module_with_source_map(file_id).0
 }
-
-
-
-// fn module_with_source_map(
-//     db: &dyn DefDatabase,
-//     file_id: FileId,
-// ) -> (Arc<Module>, Arc<ModuleSourceMap>) {
-//     let parse = db.parse(file_id);
-//     let (mut module, mut source_map) = lower::lower(db, file_id, parse);
-//     module.shrink_to_fit();
-//     source_map.shrink_to_fit();
-//     (Arc::new(module), Arc::new(source_map))
-// }

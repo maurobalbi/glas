@@ -16,9 +16,13 @@ pub(crate) fn goto_definition(
 ) -> Option<GotoDefinitionResult> {
     let parse = db.parse(file_id).syntax_node();
     let tok = best_token_at_offset(&parse, pos)?;
+    let module_data = db.module(file_id);
     let source_map = db.source_map(file_id);
 
-    tracing::info!("Module name: {:?}", db.module_map().module_name_for_file(file_id));
+    tracing::info!(
+        "Module name: {:?}",
+        db.module_map().module_name_for_file(file_id)
+    );
     //If tok.parent is field access or tuple access, it will be necessary to infer type first
     if matches!(
         tok.parent()?.kind(),
@@ -34,25 +38,27 @@ pub(crate) fn goto_definition(
         let expr_id = source_map.expr_for_node(ptr)?;
 
         let name_res = db.name_resolution(file_id);
-        // tracing::info!("Name_res: {:#?}", name_res);
-        let targets = match name_res.get(expr_id)? {
-            ResolveResult::Definition(name) => {
-                source_map.node_for_name(*name).map(|ptr| {
-                    let name_node = ptr.to_node(&parse);
-                    // let full_node = name_node.ancestors().find(|n| {
-                    //     matches!(
-                    //         n.kind(),
-                    //         SyntaxKind::LAMBDA | SyntaxKind::ATTR_PATH_VALUE | SyntaxKind::INHERIT
-                    //     )
-                    // })?;
-                    NavigationTarget {
-                        file_id,
-                        focus_range: name_node.syntax().text_range(),
-                        full_range: name_node.syntax().text_range(),
-                    }
-                })
+        tracing::info!("Name_res: {:#?} {:?}", name_res, expr_id);
+        let ResolveResult((name, file_id)) = name_res.get(expr_id)?;
+
+        let source_map = db.source_map(*file_id);
+        tracing::info!("WERE DOING SOMETHING {:?} {:?}", name, file_id);
+
+        let targets = source_map.node_for_name(*name).map(|ptr| {
+            let name_node = ptr.to_node(&db.parse(*file_id).syntax_node());
+            // let full_node = name_node.ancestors().find(|n| {
+            //     matches!(
+            //         n.kind(),
+            //         SyntaxKind::LAMBDA | SyntaxKind::ATTR_PATH_VALUE | SyntaxKind::INHERIT
+            //     )
+            // })?;
+            NavigationTarget {
+                file_id: *file_id,
+                focus_range: name_node.syntax().text_range(),
+                full_range: name_node.syntax().text_range(),
             }
-        };
+        });
+
         return Some(GotoDefinitionResult::Targets(vec![targets?]));
     }
     // let ptr: AstPtr<ast::Literal> = tok.parent_ancestors().find_map(|node| {

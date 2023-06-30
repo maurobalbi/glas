@@ -25,3 +25,6 @@ How i think Rust analyzer loads on startup
 
 ModuleInterfaces
  - Add deps field to check if module forms cycle
+
+
+TypeName

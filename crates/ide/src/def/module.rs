@@ -4,7 +4,7 @@ use la_arena::{Arena, ArenaMap, Idx};
 use ordered_float::OrderedFloat;
 use smol_str::SmolStr;
 use syntax::{
-    ast::{self, BinaryOpKind, TypeNameRef},
+    ast::{self, BinaryOpKind},
     AstPtr,
 };
 
@@ -14,6 +14,7 @@ use crate::{impl_from, Diagnostic};
 #[derive(Debug, Default, Eq, PartialEq)]
 pub struct ModuleData {
     pub functions: Arena<Function>,
+    pub imports: Arena<Import>,
     pub params: Arena<Param>,
     pub patterns: Arena<Pattern>,
     pub exprs: Arena<Expr>,
@@ -23,6 +24,7 @@ pub struct ModuleData {
 impl ModuleData {
     pub fn shink_to_fit(&mut self) {
         self.functions.shrink_to_fit();
+        self.imports.shrink_to_fit();
         self.params.shrink_to_fit();
         self.patterns.shrink_to_fit();
         self.exprs.shrink_to_fit();
@@ -34,6 +36,9 @@ impl ModuleData {
     ) -> impl Iterator<Item = (FunctionId, &'_ Function)> + ExactSizeIterator + '_ {
         self.functions.iter()
     }
+    pub fn imports(&self) -> impl Iterator<Item = (ImportId, &'_ Import)> + ExactSizeIterator + '_ {
+        self.imports.iter()
+    }
 
     pub fn exprs(&self) -> impl Iterator<Item = (ExprId, &'_ Expr)> + ExactSizeIterator + '_ {
         self.exprs.iter()
@@ -42,8 +47,10 @@ impl ModuleData {
     pub fn names(&self) -> impl Iterator<Item = (NameId, &'_ Name)> + ExactSizeIterator + '_ {
         self.names.iter()
     }
-    
-    pub fn patterns(&self) -> impl Iterator<Item = (PatternId, &'_ Pattern)> + ExactSizeIterator + '_ {
+
+    pub fn patterns(
+        &self,
+    ) -> impl Iterator<Item = (PatternId, &'_ Pattern)> + ExactSizeIterator + '_ {
         self.patterns.iter()
     }
 }
@@ -103,7 +110,7 @@ impl ModuleSourceMap {
 
         self.name_map.shrink_to_fit();
         self.name_map_rev.shrink_to_fit();
-        
+
         self.pattern_map.shrink_to_fit();
         self.pattern_map_rev.shrink_to_fit();
     }
@@ -154,6 +161,25 @@ pub struct Function {
     pub ast_ptr: AstPtr<ast::Function>,
 }
 
+pub type ImportId = Idx<Import>;
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct Import {
+    pub module: SmolStr, // e.g. import >>one/wobble<<
+    pub name: NameId, // Name as it's allocated in module, Should be AsName if available otherwise Name
+
+    pub unqualified_as_name: Option<SmolStr>, // e.g. {* as >>AsName<<}
+    pub unqualifed_name: SmolStr,             // e.g. { >>Name<< as Wobble }
+}
+
+impl Import {
+    pub fn local_name(&self) -> SmolStr {
+        self.unqualified_as_name
+            .as_ref()
+            .unwrap_or(&self.unqualifed_name)
+            .clone()
+    }
+}
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Param {
     pub name: NameId,
@@ -169,17 +195,17 @@ pub enum Visibility {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Statement {
     Let {
-        pattern: PatternId, // Should be pattern 
+        pattern: PatternId, // Should be pattern
         // type_ann: Type
-        body: ExprId
+        body: ExprId,
     },
     Use {
         patterns: Vec<PatternId>,
         expr: ExprId,
     },
     Expr {
-        expr: ExprId
-    }
+        expr: ExprId,
+    },
 }
 pub type ExprId = Idx<Expr>;
 
@@ -188,7 +214,7 @@ pub enum Expr {
     Missing,
     Literal(Literal),
     Block {
-        stmts: Vec<Statement>
+        stmts: Vec<Statement>,
     },
     Binary {
         left: ExprId,
@@ -207,12 +233,8 @@ pub type PatternId = Idx<Pattern>;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Pattern {
     // Missing,
-    Variable {
-        name: NameId,
-    },
-    Record {
-        args: Vec<PatternId>
-    }
+    Variable { name: NameId },
+    Record { args: Vec<PatternId> },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -236,6 +258,8 @@ pub enum NameKind {
     Pattern,
     Param,
     PatField,
+    Import,
+    Module,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

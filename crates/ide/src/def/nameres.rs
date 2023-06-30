@@ -6,8 +6,8 @@ use smol_str::SmolStr;
 use crate::{DefDatabase, FileId};
 
 use super::module::{
-    Expr, ExprId, FunctionId, ModuleData, ModuleStatementId, Name, NameId, Pattern, PatternId,
-    Statement, Visibility,
+    Expr, ExprId, FunctionId, ImportId, ModuleData, ModuleStatementId, Name, NameId, Pattern,
+    PatternId, Statement, Visibility, Import,
 };
 
 // #[derive(Debug, Default, PartialEq, Eq)]
@@ -24,10 +24,9 @@ use super::module::{
 
 /// The resolve result of a name reference.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ResolveResult {
-    /// Reference to a Name.
-    Definition(NameId),
-}
+pub struct ResolveResult(pub Definition);
+
+pub type Definition = (NameId, FileId);
 
 pub type ScopeId = Idx<ScopeData>;
 
@@ -40,6 +39,7 @@ impl ops::Index<ScopeId> for ModuleScope {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct ModuleScope {
+    file_id: FileId,
     scopes: Arena<ScopeData>,
     scope_by_expr: ArenaMap<ExprId, ScopeId>,
 }
@@ -48,17 +48,26 @@ impl ModuleScope {
     pub(crate) fn module_scopes_query(db: &dyn DefDatabase, file_id: FileId) -> Arc<Self> {
         let module = db.module(file_id);
         let mut this = Self {
+            file_id,
             scopes: Arena::new(),
             scope_by_expr: ArenaMap::with_capacity(module.exprs.len()),
         };
 
+        let import_definitions = module
+            .imports()
+            .filter_map(|(_, import)| Some((import.local_name(), this.resolve_import(db, import)?)));
+
         let definitions = module
-            .functions
-            .iter()
-            .map(|(idx, f)| (module[f.name].text.clone(), f.name));
+            .functions()
+            .map(|(_, f)| (module[f.name].text.clone(), (f.name, file_id)));
+
+        let import_scope = this.scopes.alloc(ScopeData {
+            parent: None,
+            kind: ScopeKind::Imports(import_definitions.collect()),
+        });
 
         let root_scope = this.scopes.alloc(ScopeData {
-            parent: None,
+            parent: Some(import_scope),
             kind: ScopeKind::Definitions(definitions.collect()),
         });
 
@@ -84,14 +93,25 @@ impl ModuleScope {
     }
 
     /// Resolve a name in the scope of an Expr.
-    fn resolve_name(&self, expr_id: ExprId, name: &SmolStr) -> Option<ResolveResult> {
+    fn resolve_name(
+        &self,
+        expr_id: ExprId,
+        name: &SmolStr,
+    ) -> Option<ResolveResult> {
         let scope = self.scope_for_expr(expr_id)?;
         //     // 1. Local defs.
         if let Some(name) = self
             .ancestors(scope)
             .find_map(|data| data.as_definitions()?.get(name))
         {
-            return Some(ResolveResult::Definition(*name));
+            return Some(ResolveResult(*name));
+        }
+
+        if let Some(name) = self
+            .ancestors(scope)
+            .find_map(|data| data.as_imports()?.get(name))
+        {
+            return Some(ResolveResult(*name));
         }
         None
     }
@@ -103,7 +123,7 @@ impl ModuleScope {
 
         for param in &function.params {
             let name = &module[param.name];
-            defs.insert(name.text.clone(), param.name);
+            defs.insert(name.text.clone(), (param.name, self.file_id));
         }
 
         let scope = if !defs.is_empty() {
@@ -175,114 +195,25 @@ impl ModuleScope {
         &self,
         module: &ModuleData,
         pattern: &PatternId,
-        defs: &mut HashMap<SmolStr, Idx<Name>>,
+        defs: &mut HashMap<SmolStr, Definition>,
     ) {
         let pattern = &module[*pattern];
         match pattern {
             Pattern::Variable { name } => {
-                defs.insert(module[*name].text.clone().into(), (*name).clone());
+                defs.insert(module[*name].text.clone().into(), ((*name).clone(), self.file_id));
             }
             Pattern::Record { args } => todo!(),
         }
     }
-    //      self.scope_by_expr.insert(expr, scope);
 
-    //     match &module[expr] {
-    //         Expr::Lambda(param, pat, body) => {
-    //             let mut defs = HashMap::default();
-    //             if let &Some(name_id) = param {
-    //                 defs.insert(module[name_id].text.clone(), name_id);
-    //             }
-    //             if let Some(pat) = pat {
-    //                 for name_id in pat.fields.iter().filter_map(|(opt_id, _)| *opt_id) {
-    //                     defs.insert(module[name_id].text.clone(), name_id);
-    //                 }
-    //             }
-
-    //             let scope = if !defs.is_empty() {
-    //                 self.scopes.alloc(ScopeData {
-    //                     parent: Some(scope),
-    //                     kind: ScopeKind::Definitions(defs),
-    //                 })
-    //             } else {
-    //                 scope
-    //             };
-
-    //             if let Some(pat) = pat {
-    //                 for default_expr in pat.fields.iter().filter_map(|(_, e)| *e) {
-    //                     self.traverse_expr(module, default_expr, scope);
-    //                 }
-    //             }
-    //             self.traverse_expr(module, *body, scope);
-    //         }
-    //         Expr::With(env, body) => {
-    //             self.traverse_expr(module, *env, scope);
-    //             let scope = self.scopes.alloc(ScopeData {
-    //                 parent: Some(scope),
-    //                 kind: ScopeKind::WithExpr(expr),
-    //             });
-    //             self.traverse_expr(module, *body, scope);
-    //         }
-    //         Expr::Attrset(bindings) | Expr::RecAttrset(bindings) | Expr::LetAttrset(bindings) => {
-    //             self.traverse_bindings(module, bindings, scope);
-    //         }
-    //         Expr::LetIn(bindings, body) => {
-    //             let scope = self.traverse_bindings(module, bindings, scope);
-    //             self.traverse_expr(module, *body, scope);
-    //         }
-    //         e => e.walk_child_exprs(|e| self.traverse_expr(module, e, scope)),
-    //     }
-    // }
-
-    // fn traverse_bindings(
-    //     &mut self,
-    //     module: &Module,
-    //     bindings: &Bindings,
-    //     scope: ScopeId,
-    // ) -> ScopeId {
-    //     let mut defs = HashMap::default();
-
-    //     for &(name, value) in bindings.statics.iter() {
-    //         if module[name].kind.is_definition() {
-    //             defs.insert(module[name].text.clone(), name);
-    //         }
-
-    //         // Inherited attrs are resolved in the outer scope.
-    //         if let BindingValue::Inherit(expr) = value {
-    //             assert!(matches!(&module[expr], Expr::Reference(_)));
-    //             self.traverse_expr(module, expr, scope);
-    //         }
-    //     }
-
-    //     let scope = if defs.is_empty() {
-    //         scope
-    //     } else {
-    //         self.scopes.alloc(ScopeData {
-    //             parent: Some(scope),
-    //             kind: ScopeKind::Definitions(defs),
-    //         })
-    //     };
-
-    //     for &(_, value) in bindings.statics.iter() {
-    //         match value {
-    //             // Traversed before.
-    //             BindingValue::Inherit(_) |
-    //             // Traversed later.
-    //             BindingValue::InheritFrom(_) => {},
-    //             BindingValue::Expr(e) => {
-    //                 self.traverse_expr(module, e, scope);
-    //             }
-    //         }
-    //     }
-    //     for &e in bindings.inherit_froms.iter() {
-    //         self.traverse_expr(module, e, scope);
-    //     }
-    //     for &(k, v) in bindings.dynamics.iter() {
-    //         self.traverse_expr(module, k, scope);
-    //         self.traverse_expr(module, v, scope);
-    //     }
-    //     scope
-    // }
+    fn resolve_import(&self, db: &dyn DefDatabase, import: &Import) -> Option<(NameId, FileId)> {
+        let Import { unqualifed_name, module, ..} = import;
+        let file_id = db.module_map().file_for_module_name(module.clone())?;
+        let scopes = db.scopes(file_id);
+        let Some((_, scope)) = scopes.scopes.iter().nth(1) else {return None};
+        let name_id = scope.as_definitions()?.get(unqualifed_name)?;
+        Some((name_id.0, file_id))
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -310,13 +241,21 @@ pub struct ScopeData {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum ScopeKind {
-    Definitions(HashMap<SmolStr, NameId>),
+    Definitions(HashMap<SmolStr, Definition>),
+    Imports(HashMap<SmolStr, Definition>),
 }
 
 impl ScopeData {
-    pub fn as_definitions(&self) -> Option<&HashMap<SmolStr, NameId>> {
+    pub fn as_definitions(&self) -> Option<&HashMap<SmolStr, Definition>> {
         match &self.kind {
             ScopeKind::Definitions(defs) => Some(defs),
+            _ => None,
+        }
+    }
+
+    pub fn as_imports(&self) -> Option<&HashMap<SmolStr, Definition>> {
+        match &self.kind {
+            ScopeKind::Imports(defs) => Some(defs),
             _ => None,
         }
     }
@@ -340,12 +279,9 @@ impl NameResolution {
         tracing::info!("Scopes: {:#?}", scopes);
         let resolve_map = module
             .exprs()
-            .filter_map(|(e, kind)| {
-                match kind {
-                    // Inherited attrs are also translated into Expr::References.
-                    Expr::NameRef(name) => Some((e, scopes.resolve_name(e, name))),
-                    _ => None,
-                }
+            .filter_map(|(e, kind)| match kind {
+                Expr::NameRef(name) => Some((e, scopes.resolve_name(e, name))),
+                _ => None,
             })
             .collect::<HashMap<_, _>>();
 

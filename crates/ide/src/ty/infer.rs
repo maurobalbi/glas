@@ -59,6 +59,8 @@ pub(crate) fn infer(db: &dyn TyDatabase, file: FileId) -> Arc<InferenceResult> {
     let table = UnionFind::new(module.names().len() + module.exprs().len(), |_| Ty::Unknown);
 
     let mut ctx = InferCtx {
+        db,
+        file_id: file,
         module: &module,
         nameres: &nameres,
         table,
@@ -75,8 +77,11 @@ pub(crate) fn infer(db: &dyn TyDatabase, file: FileId) -> Arc<InferenceResult> {
 }
 
 struct InferCtx<'db> {
+    db: &'db dyn TyDatabase,
     module: &'db ModuleData,
     nameres: &'db NameResolution,
+
+    file_id: FileId,
 
     /// The arena for both unification and interning.
     /// First `module.names().len() + module.exprs().len()` elements are types of each names and
@@ -181,7 +186,18 @@ impl<'db> InferCtx<'db> {
             Expr::NameRef(_) => match self.nameres.get(e) {
                 None => self.new_ty_var(),
                 Some(res) => match res {
-                    &ResolveResult::Definition(name) => self.ty_for_name(name),
+                    &ResolveResult((name, file)) => 
+                    {
+                        self.ty_for_name(name)
+                        // if file == self.file_id {
+                        //     self.ty_for_name(name)
+                        // } else {
+                        //     let inference = self.db.infer(file);
+                        //     let var = self.new_ty_var();
+                        //     self.unify_var_ty(var, inference.ty_for_name(name));
+                        //     var
+                        // }
+                    }
                 },
             },
         }

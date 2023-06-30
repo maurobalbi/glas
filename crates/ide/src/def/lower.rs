@@ -2,25 +2,23 @@ use crate::{base::Target, Diagnostic, DiagnosticKind};
 
 use super::{
     module::{
-        Expr, ExprId, Function, FunctionId, Label, ModuleData, ModuleSourceMap, ModuleStatementId,
-        Name, NameId, NameKind, Param, Pattern, PatternId, Statement, Literal,
+        Expr, ExprId, Function, FunctionId, Import, ImportId, Label, Literal, ModuleData,
+        ModuleSourceMap, Name, NameId, NameKind, Param, Pattern, PatternId, Statement,
     },
     AstPtr, DefDatabase, FileId,
 };
 use smol_str::SmolStr;
 use syntax::{
-    ast::{self, AstNode, StatementExpr, LiteralKind, UseAssignment},
+    ast::{self, AstNode, LiteralKind, StatementExpr},
     Parse,
 };
 
 pub(super) fn lower(
     db: &dyn DefDatabase,
-    file_id: FileId,
     parse: Parse,
 ) -> (ModuleData, ModuleSourceMap) {
     let mut ctx = LowerCtx {
         db,
-        file_id,
         module_data: ModuleData::default(),
         source_map: ModuleSourceMap::default(),
     };
@@ -31,21 +29,20 @@ pub(super) fn lower(
 
 struct LowerCtx<'a> {
     db: &'a dyn DefDatabase,
-    file_id: FileId,
     module_data: ModuleData,
     source_map: ModuleSourceMap,
 }
 
 impl LowerCtx<'_> {
-    fn alloc_module_statement(
-        &mut self,
-        function: Function,
-        ptr: AstPtr<ast::Function>,
-    ) -> FunctionId {
+    fn alloc_function(&mut self, function: Function, ptr: AstPtr<ast::Function>) -> FunctionId {
         let id = self.module_data.functions.alloc(function);
         self.source_map.fn_map.insert(ptr.clone(), id.into());
         self.source_map.fn_map_rev.insert(id, ptr);
         id
+    }
+
+    fn alloc_import(&mut self, import: Import) -> ImportId {
+        self.module_data.imports.alloc(import)
     }
 
     fn alloc_name(&mut self, text: SmolStr, kind: NameKind, ptr: AstPtr<ast::Name>) -> NameId {
@@ -53,6 +50,10 @@ impl LowerCtx<'_> {
         self.source_map.name_map.insert(ptr.clone(), id);
         self.source_map.name_map_rev.insert(id, ptr);
         id
+    }
+
+    fn alloc_name_no_source_map(&mut self, text: SmolStr, kind: NameKind) -> NameId {
+        self.module_data.names.alloc(Name { text, kind })
     }
 
     fn missing_name(&mut self, kind: NameKind) -> NameId {
@@ -68,6 +69,7 @@ impl LowerCtx<'_> {
         self.source_map.expr_map_rev.insert(id, ptr);
         id
     }
+
     fn alloc_pattern(&mut self, pattern: Pattern, ptr: AstPtr<ast::Pattern>) -> PatternId {
         let id = self.module_data.patterns.alloc(pattern);
         self.source_map.pattern_map.insert(ptr.clone(), id);
@@ -79,14 +81,13 @@ impl LowerCtx<'_> {
         self.source_map.diagnostics.push(diag);
     }
 
-    fn lower_module(&mut self, module: ast::SourceFile) -> Vec<ModuleStatementId> {
-        module
-            .statements()
-            .flat_map(|tg| self.lower_target_group(&tg))
-            .collect()
+    fn lower_module(&mut self, module: ast::SourceFile) {
+        for tg in module.statements() {
+            self.lower_target_group(&tg)
+        }
     }
 
-    fn lower_target_group(&mut self, tg: &ast::TargetGroup) -> Vec<ModuleStatementId> {
+    fn lower_target_group(&mut self, tg: &ast::TargetGroup) {
         let package_info = self.db.source_root_package_info(crate::SourceRootId(0));
         if let (Some(token), Some(package_info)) =
             (tg.target().and_then(|t| t.token()), package_info)
@@ -96,27 +97,26 @@ impl LowerCtx<'_> {
                     tg.syntax().text_range(),
                     DiagnosticKind::InactiveTarget,
                 ));
-                return Vec::new();
+                return;
             }
         }
-
-        tg.statements()
-            .flat_map(|stmt| self.lower_module_statement(&stmt))
-            .collect()
+        for statement in tg.statements() {
+            self.lower_module_statement(&statement)
+        }
     }
 
-    fn lower_module_statement(
-        &mut self,
-        stmnt: &ast::ModuleStatement,
-    ) -> Option<ModuleStatementId> {
-        let item = match stmnt {
+    fn lower_module_statement(&mut self, stmnt: &ast::ModuleStatement) {
+        match stmnt {
             // ast::ModuleStatement::ModuleConstant(_) => todo!(),
             // ast::ModuleStatement::Import(_) => todo!(),
-            ast::ModuleStatement::Function(f) => self.lower_function(f)?.into(),
-            _ => return None,
+            ast::ModuleStatement::Function(f) => {
+                self.lower_function(f);
+            }
+            ast::ModuleStatement::Import(i) => {
+                self.lower_import(i);
+            }
+            _ => return,
         };
-
-        Some(item)
     }
 
     fn lower_function(&mut self, fun: &ast::Function) -> Option<FunctionId> {
@@ -151,18 +151,49 @@ impl LowerCtx<'_> {
 
         let expr_id = self.lower_expr(ast::Expr::Block(fun.body()?));
 
-        Some(
-            self.alloc_module_statement(
-                Function {
+        Some(self.alloc_function(
+            Function {
+                name,
+                params,
+                body: expr_id,
+                ast_ptr: ast_ptr.clone(),
+            },
+            ast_ptr,
+        ))
+    }
+
+    /// Here were resolving the imports and allocating the
+    fn lower_import(&mut self, i: &ast::Import) {
+        let module_name: SmolStr = i
+            .module_path()
+            .into_iter()
+            .filter_map(|t| Some(format!("{}", t.token()?.text())))
+            .collect();
+        self.alloc_name_no_source_map(module_name.clone(), NameKind::Module);
+
+        for unqualified in i.unqualified() {
+            if let Some(unqualified_name) = unqualified
+                .name()
+                .and_then(|t| t.token().map(|t| SmolStr::from(t.text())))
+            {
+                let unqualified_as_name: Option<SmolStr> = unqualified
+                    .as_name()
+                    .and_then(|t| t.token())
+                    .map(|t| t.text().into());
+                let name = self.alloc_name_no_source_map(
+                    unqualified_as_name
+                        .clone()
+                        .unwrap_or(unqualified_name.clone()),
+                    NameKind::Import,
+                );
+                self.alloc_import(Import {
                     name,
-                    params,
-                    body: expr_id,
-                    ast_ptr: ast_ptr.clone(),
-                },
-                ast_ptr,
-            )
-            .into(),
-        )
+                    module: module_name.clone(),
+                    unqualified_as_name: unqualified_as_name,
+                    unqualifed_name: unqualified_name,
+                });
+            }
+        }
     }
 
     fn lower_expr(&mut self, expr: ast::Expr) -> ExprId {
@@ -203,7 +234,7 @@ impl LowerCtx<'_> {
                 let left = self.lower_expr_opt(e.lhs());
                 let op = e.op_kind();
                 let right = self.lower_expr_opt(e.rhs());
-                self.alloc_expr(Expr::Binary{op, left, right}, ptr)
+                self.alloc_expr(Expr::Binary { op, left, right }, ptr)
             }
             ast::Expr::Literal(lit) => {
                 let lit = self.lower_literal(lit);
@@ -248,9 +279,12 @@ impl LowerCtx<'_> {
                         }
                     }
                     let expr_id = self.lower_expr(expr);
-                    statements.push(Statement::Use {patterns, expr: expr_id});
+                    statements.push(Statement::Use {
+                        patterns,
+                        expr: expr_id,
+                    });
                 }
-            },
+            }
         }
     }
 
