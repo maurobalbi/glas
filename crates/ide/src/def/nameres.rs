@@ -6,21 +6,8 @@ use smol_str::SmolStr;
 use crate::{DefDatabase, FileId};
 
 use super::module::{
-    Expr, ExprId, FunctionId, ImportId, ModuleData, ModuleStatementId, Name, NameId, Pattern,
-    PatternId, Statement, Visibility, Import,
+    Expr, ExprId, FunctionId, Import, ModuleData, Name, NameId, Pattern, PatternId, Statement,
 };
-
-// #[derive(Debug, Default, PartialEq, Eq)]
-// pub struct ModuleScope {
-//     /// Where does this module come from?
-//     types: HashMap<Name, (ModuleStatementId, Visibility)>,
-//     values: HashMap<Name, (ModuleStatementId, Visibility)>,
-//     unresolved: HashSet<Name>,
-
-//     /// The defs declared in this scope. Each def has a single scope where it is
-//     /// declared.
-//     declarations: Vec<ModuleStatementId>,
-// }
 
 /// The resolve result of a name reference.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -53,9 +40,9 @@ impl ModuleScope {
             scope_by_expr: ArenaMap::with_capacity(module.exprs.len()),
         };
 
-        let import_definitions = module
-            .imports()
-            .filter_map(|(_, import)| Some((import.local_name(), this.resolve_import(db, import)?)));
+        let import_definitions = module.imports().filter_map(|(_, import)| {
+            Some((import.local_name(), this.resolve_import(db, import)?))
+        });
 
         let definitions = module
             .functions()
@@ -93,11 +80,7 @@ impl ModuleScope {
     }
 
     /// Resolve a name in the scope of an Expr.
-    fn resolve_name(
-        &self,
-        expr_id: ExprId,
-        name: &SmolStr,
-    ) -> Option<ResolveResult> {
+    fn resolve_name(&self, expr_id: ExprId, name: &SmolStr) -> Option<ResolveResult> {
         let scope = self.scope_for_expr(expr_id)?;
         //     // 1. Local defs.
         if let Some(name) = self
@@ -151,7 +134,7 @@ impl ModuleScope {
                 }
                 self.traverse_expr(module, *func, scope);
             }
-            Expr::Binary { left, right, op } => {
+            Expr::Binary { left, right, op: _ } => {
                 self.traverse_expr(module, *left, scope);
                 self.traverse_expr(module, *right, scope);
             }
@@ -200,14 +183,21 @@ impl ModuleScope {
         let pattern = &module[*pattern];
         match pattern {
             Pattern::Variable { name } => {
-                defs.insert(module[*name].text.clone().into(), ((*name).clone(), self.file_id));
+                defs.insert(
+                    module[*name].text.clone().into(),
+                    ((*name).clone(), self.file_id),
+                );
             }
-            Pattern::Record { args } => todo!(),
+            Pattern::Record { args: _ } => todo!(),
         }
     }
 
     fn resolve_import(&self, db: &dyn DefDatabase, import: &Import) -> Option<(NameId, FileId)> {
-        let Import { unqualifed_name, module, ..} = import;
+        let Import {
+            unqualifed_name,
+            module,
+            ..
+        } = import;
         let file_id = db.module_map().file_for_module_name(module.clone())?;
         let scopes = db.scopes(file_id);
         let Some((_, scope)) = scopes.scopes.iter().nth(1) else {return None};

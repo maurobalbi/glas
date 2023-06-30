@@ -5,7 +5,7 @@ use super::{
         Expr, ExprId, Function, FunctionId, Import, ImportId, Label, Literal, ModuleData,
         ModuleSourceMap, Name, NameId, NameKind, Param, Pattern, PatternId, Statement,
     },
-    AstPtr, DefDatabase, FileId,
+    AstPtr, DefDatabase,
 };
 use smol_str::SmolStr;
 use syntax::{

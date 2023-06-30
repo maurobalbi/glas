@@ -1,6 +1,6 @@
 use crate::{DefDatabase, FilePos};
-use syntax::ast::{self, AstNode};
-use syntax::{best_token_at_offset, TextRange, T};
+
+use syntax::{TextRange};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct HlRelated {
@@ -9,7 +9,7 @@ pub struct HlRelated {
 }
 
 pub(crate) fn highlight_related(db: &dyn DefDatabase, fpos: FilePos) -> Option<Vec<HlRelated>> {
-  let parse = db.parse(fpos.file_id);
+  let _parse = db.parse(fpos.file_id);
   // let source_map = db.souce_map(fpos.file_id);
   None
 }
@@ -18,7 +18,7 @@ pub(crate) fn highlight_related(db: &dyn DefDatabase, fpos: FilePos) -> Option<V
 mod tests {
     use crate::tests::TestDB;
     use crate::SourceDatabase;
-    use expect_test::{expect, Expect};
+    use expect_test::{Expect};
 
     #[track_caller]
     fn check(fixture: &str, expect: Expect) {

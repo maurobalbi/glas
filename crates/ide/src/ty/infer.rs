@@ -119,12 +119,12 @@ impl<'db> InferCtx<'db> {
 
     fn infer_stmt(&mut self, stmt: Statement) -> TyVar {
         match stmt {
-            Statement::Let { pattern, body } => {
+            Statement::Let { pattern: _, body } => {
                 //infer pat
                 self.infer_expr(body)
             }
             Statement::Expr { expr } => self.infer_expr(expr),
-            Statement::Use { patterns, expr } => todo![]
+            Statement::Use { patterns: _, expr: _ } => todo![]
         }
     }
 
@@ -186,7 +186,7 @@ impl<'db> InferCtx<'db> {
             Expr::NameRef(_) => match self.nameres.get(e) {
                 None => self.new_ty_var(),
                 Some(res) => match res {
-                    &ResolveResult((name, file)) => 
+                    &ResolveResult((name, _file)) => 
                     {
                         self.ty_for_name(name)
                         // if file == self.file_id {
@@ -302,7 +302,7 @@ impl<'a> Collector<'a> {
                     return_: Arc::new(super_return),
                 }
             }
-            Ty::Tuple { fields } => todo!(),
+            Ty::Tuple { fields: _ } => todo!(),
         }
     }
 }

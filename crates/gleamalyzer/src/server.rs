@@ -15,26 +15,25 @@ use lsp_types::{
     DidChangeTextDocumentParams, DidChangeWatchedFilesParams,
     DidChangeWatchedFilesRegistrationOptions, DidCloseTextDocumentParams,
     DidOpenTextDocumentParams, FileChangeType, FileEvent, FileSystemWatcher, GlobPattern,
-    InitializeParams, InitializeResult, InitializedParams, MessageActionItem,
-    MessageActionItemProperty, MessageType, NumberOrString, OneOf, ProgressParams,
+    InitializeParams, InitializeResult, InitializedParams, MessageType, NumberOrString, OneOf, ProgressParams,
     ProgressParamsValue, PublishDiagnosticsParams, Registration, RegistrationParams,
-    RelativePattern, ServerInfo, ShowMessageParams, ShowMessageRequestParams, Url,
+    RelativePattern, ServerInfo, ShowMessageParams, Url,
     WorkDoneProgress, WorkDoneProgressBegin, WorkDoneProgressCreateParams, WorkDoneProgressEnd,
     WorkDoneProgressReport,
 };
-use rustix::io::write;
+
 use smol_str::SmolStr;
 use std::backtrace::Backtrace;
 use std::borrow::BorrowMut;
 use std::cell::Cell;
 use std::collections::HashMap;
-use std::fmt::Error;
+
 use std::future::{ready, Future};
 use std::io::{ErrorKind, Read};
 use std::ops::ControlFlow;
 use std::panic::UnwindSafe;
 use std::path::{Path, PathBuf};
-use std::pin::pin;
+
 use std::sync::{Arc, Once, RwLock};
 use std::time::Duration;
 use std::{fmt, panic};

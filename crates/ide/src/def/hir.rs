@@ -13,7 +13,7 @@ pub struct Package {
 }
 
 impl Package {
-    pub fn dependencies(self, db: &dyn DefDatabase) -> Vec<PackageDependency> {
+    pub fn dependencies(self, _db: &dyn DefDatabase) -> Vec<PackageDependency> {
         Vec::new()
     }
 

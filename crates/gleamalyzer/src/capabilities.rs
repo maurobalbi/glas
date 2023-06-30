@@ -1,9 +1,6 @@
 use lsp_types::{
-    CodeActionProviderCapability, CompletionOptions, DocumentLinkOptions, HoverProviderCapability,
-    InitializeParams, OneOf, RenameOptions, SelectionRangeProviderCapability,
-    SemanticTokensFullOptions, SemanticTokensLegend, SemanticTokensOptions,
-    SemanticTokensServerCapabilities, ServerCapabilities, TextDocumentSyncCapability,
-    TextDocumentSyncKind, TextDocumentSyncOptions, WorkDoneProgressOptions,
+    InitializeParams, OneOf, ServerCapabilities, TextDocumentSyncCapability,
+    TextDocumentSyncKind, TextDocumentSyncOptions,
 };
 
 macro_rules! test {

@@ -16,7 +16,7 @@ pub(crate) fn goto_definition(
 ) -> Option<GotoDefinitionResult> {
     let parse = db.parse(file_id).syntax_node();
     let tok = best_token_at_offset(&parse, pos)?;
-    let module_data = db.module(file_id);
+    let _module_data = db.module(file_id);
     let source_map = db.source_map(file_id);
 
     tracing::info!(

@@ -111,11 +111,11 @@ impl Fixture {
                 let path = VfsPath::new(path);
 
                 for prop in iter {
-                    if let Some((name, target)) = prop
+                    if let Some((_name, target)) = prop
                         .strip_prefix("input:")
                         .and_then(|input| input.split_once('='))
                     {
-                        let target = VfsPath::new(target);
+                        let _target = VfsPath::new(target);
                         this.package_info
                             .get_or_insert_with(|| PackageInfo {
                                 root_manifest: cur_file,

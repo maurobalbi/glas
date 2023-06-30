@@ -1,6 +1,6 @@
 use std::cell::Cell;
 
-use crate::ast::{AstNode, SourceFile, TypeName};
+use crate::ast::{AstNode, SourceFile};
 use crate::lexer::{GleamLexer, LexToken};
 use crate::token_set::TokenSet;
 use crate::SyntaxKind::{self, *};

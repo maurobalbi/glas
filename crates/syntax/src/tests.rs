@@ -1,4 +1,4 @@
-use crate::{parse_module, GleamLanguage, ast};
+use crate::{parse_module, GleamLanguage};
 use expect_test::expect_file;
 use rowan::ast::AstNode;
 use std::fmt::Write;

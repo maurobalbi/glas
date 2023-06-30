@@ -1,9 +1,9 @@
-use std::collections::HashMap;
-use std::sync::Arc;
+
+
 
 use crate::tests::TestDB;
 use crate::{
-    DefDatabase, InferenceResult, ModuleData, SourceDatabase, TyDatabase,
+    DefDatabase, InferenceResult, ModuleData, TyDatabase,
 };
 use expect_test::{expect, Expect};
 use tracing_test::traced_test;
@@ -52,7 +52,7 @@ fn check_all(src: &str, expect: Expect) {
 }
 
 #[track_caller]
-fn check_all_expect(src: &str, expect_ty: Ty, expect: Expect) {
+fn check_all_expect(src: &str, _expect_ty: Ty, expect: Expect) {
     let (db, file) = TestDB::single_file(src).unwrap();
     let module = db.module(file);
     let infer = super::infer::infer(&db, file);

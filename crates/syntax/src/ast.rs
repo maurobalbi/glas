@@ -1,4 +1,4 @@
-use std::any::type_name;
+
 
 use crate::SyntaxKind::{self, *};
 use crate::{GleamLanguage, SyntaxNode, SyntaxToken};
@@ -490,7 +490,7 @@ asts! {
 
 #[cfg(test)]
 mod tests {
-    use smol_str::SmolStr;
+    
 
     use super::*;
     use crate::{ast, tests::parse};
@@ -795,7 +795,7 @@ mod tests {
 
     #[test]
     fn bit_string() {
-        let b = parse::<BitString>("fn a() { <<a:size(0)>> <<a:8, rest:bit_string>> }");
+        let _b = parse::<BitString>("fn a() { <<a:size(0)>> <<a:8, rest:bit_string>> }");
     }
 
     #[test]
