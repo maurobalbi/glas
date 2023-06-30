@@ -121,8 +121,7 @@ impl rowan::Language for GleamLanguage {
 /// # let node: SyntaxNode = return;
 /// match_ast! {
 ///     match node {
-///         ast::AttrpathValue(it) => {},
-///         ast::PatField(it) => {},
+///         ast::Expr(it) => {},
 ///         _ => {},
 ///     }
 /// }

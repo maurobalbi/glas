@@ -74,8 +74,8 @@ fn let_in() {
 #[test] 
 fn use_() {
     check_all(" fn main(a) { bla() + 1 } fn bla() { 1.1 }", expect![[r#"
-        main: Function { params: [Int, Unknown], return_: Int }
-        a: Int
-        b: Unknown
+        main: Function { params: [Unknown], return_: Int }
+        a: Unknown
+        bla: Function { params: [], return_: Int }
     "#]])
 }

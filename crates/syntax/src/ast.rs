@@ -672,7 +672,7 @@ mod tests {
             .filter_map(|t| Some(format!("{}", t.token()?.text())))
             .collect::<Vec<_>>()
             .join("/");
-        assert_eq!(str, "");
+        assert_eq!(str, "aa/a");
         e.as_name().unwrap().syntax().should_eq("e");
     }
 
