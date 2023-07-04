@@ -27,4 +27,19 @@ ModuleInterfaces
  - Add deps field to check if module forms cycle
 
 
-TypeName
+New query infer_definition() -> Ty
+takes a definition (NameId, File) and returns a generalized type
+
+Rust analyzer
+  - FunctionId is roughly Idx<(FileId, SyntaxPtr)> in Gleam because ModuleId == FileId and no macros. in rust there really are many layers due to macros and nested modules.
+  - ItemTreeNode is a trait which is implemented for syntax top level items in a module, and allows to look itself up in a item tree 
+  - AstId is an interned SyntaxPtr to make it more stable
+  - FileItemTreeId is a newtype around Idx<ItemTreeNode>
+  - TreeId is the location in a Block and File (HirFile)
+  - ItemTreeId is the combination of FileItemTree and TreeId
+
+Refactor to 
+ - ModuleData only knows about toplevel definitions Imports, Functions, etc
+ - Functions can be inferred lazily when resolving a name-ref. The types need to be generalized. When resolving a type it needs to be hydrated into the environment.
+ - mutually recursive functions are gonna be tricky. Idea: Pass a "stack" BTreeSet of nameids and fileid and check if own name is included. If yes infer all functions in btreeset, if fileid changes reset Btreeset. Doesnt seem very good idea, rather split the functions into groups and infer, like the gleam compiler does
+ - Definitions
