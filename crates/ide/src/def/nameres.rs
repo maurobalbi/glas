@@ -1,13 +1,14 @@
-use std::{collections::HashMap, iter, ops, sync::Arc};
+use std::{collections::{HashMap}, iter, ops, sync::Arc};
 
 use la_arena::{Arena, ArenaMap, Idx};
+use petgraph::stable_graph::StableGraph;
 use smol_str::SmolStr;
 
 use crate::{DefDatabase, FileId};
 
-use super::module::{
-    Expr, ExprId, FunctionId, Import, ModuleData, Name, NameId, Pattern, PatternId, Statement,
-};
+use super::{module::{
+    Expr, ExprId, FunctionId, Import, ModuleData, Name, NameId, Pattern, PatternId, Statement, NameKind,
+}};
 
 /// The resolve result of a name reference.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -276,6 +277,24 @@ impl NameResolution {
             .collect::<HashMap<_, _>>();
 
         Arc::new(Self { resolve_map })
+    }
+
+    pub(crate) fn dependency_order_query(db: &dyn DefDatabase, file_id: FileId) -> Vec<Vec<usize>> {
+        let module = db.module(file_id);
+        let scopes = db.scopes(file_id);
+        let edges = module.exprs().filter_map(|(e_id, expr)| match expr {
+            Expr::NameRef(name) => {
+                let ResolveResult((name_id, f_id)) = scopes.resolve_name(e_id, name)?;
+                if file_id != f_id || module[name_id].kind != NameKind::Function{
+                    return None;
+                };
+                Some((name_id.into_raw().into(), module.expr_to_owner.get(&e_id).unwrap().into_raw().into()))
+            },
+            _ => None,
+        }).collect::<Vec<(u32, u32)>>();
+        let graph:StableGraph<(), u32> = StableGraph::from_edges(edges);
+        petgraph::algo::kosaraju_scc(&graph).into_iter().map(|v| v.into_iter().map(|v| v.index()).collect()).collect()
+        // graph::into_dependency_order(graph).into_iter().map(|v| v.into_iter().map(|v| v.index()).collect()).collect()
     }
 
     pub fn get(&self, expr: ExprId) -> Option<&ResolveResult> {

@@ -21,6 +21,7 @@ pub(super) fn lower(
         db,
         module_data: ModuleData::default(),
         source_map: ModuleSourceMap::default(),
+        current_function: None,
     };
 
     ctx.lower_module(parse.root());
@@ -31,6 +32,7 @@ struct LowerCtx<'a> {
     db: &'a dyn DefDatabase,
     module_data: ModuleData,
     source_map: ModuleSourceMap,
+    current_function: Option<NameId>,
 }
 
 impl LowerCtx<'_> {
@@ -67,6 +69,7 @@ impl LowerCtx<'_> {
         let id = self.module_data.exprs.alloc(expr);
         self.source_map.expr_map.insert(ptr.clone(), id);
         self.source_map.expr_map_rev.insert(id, ptr);
+        self.module_data.expr_to_owner.insert(id, self.current_function.expect("Expression without owner"));
         id
     }
 
@@ -129,6 +132,8 @@ impl LowerCtx<'_> {
                 AstPtr::new(&n),
             ))
         })?;
+
+        self.current_function = Some(name);
 
         let mut params = Vec::new();
 

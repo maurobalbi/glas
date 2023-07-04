@@ -19,6 +19,8 @@ pub struct ModuleData {
     pub patterns: Arena<Pattern>,
     pub exprs: Arena<Expr>,
     pub names: Arena<Name>,
+
+    pub expr_to_owner: HashMap<ExprId, NameId>,
 }
 
 impl ModuleData {
