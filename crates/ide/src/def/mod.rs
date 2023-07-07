@@ -34,7 +34,7 @@ pub trait DefDatabase: SourceDatabase {
     fn name_resolution(&self, file_id: FileId) -> Arc<NameResolution>;
 
     #[salsa::invoke(NameResolution::dependency_order_query)]
-    fn dependency_order(&self, file_id: FileId) -> Vec<Vec<usize>>;
+    fn dependency_order(&self, file_id: FileId) -> Vec<Vec<u32>>;
 }
 
 fn parse(db: &dyn DefDatabase, file_id: FileId) -> Parse {

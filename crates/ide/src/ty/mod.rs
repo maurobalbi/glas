@@ -7,19 +7,21 @@ mod tests;
 use std::sync::Arc;
 
 pub use infer::InferenceResult;
+use smol_str::SmolStr;
 
-use crate::{DefDatabase, FileId};
+use crate::{DefDatabase, FileId, def::module::NameId};
 
 
 #[salsa::query_group(TyDatabaseStorage)]
 pub trait TyDatabase: DefDatabase {
     #[salsa::invoke(infer::infer_query)]
-    fn infer(&self, file: FileId) -> Arc<InferenceResult>;
+    fn infer(&self, name: NameId, file: FileId) -> Arc<(Ty, InferenceResult)>;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Ty {
     Unknown,
+    Generic { idx: u32 },
     Int,
     Float,
     String,

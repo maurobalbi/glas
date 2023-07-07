@@ -46,8 +46,9 @@ fn all_types(module: &ModuleData, infer: &InferenceResult) -> String {
 fn check_all(src: &str, expect: Expect) {
     let (db, file) = TestDB::single_file(src).unwrap();
     let module = db.module(file);
-    let infer = db.infer(file);
-    let got = all_types(&module, &infer);
+    let name = module.functions().nth(1).unwrap().1.name;
+    let infer = db.infer(name, file);
+    let got = all_types(&module, &infer.1);
     expect.assert_eq(&got);
 }
 
@@ -55,15 +56,16 @@ fn check_all(src: &str, expect: Expect) {
 fn check_all_expect(src: &str, _expect_ty: Ty, expect: Expect) {
     let (db, file) = TestDB::single_file(src).unwrap();
     let module = db.module(file);
-    let infer = super::infer::infer(&db, file);
-    let got = all_types(&module, &infer);
+    let name = module.functions().nth(0).unwrap().1.name;
+    let infer = super::infer::infer(&db, name, file);
+    let got = all_types(&module, &infer.1);
     expect.assert_eq(&got);
 }
 
 #[traced_test]
 #[test] 
 fn let_in() {
-    check_all("fn main(a, b) { a + 1 }", expect![[r#"
+    check_all("fn bla(a, b) { a }", expect![[r#"
         main: Function { params: [Int, Unknown], return_: Int }
         a: Int
         b: Unknown
@@ -73,9 +75,9 @@ fn let_in() {
 #[traced_test]
 #[test] 
 fn use_() {
-    check_all(" fn main(a) { bla() + 1 } fn bla() { 1.1 }", expect![[r#"
+    check_all("fn bla(a, b, c, d) { a  } fn main(a) { main2(bla) } fn main2(b) { b(1.1) }", expect![[r#"
         main: Function { params: [Unknown], return_: Int }
         a: Unknown
-        bla: Function { params: [], return_: Int }
+        bla: Function { params: [], return_: Float }
     "#]])
 }

@@ -37,9 +37,11 @@ struct LowerCtx<'a> {
 
 impl LowerCtx<'_> {
     fn alloc_function(&mut self, function: Function, ptr: AstPtr<ast::Function>) -> FunctionId {
+        let name = function.name;
         let id = self.module_data.functions.alloc(function);
         self.source_map.fn_map.insert(ptr.clone(), id.into());
         self.source_map.fn_map_rev.insert(id, ptr);
+        self.module_data.name_to_func.insert(name, id );
         id
     }
 

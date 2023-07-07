@@ -279,7 +279,7 @@ impl NameResolution {
         Arc::new(Self { resolve_map })
     }
 
-    pub(crate) fn dependency_order_query(db: &dyn DefDatabase, file_id: FileId) -> Vec<Vec<usize>> {
+    pub(crate) fn dependency_order_query(db: &dyn DefDatabase, file_id: FileId) -> Vec<Vec<u32>> {
         let module = db.module(file_id);
         let scopes = db.scopes(file_id);
         let edges = module.exprs().filter_map(|(e_id, expr)| match expr {
@@ -293,7 +293,7 @@ impl NameResolution {
             _ => None,
         }).collect::<Vec<(u32, u32)>>();
         let graph:StableGraph<(), u32> = StableGraph::from_edges(edges);
-        petgraph::algo::kosaraju_scc(&graph).into_iter().map(|v| v.into_iter().map(|v| v.index()).collect()).collect()
+        petgraph::algo::kosaraju_scc(&graph).into_iter().map(|v| v.into_iter().map(|v| v.index() as u32).collect()).collect()
         // graph::into_dependency_order(graph).into_iter().map(|v| v.into_iter().map(|v| v.index()).collect()).collect()
     }
 

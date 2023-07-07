@@ -21,6 +21,7 @@ pub struct ModuleData {
     pub names: Arena<Name>,
 
     pub expr_to_owner: HashMap<ExprId, NameId>,
+    pub name_to_func: HashMap<NameId, FunctionId>,
 }
 
 impl ModuleData {
@@ -31,6 +32,8 @@ impl ModuleData {
         self.patterns.shrink_to_fit();
         self.exprs.shrink_to_fit();
         self.names.shrink_to_fit();
+        self.expr_to_owner.shrink_to_fit();
+        self.name_to_func.shrink_to_fit();
     }
 
     pub fn functions(

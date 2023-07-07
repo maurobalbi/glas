@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 
 #[derive(Debug, Clone, Default)]
-pub struct UnionFind<T>(Vec<(Option<T>, u32, u8)>);
+pub struct UnionFind<T>(pub Vec<(Option<T>, u32, u8)>);
 
 impl<T> UnionFind<T> {
     pub fn new(len: usize, mut make_default: impl FnMut(u32) -> T) -> Self {
