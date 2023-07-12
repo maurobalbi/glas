@@ -3,7 +3,7 @@
 
 use crate::tests::TestDB;
 use crate::{
-    DefDatabase, InferenceResult, ModuleData, TyDatabase,
+    DefDatabase, InferenceResult, ItemData, TyDatabase,
 };
 use expect_test::{expect, Expect};
 use tracing_test::traced_test;
@@ -35,7 +35,7 @@ use super::Ty;
 //     expect.assert_eq(&got);
 // }
 
-fn all_types(module: &ModuleData, infer: &InferenceResult) -> String {
+fn all_types(module: &ItemData, infer: &InferenceResult) -> String {
     module
         .names()
         .map(|(i, name)| format!("{}: {:?}\n", name.text, infer.ty_for_name(i)))
@@ -46,7 +46,7 @@ fn all_types(module: &ModuleData, infer: &InferenceResult) -> String {
 fn check_all(src: &str, expect: Expect) {
     let (db, file) = TestDB::single_file(src).unwrap();
     let module = db.module(file);
-    let name = module.functions().nth(1).unwrap().1.name;
+    let name = module.functions().nth(2).unwrap().1.name;
     let infer = db.infer(name, file);
     let got = all_types(&module, &infer.1);
     expect.assert_eq(&got);
@@ -75,7 +75,7 @@ fn let_in() {
 #[traced_test]
 #[test] 
 fn use_() {
-    check_all("fn bla(a, b, c, d) { a  } fn main(a) { main2(bla) } fn main2(b) { b(1.1) }", expect![[r#"
+    check_all("fn bla(a, b, c, d) { let a = 1 a  } fn main(a) { main2(bla) } fn main2(b) { b(1.1) }", expect![[r#"
         main: Function { params: [Unknown], return_: Int }
         a: Unknown
         bla: Function { params: [], return_: Float }

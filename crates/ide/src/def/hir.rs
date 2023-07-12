@@ -3,8 +3,8 @@ use la_arena::Idx;
 use crate::{impl_from, DefDatabase, SourceRootId};
 
 use super::{
-    module::{FunctionId, Name},
-    nameres::ModuleScope,
+    module:: Name,
+    scope::ExprScopes, FunctionId,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -37,7 +37,7 @@ pub struct Module {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ModuleId {
     package: SourceRootId,
-    id: Idx<ModuleScope>,
+    id: Idx<ExprScopes>,
 }
 
 /// The defs which can be visible in the module.

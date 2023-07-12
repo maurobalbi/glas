@@ -5,8 +5,8 @@ use syntax::ast::BinaryOpKind;
 
 use crate::{
     def::{
-        module::{Expr, ExprId, Function, Literal, ModuleData, NameId, Statement},
-        NameResolution, ResolveResult,
+        module::{Expr, ExprId, Function, Literal, NameId, Statement},
+        LocalNameResolution, ResolveResult,
     },
     DefDatabase, FileId, TyDatabase,
 };
@@ -109,8 +109,8 @@ pub(crate) fn infer(
 
 struct InferCtx<'db> {
     db: &'db dyn TyDatabase,
-    module: &'db ModuleData,
-    nameres: &'db NameResolution,
+    module: &'db ItemData,
+    nameres: &'db LocalNameResolution,
 
     idx: u32,
     /// The arena for both unification and interning.
@@ -133,7 +133,7 @@ impl<'db> InferCtx<'db> {
         TyVar(self.module.names().len() as u32 + u32::from(i.into_raw()))
     }
 
-    fn import_external(&mut self, ty: super::Ty, env: &mut HashMap<u32, TyVar>) -> TyVar {
+    fn import_type(&mut self, ty: super::Ty, env: &mut HashMap<u32, TyVar>) -> TyVar {
         let ty = match ty {
             super::Ty::Unknown => return self.new_ty_var(),
             super::Ty::Generic { idx } => {
@@ -153,12 +153,12 @@ impl<'db> InferCtx<'db> {
                 let mut pars = Vec::new();
                 for param in params.deref().into_iter() {
                     let par_var = self.new_ty_var();
-                    let par_ty = self.import_external(param.clone(), env);
+                    let par_ty = self.import_type(param.clone(), env);
                     self.unify_var(par_var, par_ty);
                     pars.push(par_var);
                 }
                 let ret = self.new_ty_var();
-                let ret_ty = self.import_external(return_.deref().clone(), env);
+                let ret_ty = self.import_type(return_.deref().clone(), env);
                 self.unify_var(ret, ret_ty);
                 Ty::Function {
                     params: pars,
@@ -265,10 +265,8 @@ impl<'db> InferCtx<'db> {
                         if self.module.name_to_func.contains_key(&name) =>
                     {
                         let ty = self.db.infer(name, file).deref().0.clone();
-                        tracing::info!("1!! {:?}", self.table.0);
                         let mut env = HashMap::new();
-                        let ty = self.import_external(ty, &mut env);
-                        tracing::info!("2!! {:?}", self.table.0);
+                        let ty = self.import_type(ty, &mut env);
                         ty
                     }
                     &ResolveResult((name, file)) => self.ty_for_name(name), // if file == self.file_id {

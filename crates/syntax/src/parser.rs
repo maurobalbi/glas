@@ -520,9 +520,9 @@ fn param(p: &mut Parser, is_anon: bool) {
         p.expect(IDENT);
         p.finish_node(n, LABEL);
     }
-    let o = p.start_node();
+    let pat = p.start_node();
     p.expect(IDENT);
-    p.finish_node(o, NAME);
+    p.finish_node(pat, PATTERN_VARIABLE);
 
     if p.at(T![":"]) {
         p.expect(T![":"]);
@@ -830,21 +830,22 @@ fn pattern(p: &mut Parser) {
         // variable definition or qualified constructor type
         IDENT => {
             let m = p.start_node();
-            let n = p.start_node();
+            // let n = p.start_node();
             p.expect(IDENT);
             if !p.at(T!["."]) {
-                p.finish_node(n, NAME);
+                // p.finish_node(n, NAME);
                 p.finish_node(m, PATTERN_VARIABLE);
                 return;
             }
 
             parse_application = true;
-            p.finish_node(n, MODULE_NAME);
+            let module_m = p.finish_node(m, MODULE_NAME);
+            let t_ref = p.start_node_before(module_m);
             p.expect(T!["."]);
             let t = p.start_node();
             p.expect(U_IDENT);
             p.finish_node(t, TYPE_NAME);
-            p.finish_node(m, TYPE_NAME_REF)
+            p.finish_node(t_ref, TYPE_NAME_REF)
         }
         // constructor
         U_IDENT => {

@@ -10,6 +10,7 @@ rust-version.workspace = true
 [dependencies]
 logos = "0.12.1"
 rowan = "0.15.10"
+smol_str = "0.1.24"
 tracing = { version = "0.1.37", features = ["release_max_level_info"] }
 
 [dependencies.tracing-subscriber]
@@ -25,7 +26,6 @@ features = [
 
 [dev-dependencies]
 criterion = "0.3"
-smol_str = "0.1.24"
 expect-test = "1.4.1"
 
 [[bench]]

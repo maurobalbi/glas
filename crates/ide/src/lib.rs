@@ -14,7 +14,7 @@ pub use base::{
     Change, FileId, FilePos, FileRange, FileSet, InFile, PackageGraph, PackageInfo, SourceDatabase,
     SourceRoot, SourceRootId, VfsPath, ModuleMap
 };
-pub use def::{DefDatabase,ModuleData};
+pub use def::DefDatabase;
 pub use diagnostic::{Diagnostic, DiagnosticKind, Severity};
 pub use ty::{InferenceResult, TyDatabase};
 

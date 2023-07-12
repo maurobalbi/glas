@@ -26,7 +26,7 @@ pub type SyntaxNodePtr = rowan::ast::SyntaxNodePtr<GleamLanguage>;
 
 pub use self::kind::SyntaxKind;
 pub use self::parser::{parse_module, Parse};
-pub use self::ptr::{AstPtr};
+pub use self::ptr::AstPtr;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Error {

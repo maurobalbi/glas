@@ -3,7 +3,8 @@ mod highlight_related;
 mod goto_definition;
 
 use crate::base::SourceDatabaseStorage;
-use crate::def::DefDatabaseStorage;
+use crate::ty::TyDatabaseStorage;
+use crate::def::{DefDatabaseStorage, InternDatabaseStorage};
 use crate::{Change, Diagnostic, FileId, FileSet, FilePos, SourceRoot, VfsPath, ModuleMap};
 use salsa::{Database, Durability, ParallelDatabase};
 use std::fmt;
@@ -25,7 +26,7 @@ pub use salsa::Cancelled;
 
 pub type Cancellable<T> = Result<T, Cancelled>;
 
-#[salsa::database(SourceDatabaseStorage, DefDatabaseStorage)]
+#[salsa::database(InternDatabaseStorage, SourceDatabaseStorage, DefDatabaseStorage, TyDatabaseStorage)]
 
 struct RootDatabase {
     storage: salsa::Storage<Self>,

@@ -1,5 +1,4 @@
-
-
+use smol_str::SmolStr;
 use crate::SyntaxKind::{self, *};
 use crate::{GleamLanguage, SyntaxNode, SyntaxToken};
 use rowan::ast::support::{child, children};
@@ -338,6 +337,10 @@ asts! {
         pub fn token(&self) -> Option<SyntaxToken> {
             self.0.children_with_tokens().find_map(NodeOrToken::into_token)
         }
+
+        pub fn text(&self) -> Option<SmolStr> {
+            self.token().map(|t| t.text().into())
+        }
     },
     TYPE_NAME = TypeName {
         pub fn token(&self) -> Option<SyntaxToken> {
@@ -364,8 +367,7 @@ asts! {
       as_name[1]: TypeNameOrName,
     },
     PARAM = Param {
-        // pat: Pat,
-        name: Name,
+        pattern: PatternVariable, // this mostly a pattern to make name resolution easier
         label: Label,
         ty: TypeExpr,
     },
@@ -468,7 +470,13 @@ asts! {
         patterns: [Pattern],
     },
     PATTERN_VARIABLE = PatternVariable {
-        name: Name,
+        pub fn token(&self) -> Option<SyntaxToken> {
+            self.0.children_with_tokens().find_map(NodeOrToken::into_token)
+        }
+
+        pub fn text(&self) -> Option<SmolStr> {
+            self.token().map(|t| t.text().into())
+        }
     },
     PATTERN_CONSTRUCTOR_APPLICATION = PatternConstructorApplication {
         type_constructor: TypeNameRef,
@@ -687,7 +695,7 @@ mod tests {
         let mut params = e.param_list().unwrap().params();
         let fst = params.next().unwrap();
         fst.label().unwrap().syntax().should_eq("a");
-        fst.name().unwrap().syntax().should_eq("b");
+        fst.pattern().unwrap().syntax().should_eq("b");
         fst.ty().unwrap().syntax().should_eq("Int");
         assert!(params.next().is_none())
     }
@@ -695,7 +703,7 @@ mod tests {
     #[test]
     fn name() {
         let e = parse::<Param>("fn bla(a b: Int) {}");
-        e.name().unwrap().token().unwrap().should_eq("b");
+        e.pattern().unwrap().syntax().should_eq("b");
     }
 
     #[test]
