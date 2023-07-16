@@ -4,18 +4,20 @@ mod union_find;
 #[cfg(test)]
 mod tests;
 
-use std::sync::Arc;
+use std::{sync::Arc, collections::HashMap};
 
 pub use infer::InferenceResult;
-use smol_str::SmolStr;
 
-use crate::{DefDatabase, FileId, def::module::NameId};
+use crate::{DefDatabase, FileId, def::{module::NameId, hir_def::FunctionId}, ide::Upcast};
 
 
 #[salsa::query_group(TyDatabaseStorage)]
-pub trait TyDatabase: DefDatabase {
-    #[salsa::invoke(infer::infer_query)]
-    fn infer(&self, name: NameId, file: FileId) -> Arc<(Ty, InferenceResult)>;
+pub trait TyDatabase: DefDatabase + Upcast<dyn DefDatabase>{
+    #[salsa::invoke(infer::infer_function_query)]
+    fn infer_function(&self, fn_id: FunctionId) -> Arc<InferenceResult>;
+    
+    #[salsa::invoke(infer::infer_function_group_query)]
+    fn infer_function_group(&self, group: Vec<FunctionId>) -> HashMap<FunctionId, InferenceResult>;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

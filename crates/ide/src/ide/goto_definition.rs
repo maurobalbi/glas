@@ -1,6 +1,8 @@
 use super::NavigationTarget;
-use crate::def::ResolveResult;
+use crate::def::hir_def::ModuleDefId;
+use crate::def::{resolver_for_expr};
 use crate::{DefDatabase, FilePos, VfsPath};
+use smol_str::SmolStr;
 use syntax::ast::{self, AstNode};
 use syntax::{best_token_at_offset, AstPtr, TextRange, TextSize};
 
@@ -16,8 +18,8 @@ pub(crate) fn goto_definition(
 ) -> Option<GotoDefinitionResult> {
     let parse = db.parse(file_id).syntax_node();
     let tok = best_token_at_offset(&parse, pos)?;
-    let _module_data = db.module(file_id);
-    let source_map = db.source_map(file_id);
+    // let module_data = db.module_items(file_id);
+    // let source_map = db.source_map(file_id);
 
     tracing::info!(
         "Module name: {:?}",
@@ -34,30 +36,48 @@ pub(crate) fn goto_definition(
     if ast::NameRef::can_cast(tok.parent()?.kind()) {
         let expr_ptr = ast::Expr::cast(tok.parent()?)?;
 
-        let ptr = AstPtr::new(&expr_ptr);
-        let expr_id = source_map.expr_for_node(ptr)?;
+        let expr_ptr = crate::InFile { file_id: file_id, value: &expr_ptr };
 
-        let name_res = db.name_resolution(file_id);
-        tracing::info!("Name_res: {:#?} {:?}", name_res, expr_id);
-        let ResolveResult((name, file_id)) = name_res.get(expr_id)?;
+        let item_scope = db.module_scope(file_id);
 
-        let source_map = db.source_map(*file_id);
-        tracing::info!("WERE DOING SOMETHING {:?} {:?}", name, file_id);
+        let (expr_id, fn_id) = item_scope.values().find_map(|v| {
+            let fn_id = match v.clone() {
+                ModuleDefId::FunctionId(fn_id) => fn_id
+            };
+            let source_map = db.source_map(fn_id.clone());
+            return source_map.expr_for_node(expr_ptr).map(|v| (v, fn_id))
+        })?;
 
-        let targets = source_map.node_for_name(*name).map(|ptr| {
-            let name_node = ptr.to_node(&db.parse(*file_id).syntax_node());
+        let resolver =  resolver_for_expr(db, fn_id.clone() , expr_id);
+        tracing::info!("Name_res: {:#?}", resolver);
+        // let ResolveResult((name, file_id)) = name_res.get(expr_id)?;
+
+        // let source_map = db.source_map(*file_id);
+        let deps = db.dependency_order(file_id);
+        tracing::info!("WERE DOING SOMETHING {:?}", deps);
+        let name = SmolStr::from(tok.text());
+
+        let targets = resolver.resolve_name(&name).map(|ptr| {
+            let (node, file_id) = match ptr {
+                crate::def::resolver::ResolveResult::LocalBinding(pattern) => (db.source_map(fn_id.clone()).pattern_map_rev.get(pattern)?.value.syntax_node_ptr(), file_id),
+                crate::def::resolver::ResolveResult::FunctionId(func_id) => {
+                    let func =  db.lookup_intern_function(func_id.clone());
+                     (db.module_items(func.file_id)[func.value].ast_ptr.syntax_node_ptr(), func.file_id)
+                },
+            };
+            
             // let full_node = name_node.ancestors().find(|n| {
             //     matches!(
             //         n.kind(),
             //         SyntaxKind::LAMBDA | SyntaxKind::ATTR_PATH_VALUE | SyntaxKind::INHERIT
             //     )
             // })?;
-            NavigationTarget {
-                file_id: *file_id,
-                focus_range: name_node.syntax().text_range(),
-                full_range: name_node.syntax().text_range(),
-            }
-        });
+            Some(NavigationTarget {
+                file_id,
+                focus_range: node.text_range(),
+                full_range: node.text_range(),
+            })
+        })?;
 
         return Some(GotoDefinitionResult::Targets(vec![targets?]));
     }

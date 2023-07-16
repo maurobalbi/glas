@@ -38,7 +38,6 @@ pub enum ResolveResult {
 impl Resolver {
    pub fn resolve_name(
         &self,
-        db: &dyn DefDatabase,
         name: &SmolStr,
     ) -> Option<ResolveResult> {
         for scope in self.scopes() {
@@ -59,8 +58,10 @@ impl Resolver {
             }
         }
 
-        if let res @ Some(_) = self.module_scope.resolve_name_locally(db, name) {
-            return res;
+        if let Some(res) = self.module_scope.resolve_name_locally(name.clone()) {
+            match *res {
+                super::hir_def::ModuleDefId::FunctionId(fn_id) => return Some(ResolveResult::FunctionId(fn_id)),
+            }
         }
 
         None
@@ -83,7 +84,7 @@ pub fn resolver_for_scope(
     scope_id: Option<ScopeId>,
 ) -> Resolver {
     let func = db.lookup_intern_function(owner);
-    let item_map = db.module_items(func.file_id);
+    let item_map = db.module_scope(func.file_id);
     let scopes = db.expr_scopes(owner);
     let scope_chain = scopes.scope_chain(scope_id).collect::<Vec<_>>();
     let mut r = Resolver {

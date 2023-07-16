@@ -3,9 +3,9 @@ mod highlight_related;
 mod goto_definition;
 
 use crate::base::SourceDatabaseStorage;
-use crate::ty::TyDatabaseStorage;
 use crate::def::{DefDatabaseStorage, InternDatabaseStorage};
-use crate::{Change, Diagnostic, FileId, FileSet, FilePos, SourceRoot, VfsPath, ModuleMap};
+use crate::ty::{TyDatabaseStorage, TyDatabase};
+use crate::{Change, Diagnostic, FileId, FileSet, FilePos, SourceRoot, VfsPath, ModuleMap, DefDatabase, SourceDatabase};
 use salsa::{Database, Durability, ParallelDatabase};
 use std::fmt;
 use syntax::TextRange;
@@ -28,7 +28,7 @@ pub type Cancellable<T> = Result<T, Cancelled>;
 
 #[salsa::database(InternDatabaseStorage, SourceDatabaseStorage, DefDatabaseStorage, TyDatabaseStorage)]
 
-struct RootDatabase {
+pub struct RootDatabase {
     storage: salsa::Storage<Self>,
 }
 
@@ -45,6 +45,28 @@ impl salsa::ParallelDatabase for RootDatabase {
 impl fmt::Debug for RootDatabase {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("RootDatabase").finish_non_exhaustive()
+    }
+}
+
+pub trait Upcast<T: ?Sized> {
+    fn upcast(&self) -> &T;
+}
+
+impl Upcast<dyn TyDatabase> for RootDatabase {
+    fn upcast(&self) -> &(dyn TyDatabase + 'static) {
+        &*self
+    }
+}
+
+impl Upcast<dyn SourceDatabase> for RootDatabase {
+    fn upcast(&self) -> &(dyn SourceDatabase + 'static) {
+        &*self
+    }
+}
+
+impl Upcast<dyn DefDatabase> for RootDatabase {
+    fn upcast(&self) -> &(dyn DefDatabase + 'static) {
+        &*self
     }
 }
 

@@ -1,23 +1,87 @@
 use std::{collections::HashMap, iter, ops, sync::Arc};
 
 use la_arena::{Arena, ArenaMap, Idx};
+use petgraph::stable_graph::StableGraph;
+use salsa::InternId;
 use smol_str::SmolStr;
 
 use crate::{DefDatabase, FileId};
 
 use super::{
-    body::Body,
+    body::{self, Body},
+    hir::{Module, ModuleDef},
+    hir_def::{FunctionLoc, ModuleDefId},
     module::{Expr, ExprId, Import, Pattern, PatternId, Statement, Visibility},
-    FunctionId, hir_def::ModuleDefId,
+    resolver::ResolveResult,
+    resolver_for_expr, FunctionId,
 };
+
+pub fn module_scope_query(db: &dyn DefDatabase, file_id: FileId) -> Arc<ModuleScope> {
+    let module_data = db.module_items(file_id);
+
+    let mut scope = ModuleScope::default();
+
+    for (_, import) in module_data.imports() {
+        if let Some(val) = scope.resolve_import(db, import) {
+            scope.values.insert(import.local_name(), val);
+        }
+    }
+
+    for (func_id, func) in module_data.functions() {
+        let name = &func.name;
+        let func_loc = db.intern_function(FunctionLoc {
+            file_id,
+            value: func_id,
+        });
+        let def = ModuleDefId::FunctionId(func_loc);
+        scope.values.insert(name.clone(), def.clone());
+        scope
+            .declarations
+            .insert(name.clone(), (def, func.visibility.clone()));
+    }
+    // collect all defs and imports
+
+    Arc::new(scope)
+}
 
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct ModuleScope {
-    values: HashMap<SmolStr, (ModuleDefId, Visibility)>,
+    /// The values visible in this module including imports
+    values: HashMap<SmolStr, ModuleDefId>,
 
-    /// The defs declared in this scope. Each def has a single scope where it is
-    /// declared.
-    declarations: Vec<ModuleDefId>,
+    /// The defs declared in this module which can potentially be imported in another module
+    declarations: HashMap<SmolStr, (ModuleDefId, Visibility)>,
+}
+
+impl ModuleScope {
+    pub fn resolve_name_locally(&self, name: SmolStr) -> Option<&ModuleDefId> {
+        self.values.get(&name)
+    }
+
+    pub fn values(&self) -> impl Iterator<Item = &ModuleDefId> + ExactSizeIterator + '_ {
+        self.values.iter().map(|v| v.1)
+    }
+
+    pub fn declarations(
+        &self,
+    ) -> impl Iterator<Item = &(ModuleDefId, Visibility)> + ExactSizeIterator + '_ {
+        self.declarations.iter().map(|v| v.1)
+    }
+
+    fn resolve_import(&self, db: &dyn DefDatabase, import: &Import) -> Option<ModuleDefId> {
+        let Import {
+            unqualified_name: unqualifed_name,
+            module,
+            ..
+        } = import;
+        let file_id = db.module_map().file_for_module_name(module.clone())?;
+        // let module = db.module_items(file_id);
+        let scope = db.module_scope(file_id);
+        let Some((item, Visibility::Public)) = scope.declarations.get(unqualifed_name) else {
+            return None
+        };
+        Some(item.clone())
+    }
 }
 
 pub type ScopeId = Idx<ScopeData>;
@@ -39,21 +103,16 @@ impl ExprScopes {
     pub fn expr_scopes_query(db: &dyn DefDatabase, func: FunctionId) -> Arc<ExprScopes> {
         let body = db.body(func);
         let func = db.lookup_intern_function(func);
-        let func = db.module_items(func.file_id)[func.value];
+        // let func = &db.module_items(func.file_id)[func.value];
         let mut this = ExprScopes {
             scopes: Arena::default(),
             scope_by_expr: ArenaMap::default(),
         };
-        let mut root = this.root_scope();
+        let root = this.root_scope();
         for param in &body.params {
             this.add_bindings(body.as_ref(), root, param);
         }
-        this.traverse_expr(
-            body.as_ref(),
-            body.body_expr
-                .expect("body should always have an body_expr!"),
-            root,
-        );
+        this.traverse_expr(body.as_ref(), body.body_expr, root);
         Arc::new(this)
     }
 
@@ -173,12 +232,12 @@ impl ExprScopes {
         }
     }
 
-    fn add_bindings(&self, body: &Body, scope: ScopeId, pattern_id: &PatternId) {
+    fn add_bindings(&mut self, body: &Body, scope: ScopeId, pattern_id: &PatternId) {
         let pattern = &body[*pattern_id];
         match pattern {
             Pattern::Variable { name } => {
                 self.scopes[scope].entries.push(ScopeEntry {
-                    name: *name,
+                    name: name.clone(),
                     pat: *pattern_id,
                 });
             }
@@ -186,19 +245,6 @@ impl ExprScopes {
             Pattern::Missing => {}
         }
     }
-
-    // fn resolve_import(&self, db: &dyn DefDatabase, import: &Import) -> Option<(NameId, FileId)> {
-    //     let Import {
-    //         unqualified_name: unqualifed_name,
-    //         module,
-    //         ..
-    //     } = import;
-    //     let file_id = db.module_map().file_for_module_name(module.clone())?;
-    //     let scopes = db.expr_scopes(file_id);
-    //     let Some((_, scope)) = scopes.scopes.iter().nth(1) else {return None};
-    //     let name_id = scope.as_definitions()?.get(unqualifed_name)?;
-    //     Some((name_id.0, file_id))
-    // }
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -256,34 +302,42 @@ pub struct ScopeData {
 //         Arc::new(Self { resolve_map })
 //     }
 
-//     pub(crate) fn dependency_order_query(db: &dyn DefDatabase, file_id: FileId) -> Vec<Vec<u32>> {
-//         let module = db.module(file_id);
-//         let scopes = db.scopes(file_id);
-//         let edges = module
-//             .exprs()
-//             .filter_map(|(e_id, expr)| match expr {
-//                 Expr::NameRef(name) => {
-//                     let ResolveResult((name_id, f_id)) = scopes.resolve_name(e_id, name)?;
-//                     if file_id != f_id || module[name_id].kind != NameKind::Function {
-//                         return None;
-//                     };
-//                     Some((
-//                         name_id.into_raw().into(),
-//                         module.expr_to_owner.get(&e_id).unwrap().into_raw().into(),
-//                     ))
-//                 }
-//                 _ => None,
-//             })
-//             .collect::<Vec<(u32, u32)>>();
-//         let graph: StableGraph<(), u32> = StableGraph::from_edges(edges);
-//         petgraph::algo::kosaraju_scc(&graph)
-//             .into_iter()
-//             .map(|v| v.into_iter().map(|v| v.index() as u32).collect())
-//             .collect()
-//         // graph::into_dependency_order(graph).into_iter().map(|v| v.into_iter().map(|v| v.index()).collect()).collect()
-//     }
-
 //     pub fn get(&self, expr: ExprId) -> Option<&ResolveResult> {
 //         self.resolve_map.get(&expr)?.as_ref()
 //     }
 // }
+
+pub(crate) fn dependency_order_query(
+    db: &dyn DefDatabase,
+    file_id: FileId,
+) -> Vec<Vec<FunctionId>> {
+    let scopes = db.module_scope(file_id);
+    let mut edges = Vec::new();
+    for (func, _) in scopes.declarations() {
+        match func {
+            ModuleDefId::FunctionId(owner_id) => {
+                let body = db.body(owner_id.clone());
+                edges.push((owner_id.clone().0.as_u32(), owner_id.clone().0.as_u32()));
+                body.exprs().for_each(|(e_id, expr)| match expr {
+                Expr::NameRef(name) => {
+                    let resolver = resolver_for_expr(db, owner_id.clone(), e_id);
+                    let Some(ResolveResult::FunctionId(fn_id)) = resolver.resolve_name(name) else {return};
+                    edges.push((owner_id.clone().0.as_u32(), fn_id.0.as_u32()))
+                },
+                _ => {},
+            });
+            }
+        }
+    }
+
+    let graph: StableGraph<(), u32> = StableGraph::from_edges(edges);
+    petgraph::algo::kosaraju_scc(&graph)
+        .into_iter()
+        .map(|v| {
+            v.into_iter()
+                .map(|v| FunctionId(InternId::from(v.index() as u32)))
+                .collect()
+        })
+        .collect()
+    // graph::into_dependency_order(graph).into_iter().map(|v| v.into_iter().map(|v| v.index()).collect()).collect()
+}

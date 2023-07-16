@@ -5,7 +5,7 @@ use crate::{base::Target, Diagnostic, DiagnosticKind};
 use super::{
     module::{
         Expr, ExprId, Function, Import, ImportId, Label, Literal, Name, NameId, NameKind, Param,
-        Pattern, PatternId, Statement,
+        Pattern, PatternId, Statement, Visibility,
     },
     AstPtr, DefDatabase,
 };
@@ -22,6 +22,18 @@ pub struct ModuleItemData {
     imports: Arena<Import>,
 
     diagnostics: Vec<Diagnostic>,
+}
+
+impl ModuleItemData {
+    pub fn imports(&self) -> impl Iterator<Item = (Idx<Import>, &Import)> + ExactSizeIterator + '_ {
+        self.imports.iter()
+    }
+
+    pub fn functions(
+        &self,
+    ) -> impl Iterator<Item = (Idx<Function>, &Function)> + ExactSizeIterator + '_ {
+        self.functions.iter()
+    }
 }
 
 impl Index<Idx<Function>> for ModuleItemData {
@@ -48,7 +60,6 @@ pub(super) fn lower_module(db: &dyn DefDatabase, parse: Parse) -> ModuleItemData
 
 impl<'a> LowerCtx<'a> {
     fn alloc_function(&mut self, function: Function, ptr: AstPtr<ast::Function>) -> Idx<Function> {
-        let name = function.name;
         let id = self.module_items.functions.alloc(function);
         id
     }
@@ -122,7 +133,7 @@ impl<'a> LowerCtx<'a> {
                     module: module_name.clone(),
                     unqualified_as_name,
                     unqualified_name,
-                    ast_ptr,
+                    ast_ptr: ast_ptr.clone(),
                 });
             }
         }
@@ -130,8 +141,6 @@ impl<'a> LowerCtx<'a> {
 
     fn lower_function(&mut self, fun: &ast::Function) -> Option<Idx<Function>> {
         let ast_ptr = AstPtr::new(fun);
-
-        let name = fun.name();
 
         let mut params = Vec::new();
 
@@ -150,6 +159,7 @@ impl<'a> LowerCtx<'a> {
             Function {
                 name: fun.name()?.token()?.text().into(),
                 params,
+                visibility: Visibility::Public,
                 ast_ptr: ast_ptr.clone(),
             },
             ast_ptr,

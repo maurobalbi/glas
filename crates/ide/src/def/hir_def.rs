@@ -6,7 +6,7 @@ use super::{ DefDatabase, module::Function};
 use crate::impl_intern_key;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct FunctionId(salsa::InternId);
+pub struct FunctionId(pub salsa::InternId);
 pub type FunctionLoc = InFile<Idx<Function>>;
 impl_intern!(
     FunctionId,
@@ -15,6 +15,7 @@ impl_intern!(
     lookup_intern_function
 );
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ModuleDefId {
     FunctionId(FunctionId)
 }

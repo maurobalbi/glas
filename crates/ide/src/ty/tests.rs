@@ -1,14 +1,15 @@
 
 
 
+use crate::def::ModuleItemData;
 use crate::tests::TestDB;
 use crate::{
-    DefDatabase, InferenceResult, ItemData, TyDatabase,
+    DefDatabase,
 };
 use expect_test::{expect, Expect};
 use tracing_test::traced_test;
 
-use super::Ty;
+use super::{Ty, InferenceResult, TyDatabase};
 
 // #[track_caller]
 // fn check(src: &str, expect: Expect) {
@@ -35,37 +36,41 @@ use super::Ty;
 //     expect.assert_eq(&got);
 // }
 
-fn all_types(module: &ItemData, infer: &InferenceResult) -> String {
-    module
-        .names()
-        .map(|(i, name)| format!("{}: {:?}\n", name.text, infer.ty_for_name(i)))
-        .collect()
-}
+// fn all_types(module: &ModuleItemData, infer: &InferenceResult) -> String {
+//     module
+//         .functions()
+//         .map(|(i, func)| format!("{}: {:?}\n", func, infer.ty_for_name(i)))
+//         .collect()
+// }
 
 #[track_caller]
 fn check_all(src: &str, expect: Expect) {
     let (db, file) = TestDB::single_file(src).unwrap();
-    let module = db.module(file);
-    let name = module.functions().nth(2).unwrap().1.name;
-    let infer = db.infer(name, file);
-    let got = all_types(&module, &infer.1);
-    expect.assert_eq(&got);
+    let scope= db.module_scope(file);
+    let func = scope.declarations().nth(0).unwrap();
+    match func.0 {
+        crate::def::hir_def::ModuleDefId::FunctionId(fn_id) => {
+            let infer = db.infer_function(fn_id);
+            let got = format!("{:?}", infer.fn_ty);
+            expect.assert_eq(&got);
+        },
+    }
 }
 
-#[track_caller]
-fn check_all_expect(src: &str, _expect_ty: Ty, expect: Expect) {
-    let (db, file) = TestDB::single_file(src).unwrap();
-    let module = db.module(file);
-    let name = module.functions().nth(0).unwrap().1.name;
-    let infer = super::infer::infer(&db, name, file);
-    let got = all_types(&module, &infer.1);
-    expect.assert_eq(&got);
-}
+// #[track_caller]
+// fn check_all_expect(src: &str, _expect_ty: Ty, expect: Expect) {
+//     let (db, file) = TestDB::single_file(src).unwrap();
+//     let module = db.module(file);
+//     let name = module.functions().nth(0).unwrap().1.name;
+//     let infer = super::infer::infer(&db, name, file);
+//     let got = all_types(&module, &infer.1);
+//     expect.assert_eq(&got);
+// }
 
 #[traced_test]
 #[test] 
 fn let_in() {
-    check_all("fn bla(a, b) { a }", expect![[r#"
+    check_all("fn bla(a, b) { b }", expect![[r#"
         main: Function { params: [Int, Unknown], return_: Int }
         a: Int
         b: Unknown
@@ -75,7 +80,7 @@ fn let_in() {
 #[traced_test]
 #[test] 
 fn use_() {
-    check_all("fn bla(a, b, c, d) { let a = 1 a  } fn main(a) { main2(bla) } fn main2(b) { b(1.1) }", expect![[r#"
+    check_all("fn bla(a, b, c, d) { a + 1 } fn main(a) { main2(bla) } fn main2(b) { b(1.1) }", expect![[r#"
         main: Function { params: [Unknown], return_: Int }
         a: Unknown
         bla: Function { params: [], return_: Float }

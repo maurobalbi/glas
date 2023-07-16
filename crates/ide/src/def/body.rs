@@ -1,13 +1,18 @@
-use std::{ops, collections::HashMap};
+use std::{collections::HashMap, ops};
 
-use la_arena::{Arena, ArenaMap};
+use la_arena::{Arena, ArenaMap, RawIdx};
 use smol_str::SmolStr;
-use syntax::{AstPtr, ast::{self, StatementExpr, LiteralKind, AstNode}};
+use syntax::{
+    ast::{self, AstNode, LiteralKind, StatementExpr},
+    AstPtr,
+};
 
-use crate::{InFile, Diagnostic, DefDatabase, FileId};
+use crate::{DefDatabase, Diagnostic, FileId, InFile};
 
-use super::{module::{Pattern, Expr, ExprId, PatternId, Statement, Literal, NameKind, NameId}, FunctionId};
-
+use super::{
+    module::{Expr, ExprId, Literal, NameId, NameKind, Pattern, PatternId, Statement},
+    FunctionId,
+};
 
 pub type ExprPtr = AstPtr<ast::Expr>;
 pub type ExprSource = InFile<ExprPtr>;
@@ -16,14 +21,29 @@ pub type PatternPtr = AstPtr<ast::Pattern>;
 pub type PatternSource = InFile<PatternPtr>;
 
 /// The item tree of a source file.
-#[derive(Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct Body {
     pub patterns: Arena<Pattern>,
     pub exprs: Arena<Expr>,
 
     pub params: Vec<PatternId>,
 
-    pub body_expr: Option<ExprId>,
+    pub body_expr: ExprId,
+}
+
+impl Default for Body {
+    fn default() -> Self {
+        Self {
+            patterns: Arena::default(),
+            exprs: Arena::default(),
+            params: Vec::default(),
+            body_expr: dummy_expr_id(),
+        }
+    }
+}
+/// FIXME: very hacky to allow body to implementDefault and avoid body_expr being optional
+pub(crate) fn dummy_expr_id() -> ExprId {
+    ExprId::from_raw(RawIdx::from(u32::MAX))
 }
 
 impl Body {
@@ -31,7 +51,7 @@ impl Body {
         self.patterns.shrink_to_fit();
         self.exprs.shrink_to_fit();
     }
-    
+
     pub fn exprs(&self) -> impl Iterator<Item = (ExprId, &'_ Expr)> + ExactSizeIterator + '_ {
         self.exprs.iter()
     }
@@ -85,7 +105,7 @@ impl BodySourceMap {
     pub fn node_for_expr(&self, expr_id: ExprId) -> Option<ExprSource> {
         self.expr_map_rev.get(expr_id).cloned()
     }
-  
+
     pub fn pattern_for_node(&self, node: InFile<&ast::Pattern>) -> Option<PatternId> {
         let src = node.map(AstPtr::new);
         self.pattern_map.get(&src).cloned()
@@ -100,15 +120,11 @@ impl BodySourceMap {
     }
 }
 
-
-pub(super) fn lower(
-    db: &dyn DefDatabase,
-    function_id: FunctionId
-) -> (Body, BodySourceMap) {  
+pub(super) fn lower(db: &dyn DefDatabase, function_id: FunctionId) -> (Body, BodySourceMap) {
     let loc = db.lookup_intern_function(function_id);
     let module = db.module_items(loc.file_id);
     let func = loc.value;
-    let func = module[func];
+    let func = &module[func];
     let parse = db.parse(loc.file_id);
     let ast = func.ast_ptr.to_node(&parse.syntax_node());
 
@@ -128,8 +144,8 @@ pub(super) fn lower(
         }
     }
 
-    let expr_id = ctx.lower_expr(ast::Expr::cast(*ast.body().unwrap().syntax()).unwrap());
-    ctx.body.body_expr = Some(expr_id);
+    let expr_id = ctx.lower_expr(ast::Expr::cast(ast.body().unwrap().syntax().clone()).unwrap());
+    ctx.body.body_expr = expr_id;
 
     (ctx.body, ctx.source_map)
 }
@@ -143,7 +159,10 @@ struct BodyLowerCtx<'a> {
 
 impl BodyLowerCtx<'_> {
     fn alloc_expr(&mut self, expr: Expr, ptr: AstPtr<ast::Expr>) -> ExprId {
-        let ptr = InFile{ file_id: self.file_id, value: ptr  };
+        let ptr = InFile {
+            file_id: self.file_id,
+            value: ptr,
+        };
         let id = self.body.exprs.alloc(expr);
         self.source_map.expr_map.insert(ptr.clone(), id);
         self.source_map.expr_map_rev.insert(id, ptr);
@@ -151,13 +170,16 @@ impl BodyLowerCtx<'_> {
     }
 
     fn alloc_pattern(&mut self, pattern: Pattern, ptr: AstPtr<ast::Pattern>) -> PatternId {
-        let ptr = InFile{ file_id: self.file_id, value: ptr  };
+        let ptr = InFile {
+            file_id: self.file_id,
+            value: ptr,
+        };
         let id = self.body.patterns.alloc(pattern);
         self.source_map.pattern_map.insert(ptr.clone(), id);
         self.source_map.pattern_map_rev.insert(id, ptr);
         id
     }
-    
+
     fn missing_pat(&mut self) -> PatternId {
         self.body.patterns.alloc(Pattern::Missing)
     }

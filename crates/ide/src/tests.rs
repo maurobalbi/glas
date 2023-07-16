@@ -1,6 +1,7 @@
 use crate::base::{SourceDatabaseStorage, Target};
 use crate::def::{ InternDatabaseStorage, DefDatabaseStorage };
-use crate::ty::TyDatabaseStorage;
+use crate::ide::Upcast;
+use crate::ty::{TyDatabaseStorage, TyDatabase};
 use crate::{
     Change, DefDatabase, FileId, FilePos, FileRange, FileSet, PackageGraph, PackageInfo, SourceRoot,
     SourceRootId, VfsPath, ModuleMap,
@@ -23,6 +24,12 @@ pub struct TestDB {
 }
 
 impl salsa::Database for TestDB {}
+
+impl Upcast<dyn DefDatabase> for TestDB {
+    fn upcast(&self) -> &(dyn DefDatabase + 'static) {
+        &*self
+    }
+}
 
 impl TestDB {
     pub fn single_file(fixture: &str) -> Result<(Self, FileId)> {

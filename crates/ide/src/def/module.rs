@@ -11,6 +11,7 @@ pub struct Function {
     pub name: SmolStr,
     pub params: Vec<Param>,
 
+    pub visibility: Visibility,
     pub ast_ptr: AstPtr<ast::Function>,
 }
 
@@ -40,7 +41,7 @@ pub struct Param {
     pub label: Option<SmolStr>,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Visibility {
     Public,
     Private,

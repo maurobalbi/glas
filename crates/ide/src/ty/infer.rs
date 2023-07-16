@@ -1,17 +1,23 @@
-use std::{collections::HashMap, mem, ops::Deref, sync::Arc};
+use std::{
+    borrow::BorrowMut, collections::HashMap, default, hash::Hash, mem, ops::Deref, sync::Arc,
+};
 
-use la_arena::ArenaMap;
+use la_arena::{Arena, ArenaMap};
 use syntax::ast::BinaryOpKind;
 
 use crate::{
+    base::Dependency,
     def::{
-        module::{Expr, ExprId, Function, Literal, NameId, Statement},
-        LocalNameResolution, ResolveResult,
+        body::{self, Body},
+        hir_def::FunctionId,
+        module::{Expr, ExprId, Function, Literal, NameId, PatternId, Statement},
+        resolver::ResolveResult,
+        resolver_for_expr,
     },
-    DefDatabase, FileId, TyDatabase,
+    DefDatabase, FileId,
 };
 
-use super::union_find::UnionFind;
+use super::{union_find::UnionFind, TyDatabase};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct TyVar(u32);
@@ -35,88 +41,92 @@ impl Ty {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InferenceResult {
-    name_ty_map: ArenaMap<NameId, super::Ty>,
+    pattern_ty_map: ArenaMap<PatternId, super::Ty>,
     expr_ty_map: ArenaMap<ExprId, super::Ty>,
     // field_resolution: HashMap<ExprId, FieldId>,
+    pub fn_ty: super::Ty,
 }
 
 impl InferenceResult {
-    pub fn ty_for_name(&self, name: NameId) -> super::Ty {
-        self.name_ty_map[name].clone()
+    pub fn ty_for_pat(&self, pattern: PatternId) -> super::Ty {
+        self.pattern_ty_map[pattern].clone()
     }
 
     pub fn ty_for_expr(&self, expr: ExprId) -> super::Ty {
         self.expr_ty_map[expr].clone()
     }
+
 }
 
-pub(crate) fn infer_query(
-    db: &dyn TyDatabase,
-    name: NameId,
-    file: FileId,
-) -> Arc<(super::Ty, InferenceResult)> {
-    infer(db, name, file)
+pub(crate) fn infer_function_query(db: &dyn TyDatabase, fn_id: FunctionId) -> Arc<InferenceResult> {
+    let fn_i = db.lookup_intern_function(fn_id);
+    let deps = db.dependency_order(fn_i.file_id);
+    let group = deps
+        .into_iter()
+        .find(|v| v.contains(&fn_id))
+        .expect("This is a compiler error!");
+    Arc::new(db.infer_function_group(group).get(&fn_id).unwrap().clone())
 }
 
-pub(crate) fn infer(
+pub(crate) fn infer_function_group_query(
     db: &dyn TyDatabase,
-    name_id: NameId,
-    file: FileId,
-) -> Arc<(super::Ty, InferenceResult)> {
-    let module = db.module(file);
-    let nameres = db.name_resolution(file);
+    group: Vec<FunctionId>,
+) -> HashMap<FunctionId, InferenceResult> {
+    // let fn_in_file = db.lookup_intern_function(fn_id);
+    // let deps = db.dependency_order(fn_in_file.file_id);
+
+    // let func_group: Vec<u32> = deps
+    //     .into_iter()
+    //     .filter(|v| v.contains(&fn_id.0.as_u32()))
+    //     .flatten()
+    //     .collect();
     let mut idx = 0;
-    let table = UnionFind::new(module.names().len() + module.exprs().len(), |_| {
+    let mut table = UnionFind::new(0, |_| {
         idx += 1;
         Ty::Unknown { idx }
     });
 
-    let mut ctx = InferCtx {
-        db,
-        module: &module,
-        nameres: &nameres,
-        table,
-        idx,
-    };
+    let mut fn_to_ctx = HashMap::new();
+    let mut fn_to_ty_var = HashMap::new();
 
-    let dep_order = db.dependency_order(file);
-    tracing::info!("THIS IS WEIRD {:?} {:?}", dep_order, name_id);
-    let funcs: Vec<u32> = dep_order
-        .into_iter()
-        .filter(|v| v.contains(&u32::from(name_id.into_raw())))
-        .flatten()
-        .collect();
-    // tracing::info!("UNIFY TABLE {:?}", generics);
-    for func in funcs {
-        let name_id: NameId = NameId::from_raw(func.clone().into());
-        let placeholder_ty = ctx.ty_for_name(name_id);
-        let func = module.name_to_func.get(&name_id).unwrap();
-        let func = &module[*func];
-        let ty = ctx.infer_function(func);
-        ctx.unify_var(placeholder_ty, ty);
+    for f in group.into_iter() {
+        let func = db.lookup_intern_function(f);
+        let fn_ir = db.module_items(func.file_id);
+        let func = fn_ir[func.value].clone();
+        let body = db.body(f);
+        let mut ctx = InferCtx {
+            db,
+            table: &mut table,
+            idx,
+            fn_id: f,
+            body: body.deref(),
+            body_ctx: BodyCtx::default(),
+        };
+        let ty = ctx.infer_function(&func, &body);
+        fn_to_ty_var.insert(f, ty);
+
+        let inferred_ctx = mem::replace(&mut ctx.body_ctx, BodyCtx::default());
+        fn_to_ctx.insert(f, inferred_ctx);
     }
 
-    // for (_, func) in module.functions() {
-    //     let placeholder_ty = ctx.ty_for_name(func.name);
-    //     let ty = ctx.infer_function(func);
-    //     ctx.unify_var(placeholder_ty, ty);
-    // }
-
-    // tracing::info!("{:#?}", func_ty);
-    let result = ctx.finish();
-    Arc::new((result.name_ty_map.get(name_id).unwrap().clone(), result))
+    finish_infer(table, fn_to_ctx, fn_to_ty_var)
 }
 
+#[derive(Default)]
+struct BodyCtx {
+    pattern_to_ty: HashMap<PatternId, TyVar>,
+    expr_to_ty: HashMap<ExprId, TyVar>,
+}
 struct InferCtx<'db> {
     db: &'db dyn TyDatabase,
-    module: &'db ItemData,
-    nameres: &'db LocalNameResolution,
-
+    body_ctx: BodyCtx,
     idx: u32,
+    fn_id: FunctionId,
+    body: &'db Body,
     /// The arena for both unification and interning.
     /// First `module.names().len() + module.exprs().len()` elements are types of each names and
     /// exprs, to allow recursive definition.
-    table: UnionFind<Ty>,
+    table: &'db mut UnionFind<Ty>,
 }
 
 impl<'db> InferCtx<'db> {
@@ -125,12 +135,16 @@ impl<'db> InferCtx<'db> {
         TyVar(self.table.push(Ty::Unknown { idx: self.idx }))
     }
 
-    fn ty_for_name(&self, i: NameId) -> TyVar {
-        TyVar(u32::from(i.into_raw()))
+    fn ty_for_pattern(&mut self, i: PatternId) -> TyVar {
+        let ty_var = self.new_ty_var();
+        self.body_ctx.pattern_to_ty.insert(i, ty_var);
+        ty_var
     }
 
-    fn ty_for_expr(&self, i: ExprId) -> TyVar {
-        TyVar(self.module.names().len() as u32 + u32::from(i.into_raw()))
+    fn ty_for_expr(&mut self, i: ExprId) -> TyVar {
+        let ty_var = self.new_ty_var();
+        self.body_ctx.expr_to_ty.insert(i, ty_var);
+        ty_var
     }
 
     fn import_type(&mut self, ty: super::Ty, env: &mut HashMap<u32, TyVar>) -> TyVar {
@@ -170,14 +184,15 @@ impl<'db> InferCtx<'db> {
         TyVar(self.table.push(ty))
     }
 
-    fn infer_function(&mut self, func: &Function) -> TyVar {
+    fn infer_function(&mut self, func: &Function, body: &Body) -> TyVar {
         let mut param_tys = Vec::new();
-        for param in &func.params {
+        for param in &body.params {
             let param_ty = self.new_ty_var();
             param_tys.push(param_ty);
-            self.unify_var(param_ty, self.ty_for_name(param.name));
+            let pat_ty = self.ty_for_pattern(*param);
+            self.unify_var(param_ty, pat_ty);
         }
-        let body_ty = self.infer_expr(func.body);
+        let body_ty = self.infer_expr(body.body_expr);
         Ty::Function {
             params: param_tys,
             return_: body_ty,
@@ -207,7 +222,7 @@ impl<'db> InferCtx<'db> {
     }
 
     fn infer_expr_inner(&mut self, e: ExprId) -> TyVar {
-        match &self.module[e] {
+        match &self.body[e] {
             Expr::Missing => self.new_ty_var(),
             Expr::Literal(lit) => match lit {
                 Literal::Int(_) => Ty::Int,
@@ -248,7 +263,12 @@ impl<'db> InferCtx<'db> {
                 }
                 let ret_ty = self.new_ty_var();
                 let fun_ty = self.infer_expr(*func);
-                tracing::info!("inferring func {:?} {:?} {:?}", fun_ty, self.table.find(arg_tys[0].0), ret_ty);
+                tracing::info!(
+                    "inferring func {:?} {:?} {:?}",
+                    fun_ty,
+                    self.table.find(arg_tys[0].0),
+                    ret_ty
+                );
                 self.unify_var_ty(
                     fun_ty,
                     Ty::Function {
@@ -258,27 +278,25 @@ impl<'db> InferCtx<'db> {
                 );
                 ret_ty
             }
-            Expr::NameRef(_) => match self.nameres.get(e) {
-                None => self.new_ty_var(),
-                Some(res) => match res {
-                    &ResolveResult((name, file))
-                        if self.module.name_to_func.contains_key(&name) =>
-                    {
-                        let ty = self.db.infer(name, file).deref().0.clone();
-                        let mut env = HashMap::new();
-                        let ty = self.import_type(ty, &mut env);
-                        ty
+            Expr::NameRef(name) => {
+                let db = self.db;
+                let resolver = resolver_for_expr(db.upcast(), self.fn_id, e);
+                match resolver.resolve_name(name) {
+                    Some(ResolveResult::LocalBinding(pat)) => {
+                        let pattern = self.body_ctx.pattern_to_ty.get(&pat);
+                        match pattern {
+                            Some(ty_var) => *ty_var,
+                            None => self.new_ty_var(),
+                        }
                     }
-                    &ResolveResult((name, file)) => self.ty_for_name(name), // if file == self.file_id {
-                                                                            //     self.ty_for_name(name)
-                                                                            // } else {
-                                                                            //     let inference = self.db.infer(file);
-                                                                            //     let var = self.new_ty_var();
-                                                                            //     self.unify_var_ty(var, inference.ty_for_name(name));
-                                                                            //     var
-                                                                            // }
-                },
-            },
+                    Some(ResolveResult::FunctionId(fn_id)) => {
+                        let inferred_ty = self.db.infer_function(fn_id);
+                        let mut env = HashMap::new();
+                        self.import_type(inferred_ty.fn_ty.clone(), &mut env)
+                    }
+                    None => unreachable!("This is a compiler bug!"),
+                }
+            }
         }
     }
 
@@ -327,29 +345,62 @@ impl<'db> InferCtx<'db> {
         }
     }
 
-    fn finish(mut self) -> InferenceResult {
-        let mut i = Collector::new(&mut self.table);
+    // fn finish(mut self) -> InferenceResult {
+    //     let mut i = Collector::new(&mut self.table);
 
-        let name_cnt = self.module.names().len();
-        let expr_cnt = self.module.exprs().len();
-        let mut name_ty_map = ArenaMap::with_capacity(name_cnt);
-        let mut expr_ty_map = ArenaMap::with_capacity(expr_cnt);
-        for (name, _) in self.module.names() {
-            let ty = TyVar(u32::from(name.into_raw()));
-            name_ty_map.insert(name, i.collect(ty));
+    //     let name_cnt = self.module.names().len();
+    //     let expr_cnt = self.module.exprs().len();
+    //     let mut name_ty_map = ArenaMap::with_capacity(name_cnt);
+    //     let mut expr_ty_map = ArenaMap::with_capacity(expr_cnt);
+    //     for (name, _) in self.module.names() {
+    //         let ty = TyVar(u32::from(name.into_raw()));
+    //         name_ty_map.insert(name, i.collect(ty));
+    //     }
+    //     for (expr, _) in self.module.exprs() {
+    //         let ty = TyVar(name_cnt as u32 + u32::from(expr.into_raw()));
+    //         expr_ty_map.insert(expr, i.collect(ty));
+    //     }
+
+    //     InferenceResult {
+    //         pattern_ty_map: name_ty_map,
+    //         expr_ty_map,
+    //     }
+    // }
+}
+
+fn finish_infer(
+    mut table: UnionFind<Ty>,
+    body_ctx: HashMap<FunctionId, BodyCtx>,
+    fn_ty: HashMap<FunctionId, TyVar>,
+) -> HashMap<FunctionId, InferenceResult> {
+    let mut i = Collector::new(&mut table);
+
+    let mut inference_map = HashMap::new();
+
+    for (fn_id, ctx) in body_ctx.into_iter() {
+        let mut pattern_ty_map = ArenaMap::new();
+        let mut expr_ty_map = ArenaMap::new();
+
+        for (pattern, ty) in ctx.pattern_to_ty {
+            pattern_ty_map.insert(pattern, i.collect(ty));
         }
-        for (expr, _) in self.module.exprs() {
-            let ty = TyVar(name_cnt as u32 + u32::from(expr.into_raw()));
+
+        for (expr, ty) in ctx.expr_to_ty {
             expr_ty_map.insert(expr, i.collect(ty));
         }
 
-        InferenceResult {
-            name_ty_map,
-            expr_ty_map,
-        }
+        inference_map.insert(
+            fn_id,
+            InferenceResult {
+                fn_ty: i.collect(*fn_ty.get(&fn_id).expect("Compiler error")),
+                pattern_ty_map,
+                expr_ty_map,
+            },
+        );
     }
-}
 
+    inference_map
+}
 /// Traverse the table and freeze all `Ty`s into immutable ones.
 struct Collector<'a> {
     cache: Vec<Option<super::Ty>>,
@@ -371,7 +422,7 @@ impl<'a> Collector<'a> {
         }
 
         // // Prevent cycles.
-        self.cache[i as usize] = Some(super::Ty::Unknown );
+        self.cache[i as usize] = Some(super::Ty::Unknown);
         let ret = self.collect_uncached(i);
         self.cache[i as usize] = Some(ret.clone());
         ret
