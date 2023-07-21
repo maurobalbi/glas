@@ -1,5 +1,6 @@
 mod infer;
 mod union_find;
+mod display;
 
 #[cfg(test)]
 mod tests;

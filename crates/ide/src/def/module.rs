@@ -15,7 +15,6 @@ pub struct Function {
     pub ast_ptr: AstPtr<ast::Function>,
 }
 
-pub type ImportId = Idx<Import>;
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Import {
     pub module: SmolStr, // e.g. import >>one/wobble<<
@@ -33,6 +32,13 @@ impl Import {
             .unwrap_or(&self.unqualified_name)
             .clone()
     }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct Adt {
+
+
+    pub ast_ptr: AstPtr<ast::CustomType>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]

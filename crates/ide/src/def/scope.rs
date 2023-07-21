@@ -1,5 +1,6 @@
 use std::{collections::HashMap, iter, ops, sync::Arc};
 
+use indexmap::IndexMap;
 use la_arena::{Arena, ArenaMap, Idx};
 use petgraph::stable_graph::StableGraph;
 use salsa::InternId;
@@ -50,7 +51,7 @@ pub struct ModuleScope {
     values: HashMap<SmolStr, ModuleDefId>,
 
     /// The defs declared in this module which can potentially be imported in another module
-    declarations: HashMap<SmolStr, (ModuleDefId, Visibility)>,
+    declarations: IndexMap<SmolStr, (ModuleDefId, Visibility)>,
 }
 
 impl ModuleScope {

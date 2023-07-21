@@ -4,7 +4,7 @@ use crate::{base::Target, Diagnostic, DiagnosticKind};
 
 use super::{
     module::{
-        Expr, ExprId, Function, Import, ImportId, Label, Literal, Name, NameId, NameKind, Param,
+        Expr, ExprId, Function, Import, Label, Literal, Name, NameId, NameKind, Param,
         Pattern, PatternId, Statement, Visibility,
     },
     AstPtr, DefDatabase,
@@ -20,6 +20,7 @@ use syntax::{
 pub struct ModuleItemData {
     functions: Arena<Function>,
     imports: Arena<Import>,
+    // adts: Arena<Adt>,
 
     diagnostics: Vec<Diagnostic>,
 }

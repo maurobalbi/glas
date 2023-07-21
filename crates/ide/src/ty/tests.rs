@@ -1,7 +1,7 @@
 
 
 
-use crate::def::ModuleItemData;
+use crate::def::{ModuleItemData, InternDatabase};
 use crate::tests::TestDB;
 use crate::{
     DefDatabase,
@@ -47,13 +47,15 @@ use super::{Ty, InferenceResult, TyDatabase};
 fn check_all(src: &str, expect: Expect) {
     let (db, file) = TestDB::single_file(src).unwrap();
     let scope= db.module_scope(file);
-    let func = scope.declarations().nth(0).unwrap();
-    match func.0 {
-        crate::def::hir_def::ModuleDefId::FunctionId(fn_id) => {
-            let infer = db.infer_function(fn_id);
-            let got = format!("{:?}", infer.fn_ty);
-            expect.assert_eq(&got);
-        },
+    for fun in scope.declarations() {
+        match fun.0 {
+            crate::def::hir_def::ModuleDefId::FunctionId(fn_id) => {
+                let infer = db.infer_function(fn_id);
+                
+                let got = format!("{:?}", infer);
+                expect.assert_eq(&got);
+            },
+        }
     }
 }
 
@@ -70,7 +72,7 @@ fn check_all(src: &str, expect: Expect) {
 #[traced_test]
 #[test] 
 fn let_in() {
-    check_all("fn bla(a, b) { b }", expect![[r#"
+    check_all("fn bla(a, b) { a }", expect![[r#"
         main: Function { params: [Int, Unknown], return_: Int }
         a: Int
         b: Unknown
