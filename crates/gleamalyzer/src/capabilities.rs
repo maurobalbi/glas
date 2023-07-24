@@ -1,6 +1,6 @@
 use lsp_types::{
     InitializeParams, OneOf, ServerCapabilities, TextDocumentSyncCapability,
-    TextDocumentSyncKind, TextDocumentSyncOptions,
+    TextDocumentSyncKind, TextDocumentSyncOptions, HoverProviderCapability,
 };
 
 macro_rules! test {
@@ -57,6 +57,7 @@ pub(crate) fn negotiate_capabilities(
                 save: None, 
             },
         )),
+        hover_provider: Some(HoverProviderCapability::Simple(true)),
         definition_provider: Some(OneOf::Left(true)),
         ..Default::default()
     };

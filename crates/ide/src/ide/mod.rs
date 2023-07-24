@@ -1,6 +1,7 @@
 mod diagnostics;
-mod highlight_related;
 mod goto_definition;
+mod highlight_related;
+mod hover;
 
 use crate::base::SourceDatabaseStorage;
 use crate::def::{DefDatabaseStorage, InternDatabaseStorage};
@@ -12,6 +13,7 @@ use syntax::TextRange;
 
 pub use highlight_related::HlRelated;
 pub use goto_definition::GotoDefinitionResult;
+pub use hover::HoverResult;
 
 pub const DEFAULT_LRU_CAP: usize = 128;
 

@@ -1,7 +1,7 @@
 use crate::{LineMap, Result, Vfs};
 use async_lsp::{ResponseError, ErrorCode};
-use ide::{Diagnostic, FileId, FilePos, FileRange, Severity, DiagnosticKind};
-use lsp::DiagnosticTag;
+use ide::{Diagnostic, FileId, HoverResult, FilePos, FileRange, Severity, DiagnosticKind};
+use lsp::{DiagnosticTag, Hover, MarkupContent, MarkupKind};
 use lsp_types::{
     self as lsp, DiagnosticRelatedInformation, DiagnosticSeverity, Location, NumberOrString,
     Position, PrepareRenameResponse, Range, TextDocumentIdentifier, TextDocumentPositionParams,
@@ -50,6 +50,16 @@ pub(crate) fn to_range(line_map: &LineMap, range: TextRange) -> Range {
     let (line1, col1) = line_map.line_col_for_pos(range.start());
     let (line2, col2) = line_map.line_col_for_pos(range.end());
     Range::new(Position::new(line1, col1), Position::new(line2, col2))
+}
+
+pub(crate) fn to_hover(line_map: &LineMap, hover: HoverResult) -> Hover {
+    Hover {
+        range: Some(to_range(line_map, hover.range)),
+        contents: lsp::HoverContents::Markup(MarkupContent {
+            kind: MarkupKind::Markdown,
+            value: hover.markup,
+        }),
+    }
 }
 
 pub(crate) fn to_diagnostics(
