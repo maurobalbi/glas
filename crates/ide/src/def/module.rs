@@ -1,10 +1,43 @@
-use la_arena::Idx;
+use la_arena::{Idx, IdxRange};
 use ordered_float::OrderedFloat;
 use smol_str::SmolStr;
 use syntax::{
     ast::{self, BinaryOpKind},
     AstPtr,
 };
+
+use crate::ty;
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct Adt {
+    pub name: SmolStr,
+
+    pub constructors: IdxRange<Variant>,
+
+    pub params: Vec<TypeParam>,
+    pub visibility: Visibility,
+
+    pub ast_ptr: AstPtr<ast::Adt>
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct Variant {
+    pub name: SmolStr,
+    
+    pub fields: Vec<ConstructorField>,
+
+    pub ast_ptr: AstPtr<ast::Variant>
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct ConstructorField {
+    pub label: Option<SmolStr>,
+    pub type_ref: ty::Ty,
+}
+
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct TypeParam(SmolStr);
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Function {
@@ -32,13 +65,6 @@ impl Import {
             .unwrap_or(&self.unqualified_name)
             .clone()
     }
-}
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub struct Adt {
-
-
-    pub ast_ptr: AstPtr<ast::CustomType>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -103,24 +129,6 @@ pub enum Literal {
     Int(i64),
     Float(OrderedFloat<f64>),
     String(SmolStr),
-}
-
-pub type NameId = Idx<Name>;
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Name {
-    pub text: SmolStr,
-    pub kind: NameKind,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum NameKind {
-    Function,
-    Pattern,
-    Param,
-    PatField,
-    Import,
-    Module,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

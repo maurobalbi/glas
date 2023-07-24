@@ -1,27 +1,29 @@
 use std::ops::Index;
 
-use crate::{base::Target, Diagnostic, DiagnosticKind};
+use crate::{base::Target, ty, Diagnostic, DiagnosticKind};
 
 use super::{
     module::{
-        Expr, ExprId, Function, Import, Label, Literal, Name, NameId, NameKind, Param,
-        Pattern, PatternId, Statement, Visibility,
+        ConstructorField, Adt, Expr, ExprId, Param, Function, Import, Label, Literal,
+        Pattern, PatternId, Variant, Statement, Visibility
     },
     AstPtr, DefDatabase,
 };
-use la_arena::{Arena, Idx};
+use la_arena::{Arena, Idx, IdxRange, RawIdx};
 use smol_str::SmolStr;
 use syntax::{
     ast::{self, AstNode, LiteralKind, StatementExpr},
     Parse,
 };
+use tracing::field;
 
 #[derive(Default, Debug, Eq, PartialEq)]
 pub struct ModuleItemData {
     functions: Arena<Function>,
     imports: Arena<Import>,
-    // adts: Arena<Adt>,
+    adts: Arena<Adt>,
 
+    variants: Arena<Variant>,
     diagnostics: Vec<Diagnostic>,
 }
 
@@ -30,10 +32,38 @@ impl ModuleItemData {
         self.imports.iter()
     }
 
+    pub fn adts(
+        &self,
+    ) -> impl Iterator<Item = (Idx<Adt>, &Adt)> + ExactSizeIterator + '_ {
+        self.adts.iter()
+    }
+    
+    pub fn variants(
+        &self,
+    ) -> impl Iterator<Item = (Idx<Variant>, &Variant)> + ExactSizeIterator + '_ {
+        self.variants.iter()
+    }
+
     pub fn functions(
         &self,
     ) -> impl Iterator<Item = (Idx<Function>, &Function)> + ExactSizeIterator + '_ {
         self.functions.iter()
+    }
+}
+
+impl Index<Idx<Adt>> for ModuleItemData {
+    type Output = Adt;
+
+    fn index(&self, index: Idx<Adt>) -> &Self::Output {
+        &self.adts[index]
+    }
+}
+
+impl Index<Idx<Variant>> for ModuleItemData {
+    type Output = Variant;
+
+    fn index(&self, index: Idx<Variant>) -> &Self::Output {
+        &self.variants[index]
     }
 }
 
@@ -60,8 +90,21 @@ pub(super) fn lower_module(db: &dyn DefDatabase, parse: Parse) -> ModuleItemData
 }
 
 impl<'a> LowerCtx<'a> {
-    fn alloc_function(&mut self, function: Function, ptr: AstPtr<ast::Function>) -> Idx<Function> {
+    fn alloc_function(&mut self, function: Function) -> Idx<Function> {
         let id = self.module_items.functions.alloc(function);
+        id
+    }
+
+    fn alloc_custom_type(&mut self, custom_type: Adt) -> Idx<Adt> {
+        let id = self.module_items.adts.alloc(custom_type);
+        id
+    }
+
+    fn alloc_variant(
+        &mut self,
+        constructor: Variant,
+    ) -> Idx<Variant> {
+        let id = self.module_items.variants.alloc(constructor);
         id
     }
 
@@ -106,6 +149,9 @@ impl<'a> LowerCtx<'a> {
             }
             ast::ModuleStatement::Import(i) => {
                 self.lower_import(i);
+            }
+            ast::ModuleStatement::Adt(ct) => {
+                self.lower_custom_type(ct);
             }
             _ => return,
         };
@@ -156,14 +202,85 @@ impl<'a> LowerCtx<'a> {
             }
         };
 
-        Some(self.alloc_function(
-            Function {
-                name: fun.name()?.token()?.text().into(),
-                params,
-                visibility: Visibility::Public,
-                ast_ptr: ast_ptr.clone(),
-            },
+        Some(self.alloc_function(Function {
+            name: fun.name()?.token()?.text().into(),
+            params,
+            visibility: Visibility::Public,
+            ast_ptr: ast_ptr,
+        }))
+    }
+
+    fn lower_custom_type(&mut self, ct: &ast::Adt) -> Option<Idx<Adt>> {
+        let ast_ptr = AstPtr::new(ct);
+        let name = ct.name()?.token()?.text().into();
+
+        let visibility = Visibility::Public;
+
+        let constructors = self.lower_constructors(ct.constructors());
+        Some(self.alloc_custom_type(Adt {
+            name,
+            constructors,
+            params: Vec::new(),
+            visibility,
             ast_ptr,
-        ))
+        }))
+    }
+
+    fn lower_constructors(
+        &mut self,
+        constructors: ast::AstChildren<ast::Variant>,
+    ) -> IdxRange<Variant> {
+        let start = self.next_constructor_idx();
+        for constructor in constructors {
+            self.lower_constructor(&constructor);
+        }
+        let end = self.next_constructor_idx();
+        IdxRange::new(start..end)
+    }
+
+    fn lower_constructor(
+        &mut self,
+        constructor: &ast::Variant,
+    ) -> Option<Idx<Variant>> {
+        let ast_ptr = AstPtr::new(constructor);
+        let name = constructor.name()?.text()?;
+
+        let mut fields_vec = Vec::new();
+        if let Some(fields) = constructor.field_list() {
+            for field in fields.fields() {
+                if let (Some(label), Some(type_ref)) =
+                    (field.label(), self.ty_from_ast_opt(field.type_()))
+                {
+                    fields_vec.push(ConstructorField { label: label.text(), type_ref })
+                }
+            }
+        }
+
+        Some(self.alloc_variant(Variant {
+            name,
+            fields: fields_vec,
+            ast_ptr,
+        }))
+    }
+
+    fn ty_from_ast_opt(&self, type_ast: Option<ast::TypeExpr>) -> Option<ty::Ty> {
+        match type_ast {
+            Some(_) => None,
+            None => None,
+        }
+    }
+
+    fn ty_from_ast(&self, ast_expr: ast::TypeExpr) -> ty::Ty {
+        match ast_expr {
+            ast::TypeExpr::FnType(fn_type) => todo!(),
+            ast::TypeExpr::VarType(_) => todo!(),
+            ast::TypeExpr::TupleType(_) => todo!(),
+            ast::TypeExpr::TypeNameRef(_) => todo!(),
+            ast::TypeExpr::TypeApplication(_) => todo!(),
+        }
+    }
+
+    fn next_constructor_idx(&self) -> Idx<Variant> {
+        Idx::from_raw(RawIdx::from(self.module_items.variants.len() as u32))
     }
 }

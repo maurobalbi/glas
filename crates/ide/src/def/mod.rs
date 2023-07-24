@@ -5,6 +5,7 @@ mod lower;
 pub mod module;
 pub mod resolver;
 mod scope;
+pub mod source_analyzer;
 
 use std::sync::Arc;
 
@@ -17,7 +18,7 @@ use syntax::{AstPtr, Parse};
 pub use syntax::ast::{AstNode, BinaryOpKind as BinaryOp, Expr, UnaryOpKind as UnaryOp};
 
 use self::body::{Body, BodySourceMap};
-use self::hir_def::{FunctionId, FunctionLoc};
+use self::hir_def::{FunctionId, FunctionLoc, AdtLoc, AdtId, VariantLoc, VariantId};
 use self::lower::lower_module;
 pub use self::lower::ModuleItemData;
 use self::scope::{dependency_order_query, module_scope_query, ExprScopes, ModuleScope};
@@ -27,6 +28,12 @@ pub use resolver::resolver_for_expr;
 pub trait InternDatabase: SourceDatabase {
     #[salsa::interned]
     fn intern_function(&self, loc: FunctionLoc) -> FunctionId;
+
+    #[salsa::interned]
+    fn intern_adt(&self, loc: AdtLoc) -> AdtId;
+    
+    #[salsa::interned]
+    fn intern_variant(&self, loc: VariantLoc) -> VariantId;
 }
 
 #[salsa::query_group(DefDatabaseStorage)]

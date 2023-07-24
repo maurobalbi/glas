@@ -1,10 +1,16 @@
-use std::{sync::Arc, ops::Deref};
+use std::{ops::Deref, sync::Arc};
 
 use smol_str::SmolStr;
 
-use crate::DefDatabase;
+use crate::{DefDatabase, FileId};
 
-use super::{lower::ModuleItemData, FunctionId, ExprScopes, scope::{ScopeId, ModuleScope}, module::{ExprId, PatternId}};
+use super::{
+    hir_def::VariantId,
+    lower::ModuleItemData,
+    module::{ExprId, PatternId},
+    scope::{ModuleScope, ScopeId},
+    ExprScopes, FunctionId,
+};
 
 #[derive(Debug, Clone)]
 pub struct Resolver {
@@ -32,14 +38,12 @@ enum Scope {
 
 pub enum ResolveResult {
     LocalBinding(PatternId),
-    FunctionId(FunctionId)
+    FunctionId(FunctionId),
+    VariantId(VariantId),
 }
 
 impl Resolver {
-   pub fn resolve_name(
-        &self,
-        name: &SmolStr,
-    ) -> Option<ResolveResult> {
+    pub fn resolve_name(&self, name: &SmolStr) -> Option<ResolveResult> {
         for scope in self.scopes() {
             match scope {
                 Scope::ExprScope(scope) => {
@@ -52,19 +56,32 @@ impl Resolver {
                     if let Some(e) = entry {
                         return Some(ResolveResult::LocalBinding(e.pat()));
                     }
-                }
-                // Scope::GenericParams { params, def } => {}
-
+                } // Scope::GenericParams { params, def } => {}
             }
         }
 
         if let Some(res) = self.module_scope.resolve_name_locally(name.clone()) {
             match *res {
-                super::hir_def::ModuleDefId::FunctionId(fn_id) => return Some(ResolveResult::FunctionId(fn_id)),
+                super::hir_def::ModuleDefId::FunctionId(it) => {
+                    return Some(ResolveResult::FunctionId(it))
+                }
+                super::hir_def::ModuleDefId::AdtId(_) => {
+                        
+                },
+                super::hir_def::ModuleDefId::VariantId(it) => {
+                    return Some(ResolveResult::VariantId(it))
+                }
             }
         }
 
         None
+    }
+
+    pub fn body_owner(&self) -> Option<FunctionId> {
+        self.scopes().find_map(|scope| match scope {
+            Scope::ExprScope(it) => Some(it.owner),
+            _ => None,
+        })
     }
 
     fn scopes(&self) -> impl Iterator<Item = &Scope> {
@@ -78,6 +95,14 @@ pub fn resolver_for_expr(db: &dyn DefDatabase, owner: FunctionId, expr_id: ExprI
     resolver_for_scope(db, owner, scopes.scope_for_expr(expr_id))
 }
 
+pub fn resolver_for_toplevel(db: &dyn DefDatabase, file: FileId) -> Resolver {
+    let item_map = db.module_scope(file);
+    Resolver {
+        scopes: Vec::with_capacity(0),
+        module_scope: item_map,
+    }
+}
+
 pub fn resolver_for_scope(
     db: &dyn DefDatabase,
     owner: FunctionId,
@@ -89,7 +114,7 @@ pub fn resolver_for_scope(
     let scope_chain = scopes.scope_chain(scope_id).collect::<Vec<_>>();
     let mut r = Resolver {
         scopes: Vec::with_capacity(scope_chain.len()),
-        module_scope: item_map
+        module_scope: item_map,
     };
     r.scopes.reserve(scope_chain.len());
 
@@ -119,6 +144,10 @@ impl Resolver {
         expr_scopes: Arc<ExprScopes>,
         scope_id: ScopeId,
     ) -> Resolver {
-        self.push_scope(Scope::ExprScope(ExprScope { owner, expr_scopes, scope_id }))
+        self.push_scope(Scope::ExprScope(ExprScope {
+            owner,
+            expr_scopes,
+            scope_id,
+        }))
     }
 }

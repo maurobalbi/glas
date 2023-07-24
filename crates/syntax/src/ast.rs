@@ -157,7 +157,7 @@ enums! {
         ModuleConstant,
         Import,
         Function,
-        CustomType,
+        Adt,
     },
     ConstantExpr {
         Literal,
@@ -174,6 +174,7 @@ enums! {
         Literal,
         Block,
         NameRef,
+        Lambda,
         BinaryOp,
         UnaryOp,
         ExprCall,
@@ -258,13 +259,13 @@ asts! {
             })
         }
     },
-    CUSTOM_TYPE = CustomType {
+    ADT = Adt {
         name: TypeName,
-        variants: [CustomTypeVariant],
+        constructors: [Variant],
     },
     CUSTOM_TYPE_ALIAS = CustomTypeAlias {
         name: TypeName,
-        constructors: [CustomTypeVariant],
+        constructors: [Variant],
 
         pub fn is_public(&self) -> bool {
             self.syntax().children_with_tokens().find(|it| it.kind() == T!["pub"]).is_some()
@@ -274,16 +275,21 @@ asts! {
             self.0.children_with_tokens().find(|t| t.kind() == T!["opaque"]).is_some()
         }
     },
-    CUSTOM_TYPE_VARIANT = CustomTypeVariant {
+    VARIANT = Variant {
         name: Name,
-        field_list: VariantFieldList,
+        field_list: ConstructorFieldList,
     },
-    VARIANT_FIELD_LIST = VariantFieldList {
-        fields: [VariantField],
+    CONSTRUCTOR_FIELD_LIST = ConstructorFieldList {
+        fields: [ConstructorField],
     },
-    VARIANT_FIELD = VariantField {
+    CONSTRUCTOR_FIELD = ConstructorField {
         label: Label,
         type_: TypeExpr,
+    },
+    LAMBDA = Lambda { 
+        param_list: ParamList,
+        return_type: TypeExpr,
+        body: Block,
     },
     FUNCTION = Function {
         name: Name,
@@ -350,6 +356,9 @@ asts! {
     LABEL = Label {
         pub fn token(&self) -> Option<SyntaxToken> {
             self.0.children_with_tokens().find_map(NodeOrToken::into_token)
+        }
+        pub fn text(&self) -> Option<SmolStr> {
+            self.token().map(|t| t.text().into())
         }
     },
     TARGET = Target {
@@ -428,7 +437,7 @@ asts! {
     },
     TYPE_NAME_REF = TypeNameRef {
         module: ModuleName,
-        constructor: TypeName,
+        constructor_name: TypeName,
     },
     TYPE_APPLICATION = TypeApplication {
         type_constructor: TypeNameRef,
@@ -540,11 +549,10 @@ mod tests {
     #[test]
     fn assert() {
         let e = crate::parse_module(
-            "fn a() { 
-                use manager: Int, a <- result.try(
-                    start_manager()
-                )
-                }",
+            "fn bla2(a) {
+                let a = fn(a,b) {1}
+                b
+              }",
         );
         for error in e.errors() {
             println!("{}", error);
@@ -602,14 +610,14 @@ mod tests {
 
     #[test]
     fn type_variant() {
-        let e = parse::<CustomType>(
+        let e = parse::<Adt>(
             "type Wobbles {
             Alot(name: Int, Int)
             Of(String)
         }",
         );
         e.name().unwrap().syntax().should_eq("Wobbles");
-        let mut iter = e.variants();
+        let mut iter = e.constructors();
         let variant = iter.next().unwrap();
         variant.name().unwrap().syntax().should_eq("Alot");
         let mut fields = variant.field_list().unwrap().fields();
@@ -619,6 +627,18 @@ mod tests {
         first_field.type_().unwrap().syntax().should_eq("Int");
         let _ = fields.next().is_some();
         let _ = fields.next().is_none();
+    }
+    
+    #[test]
+    fn type_variant_generic() {
+        let e = parse::<Adt>(
+            "type Wobbles(a,b) {
+            Alot(name: Int, Int)
+            Of(String)
+        }",
+        );
+        e.name().unwrap().syntax().should_eq("Wobbles");
+
     }
 
     #[test]
@@ -644,7 +664,7 @@ mod tests {
     #[test]
     fn module_constructor_type() {
         let e = parse::<TypeNameRef>("const a : gleam.Int = 1");
-        e.constructor().unwrap().syntax().should_eq("Int");
+        e.constructor_name().unwrap().syntax().should_eq("Int");
         e.module().unwrap().syntax().should_eq("gleam");
     }
 
@@ -707,6 +727,23 @@ mod tests {
     }
 
     #[test]
+    fn type_name() {
+        let e = parse::<Variant>("type Wobble(a) {
+            Wobble1(a)
+        }");
+        e.name().unwrap().syntax().should_eq("Wobble1");
+    }
+    
+    #[test]
+    fn constructor_field() {
+        let e = parse::<ConstructorField>("type Wobble(a) {
+            Wobble1(a: int.Wobbles)
+        }");
+        e.label().unwrap().syntax().should_eq("a");
+        e.type_().unwrap().syntax().should_eq("int.Wobbles")
+    }
+
+    #[test]
     fn block() {
         let e = parse::<Block>("fn b() { 1 }");
         let mut exprs = e.expressions();
@@ -726,7 +763,7 @@ mod tests {
 
     #[test]
     fn type_application() {
-        let e = parse::<CustomTypeVariant>("type Bla { Bla2(#(Int)) }");
+        let e = parse::<Variant>("type Bla { Bla2(#(Int)) }");
         e.field_list()
             .iter()
             .next()

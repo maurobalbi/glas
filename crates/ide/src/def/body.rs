@@ -10,7 +10,7 @@ use syntax::{
 use crate::{DefDatabase, Diagnostic, FileId, InFile};
 
 use super::{
-    module::{Expr, ExprId, Literal, NameId, NameKind, Pattern, PatternId, Statement},
+    module::{Expr, ExprId, Literal,Pattern, PatternId, Statement},
     FunctionId,
 };
 

@@ -1,7 +1,9 @@
 use super::NavigationTarget;
 use crate::def::hir_def::ModuleDefId;
-use crate::def::{resolver_for_expr};
-use crate::{DefDatabase, FilePos, VfsPath};
+use crate::def::resolver::resolver_for_toplevel;
+use crate::def::resolver_for_expr;
+use crate::def::source_analyzer::find_def;
+use crate::{DefDatabase, FilePos, VfsPath, InFile};
 use smol_str::SmolStr;
 use syntax::ast::{self, AstNode};
 use syntax::{best_token_at_offset, AstPtr, TextRange, TextSize};
@@ -34,21 +36,25 @@ pub(crate) fn goto_definition(
     }
     // Refactor to build make module map / data with exprs / other definitions. Its way to much work to use defbodies for no reason!
     if ast::NameRef::can_cast(tok.parent()?.kind()) {
-        let expr_ptr = ast::Expr::cast(tok.parent()?)?;
+        let expr = ast::Expr::cast(tok.parent()?)?;
 
-        let expr_ptr = crate::InFile { file_id: file_id, value: &expr_ptr };
+        let expr_ptr = InFile {
+            file_id: file_id,
+            value: &tok.parent()?,
+        };
 
-        let item_scope = db.module_scope(file_id);
+        // dangerous find_map because iterating hashmap has not always same order!
+        // ToDo: Make diagnostic when multiple values declared
+        // Find resolver based on where cursor is! not depending on luck!
+        let resolver = match find_def(db, expr_ptr) {
+            Some(ModuleDefId::FunctionId(id)) => {
+                let source_map = db.source_map(id);
+                let expr_ptr = expr_ptr.with_value(&expr);
+                resolver_for_expr(db, id, source_map.expr_for_node(expr_ptr)?)
+            },
+            _ => resolver_for_toplevel(db, file_id),
+        };
 
-        let (expr_id, fn_id) = item_scope.values().find_map(|v| {
-            let fn_id = match v.clone() {
-                ModuleDefId::FunctionId(fn_id) => fn_id
-            };
-            let source_map = db.source_map(fn_id.clone());
-            return source_map.expr_for_node(expr_ptr).map(|v| (v, fn_id))
-        })?;
-
-        let resolver =  resolver_for_expr(db, fn_id.clone() , expr_id);
         tracing::info!("Name_res: {:#?}", resolver);
         // let ResolveResult((name, file_id)) = name_res.get(expr_id)?;
 
@@ -59,13 +65,34 @@ pub(crate) fn goto_definition(
 
         let targets = resolver.resolve_name(&name).map(|ptr| {
             let (node, file_id) = match ptr {
-                crate::def::resolver::ResolveResult::LocalBinding(pattern) => (db.source_map(fn_id.clone()).pattern_map_rev.get(pattern)?.value.syntax_node_ptr(), file_id),
+                crate::def::resolver::ResolveResult::LocalBinding(pattern) => (
+                    db.source_map(resolver.body_owner()?.clone())
+                        .pattern_map_rev
+                        .get(pattern)?
+                        .value
+                        .syntax_node_ptr(),
+                    file_id,
+                ),
                 crate::def::resolver::ResolveResult::FunctionId(func_id) => {
-                    let func =  db.lookup_intern_function(func_id.clone());
-                     (db.module_items(func.file_id)[func.value].ast_ptr.syntax_node_ptr(), func.file_id)
+                    let func = db.lookup_intern_function(func_id.clone());
+                    (
+                        db.module_items(func.file_id)[func.value]
+                            .ast_ptr
+                            .syntax_node_ptr(),
+                        func.file_id,
+                    )
+                }
+                crate::def::resolver::ResolveResult::VariantId(variant_id) => {
+                    let variant = db.lookup_intern_variant(variant_id.clone());
+                    (
+                        db.module_items(variant.file_id)[variant.value]
+                            .ast_ptr
+                            .syntax_node_ptr(),
+                        variant.file_id,
+                    )
                 },
             };
-            
+
             // let full_node = name_node.ancestors().find(|n| {
             //     matches!(
             //         n.kind(),

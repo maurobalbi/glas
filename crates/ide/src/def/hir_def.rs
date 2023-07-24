@@ -2,7 +2,7 @@ use la_arena::Idx;
 
 use crate::{InFile, impl_intern, impl_from};
 
-use super::{ DefDatabase, module::Function};
+use super::{ DefDatabase, module::{Function, Adt, Variant}};
 use crate::impl_intern_key;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -15,13 +15,37 @@ impl_intern!(
     lookup_intern_function
 );
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct AdtId(pub salsa::InternId);
+pub type AdtLoc = InFile<Idx<Adt>>;
+impl_intern!(
+    AdtId,
+    AdtLoc,
+    intern_adt,
+    lookup_intern_adt
+);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct VariantId(pub salsa::InternId);
+pub type VariantLoc = InFile<Idx<Variant>>;
+impl_intern!(
+    VariantId,
+    VariantLoc,
+    intern_variant,
+    lookup_intern_variant
+);
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ModuleDefId {
-    FunctionId(FunctionId)
+    FunctionId(FunctionId),
+    AdtId(AdtId),
+    VariantId(VariantId),
 }
 
 impl_from!(
-    FunctionId
+    FunctionId,
+    AdtId,
+    VariantId
     for ModuleDefId 
 );
 

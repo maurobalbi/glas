@@ -10,7 +10,7 @@ use crate::{
     def::{
         body::{self, Body},
         hir_def::FunctionId,
-        module::{Expr, ExprId, Function, Literal, NameId, PatternId, Statement},
+        module::{Expr, ExprId, Function, Literal, PatternId, Statement},
         resolver::ResolveResult,
         resolver_for_expr,
     },
@@ -90,9 +90,6 @@ pub(crate) fn infer_function_group_query(
     let mut fn_to_ty_var = HashMap::new();
 
     for f in group.into_iter() {
-        let func = db.lookup_intern_function(f);
-        let fn_ir = db.module_items(func.file_id);
-        let func = fn_ir[func.value].clone();
         let body = db.body(f);
         let mut ctx = InferCtx {
             db,
@@ -102,7 +99,7 @@ pub(crate) fn infer_function_group_query(
             body: body.deref(),
             body_ctx: BodyCtx::default(),
         };
-        let ty = ctx.infer_function(&func, &body);
+        let ty = ctx.infer_function(&body);
         fn_to_ty_var.insert(f, ty);
 
         let inferred_ctx = mem::replace(&mut ctx.body_ctx, BodyCtx::default());
@@ -147,7 +144,7 @@ impl<'db> InferCtx<'db> {
         ty_var
     }
 
-    fn import_type(&mut self, ty: super::Ty, env: &mut HashMap<u32, TyVar>) -> TyVar {
+    fn make_type(&mut self, ty: super::Ty, env: &mut HashMap<u32, TyVar>) -> TyVar {
         let ty = match ty {
             super::Ty::Unknown => return self.new_ty_var(),
             super::Ty::Generic { idx } => {
@@ -167,12 +164,12 @@ impl<'db> InferCtx<'db> {
                 let mut pars = Vec::new();
                 for param in params.deref().into_iter() {
                     let par_var = self.new_ty_var();
-                    let par_ty = self.import_type(param.clone(), env);
+                    let par_ty = self.make_type(param.clone(), env);
                     self.unify_var(par_var, par_ty);
                     pars.push(par_var);
                 }
                 let ret = self.new_ty_var();
-                let ret_ty = self.import_type(return_.deref().clone(), env);
+                let ret_ty = self.make_type(return_.deref().clone(), env);
                 self.unify_var(ret, ret_ty);
                 Ty::Function {
                     params: pars,
@@ -180,11 +177,12 @@ impl<'db> InferCtx<'db> {
                 }
             }
             super::Ty::Tuple { fields } => todo!(),
+            super::Ty::Adt() => todo!(),
         };
         TyVar(self.table.push(ty))
     }
 
-    fn infer_function(&mut self, func: &Function, body: &Body) -> TyVar {
+    fn infer_function(&mut self, body: &Body) -> TyVar {
         let mut param_tys = Vec::new();
         for param in &body.params {
             let param_ty = self.new_ty_var();
@@ -292,7 +290,10 @@ impl<'db> InferCtx<'db> {
                     Some(ResolveResult::FunctionId(fn_id)) => {
                         let inferred_ty = self.db.infer_function(fn_id);
                         let mut env = HashMap::new();
-                        self.import_type(inferred_ty.fn_ty.clone(), &mut env)
+                        self.make_type(inferred_ty.fn_ty.clone(), &mut env)
+                    }
+                    Some(ResolveResult::VariantId(var_id)) => {
+                        self.new_ty_var()
                     }
                     None => unreachable!("This is a compiler bug!"),
                 }

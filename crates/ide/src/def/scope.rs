@@ -11,7 +11,7 @@ use crate::{DefDatabase, FileId};
 use super::{
     body::{self, Body},
     hir::{Module, ModuleDef},
-    hir_def::{FunctionLoc, ModuleDefId},
+    hir_def::{FunctionLoc, ModuleDefId, AdtLoc, AdtId, VariantLoc},
     module::{Expr, ExprId, Import, Pattern, PatternId, Statement, Visibility},
     resolver::ResolveResult,
     resolver_for_expr, FunctionId,
@@ -24,7 +24,10 @@ pub fn module_scope_query(db: &dyn DefDatabase, file_id: FileId) -> Arc<ModuleSc
 
     for (_, import) in module_data.imports() {
         if let Some(val) = scope.resolve_import(db, import) {
-            scope.values.insert(import.local_name(), val);
+            match val {
+                ModuleDefId::AdtId(_) =>  scope.types.insert(import.local_name(), val),
+                _ => scope.values.insert(import.local_name(), val)
+            };
         }
     }
 
@@ -40,6 +43,32 @@ pub fn module_scope_query(db: &dyn DefDatabase, file_id: FileId) -> Arc<ModuleSc
             .declarations
             .insert(name.clone(), (def, func.visibility.clone()));
     }
+
+    for (adt_id, adt) in module_data.adts() {
+        let name = &adt.name;
+        let adt_loc = db.intern_adt(AdtLoc{
+            file_id,
+            value: adt_id
+        });
+        let def = ModuleDefId::AdtId(adt_loc);
+        scope.types.insert(name.clone(), def.clone());
+        scope.declarations.insert(name.clone(), (def, adt.visibility.clone()));
+
+        for variant_id in adt.constructors.clone() {
+            let variant = &module_data[variant_id];
+            let name = &variant.name;
+            let variant_loc = db.intern_variant(VariantLoc{
+                file_id,
+                value: variant_id
+            });
+            let def = ModuleDefId::VariantId(variant_loc);
+            scope.values.insert(name.clone(), def.clone());
+
+            //use visibility of adt
+            scope.declarations.insert(name.clone(), (def, adt.visibility.clone()));
+        }
+    }
+    
     // collect all defs and imports
 
     Arc::new(scope)
@@ -48,7 +77,8 @@ pub fn module_scope_query(db: &dyn DefDatabase, file_id: FileId) -> Arc<ModuleSc
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct ModuleScope {
     /// The values visible in this module including imports
-    values: HashMap<SmolStr, ModuleDefId>,
+    values: IndexMap<SmolStr, ModuleDefId>,
+    types: IndexMap<SmolStr, ModuleDefId>,
 
     /// The defs declared in this module which can potentially be imported in another module
     declarations: IndexMap<SmolStr, (ModuleDefId, Visibility)>,
@@ -61,6 +91,10 @@ impl ModuleScope {
 
     pub fn values(&self) -> impl Iterator<Item = &ModuleDefId> + ExactSizeIterator + '_ {
         self.values.iter().map(|v| v.1)
+    }
+
+    pub fn types(&self) -> impl Iterator<Item = &ModuleDefId> + ExactSizeIterator + '_ {
+        self.types.iter().map(|v| v.1)
     }
 
     pub fn declarations(
@@ -103,8 +137,7 @@ pub struct ExprScopes {
 impl ExprScopes {
     pub fn expr_scopes_query(db: &dyn DefDatabase, func: FunctionId) -> Arc<ExprScopes> {
         let body = db.body(func);
-        let func = db.lookup_intern_function(func);
-        // let func = &db.module_items(func.file_id)[func.value];
+
         let mut this = ExprScopes {
             scopes: Arena::default(),
             scope_by_expr: ArenaMap::default(),
@@ -123,39 +156,6 @@ impl ExprScopes {
             entries: vec![],
         })
     }
-
-    // pub(crate) fn expr_scopes_query(db: &dyn DefDatabase, function_id: FunctionId) -> Arc<Self> {
-
-    //     let mut this = Self {
-    //         scopes: Arena::new(),
-    //         scope_by_expr: ArenaMap::with_capacity(module.exprs.len()),
-    //     };
-
-    //     let import_definitions = module.imports().filter_map(|(_, import)| {
-    //         Some((import.local_name(), this.resolve_import(db, import)?))
-    //     });
-
-    //     let definitions = module
-    //         .functions()
-    //         .map(|(_, f)| (module[f.name].text.clone(), (f.name, file_id)));
-
-    //     let import_scope = this.scopes.alloc(ScopeData {
-    //         parent: None,
-    //         kind: ScopeKind::Imports(import_definitions.collect()),
-    //     });
-
-    //     let root_scope = this.scopes.alloc(ScopeData {
-    //         parent: Some(import_scope),
-    //         kind: ScopeKind::Definitions(definitions.collect()),
-    //     });
-
-    //     for (function, _) in module.functions.iter() {
-    //         this.traverse_function(function, &module, root_scope);
-    //     }
-
-    //     this.shrink_to_fit();
-    //     Arc::new(this)
-    // }
 
     pub fn shrink_to_fit(&mut self) {
         self.scopes.shrink_to_fit();
@@ -319,15 +319,17 @@ pub(crate) fn dependency_order_query(
             ModuleDefId::FunctionId(owner_id) => {
                 let body = db.body(owner_id.clone());
                 edges.push((owner_id.clone().0.as_u32(), owner_id.clone().0.as_u32()));
-                body.exprs().for_each(|(e_id, expr)| match expr {
-                Expr::NameRef(name) => {
-                    let resolver = resolver_for_expr(db, owner_id.clone(), e_id);
-                    let Some(ResolveResult::FunctionId(fn_id)) = resolver.resolve_name(name) else {return};
-                    edges.push((owner_id.clone().0.as_u32(), fn_id.0.as_u32()))
-                },
-                _ => {},
-            });
+                body.exprs().for_each(|(e_id, expr)| 
+                    match expr {
+                        Expr::NameRef(name) => {
+                            let resolver = resolver_for_expr(db, owner_id.clone(), e_id);
+                            let Some(ResolveResult::FunctionId(fn_id)) = resolver.resolve_name(name) else {return};
+                            edges.push((owner_id.clone().0.as_u32(), fn_id.0.as_u32()))
+                        },
+                        _ => {},
+                });
             }
+            _ => {}
         }
     }
 

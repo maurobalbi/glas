@@ -3,7 +3,6 @@ use la_arena::Idx;
 use crate::{impl_from, DefDatabase, SourceRootId};
 
 use super::{
-    module:: Name,
     scope::ExprScopes, FunctionId,
 };
 
@@ -26,7 +25,6 @@ impl Package {
 #[derive(Debug)]
 pub struct PackageDependency {
     pub package: Package,
-    pub name: Name,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

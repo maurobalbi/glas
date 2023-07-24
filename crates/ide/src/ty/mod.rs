@@ -9,7 +9,7 @@ use std::{sync::Arc, collections::HashMap};
 
 pub use infer::InferenceResult;
 
-use crate::{DefDatabase, FileId, def::{module::NameId, hir_def::FunctionId}, ide::Upcast};
+use crate::{DefDatabase, FileId, def::hir_def::FunctionId, ide::Upcast};
 
 
 #[salsa::query_group(TyDatabaseStorage)]
@@ -32,6 +32,7 @@ pub enum Ty {
         params: Arc<Vec<Ty>>, 
         return_: Arc<Ty>
     },
+    Adt(),
     Tuple {
         fields: Arc<Vec<Ty>>
     },

@@ -545,10 +545,11 @@ impl Server {
 
     fn on_set_package_info(&mut self, info: SetPackageInfoEvent) -> NotifyResult {
         tracing::debug!("Set package info: {:#?}", info.0);
-        self.vfs
+        let mut vfs = self.vfs
             .write()
-            .unwrap()
-            .set_package_info(info.0.as_ref().map(|i| i.0.clone()));
+            .unwrap();
+            
+        vfs.set_package_info(info.0.as_ref().map(|i| i.0.clone()));
 
         let roots = info
             .0
@@ -556,6 +557,11 @@ impl Server {
             .unwrap_or_else(|| vec![self.config.root_path.clone()]);
         self.source_root_config = roots;
 
+        let (root_sets, module_map) = Self::lower_vfs(&mut vfs, self.source_root_config.clone());
+        vfs.set_roots_and_map(root_sets, module_map);
+
+        drop(vfs);
+        
         self.apply_vfs_change();
 
         // This is currently mostly to get proper diagnostics on startup
@@ -688,8 +694,7 @@ impl Server {
     fn apply_vfs_change(&mut self) {
         let mut vfs = self.vfs.write().unwrap();
         
-        let (root_sets, module_map) = Self::lower_vfs(&mut vfs, self.source_root_config.clone());
-        vfs.set_roots_and_map(root_sets, module_map);
+
 
         let changes = vfs.take_change();
         drop(vfs);

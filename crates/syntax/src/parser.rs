@@ -400,7 +400,7 @@ fn custom_type(p: &mut Parser, m: MarkOpened) {
                 }
             }
             p.expect(T!["}"]);
-            p.finish_node(m, CUSTOM_TYPE);
+            p.finish_node(m, ADT);
         }
         T!["="] => {
             if opaque {
@@ -443,11 +443,11 @@ fn custom_type_variant(p: &mut Parser) {
                 p.bump_with_error(ErrorKind::ExpectedType);
             }
         }
-        p.finish_node(f, VARIANT_FIELD_LIST);
+        p.finish_node(f, CONSTRUCTOR_FIELD_LIST);
         p.expect(T![")"]);
     }
 
-    p.finish_node(m, CUSTOM_TYPE_VARIANT);
+    p.finish_node(m, VARIANT);
 }
 
 fn type_variant_field(p: &mut Parser) {
@@ -459,7 +459,7 @@ fn type_variant_field(p: &mut Parser) {
         p.expect(T![":"]);
     }
     type_expr(p);
-    p.finish_node(m, VARIANT_FIELD);
+    p.finish_node(m, CONSTRUCTOR_FIELD);
 }
 
 fn function(p: &mut Parser, m: MarkOpened, is_anon: bool) -> MarkClosed {
@@ -487,6 +487,9 @@ fn function(p: &mut Parser, m: MarkOpened, is_anon: bool) -> MarkClosed {
         block(p);
     }
 
+    if is_anon {
+        return p.finish_node(m, LAMBDA)   
+    }
     p.finish_node(m, FUNCTION)
 }
 
@@ -1249,20 +1252,19 @@ fn type_expr(p: &mut Parser) {
         // type variable or constructor type
         IDENT => {
             let m = p.start_node();
-            let n = p.start_node();
             p.expect(IDENT);
-            p.finish_node(n, MODULE_NAME);
             if !p.at(T!["."]) {
-                p.finish_node(m, TYPE_NAME_REF);
+                p.finish_node(m, TYPE_NAME);
                 return;
             }
-
+            let m = p.finish_node(m, MODULE_NAME);
+            let n = p.start_node_before(m);
             type_application = true;
             p.expect(T!["."]);
             let t = p.start_node();
             p.expect(U_IDENT);
             p.finish_node(t, TYPE_NAME);
-            p.finish_node(m, TYPE_NAME_REF)
+            p.finish_node(n, TYPE_NAME_REF)
         }
         // constructor
         U_IDENT => {
