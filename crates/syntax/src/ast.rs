@@ -550,8 +550,8 @@ mod tests {
     fn assert() {
         let e = crate::parse_module(
             "fn bla2(a) {
-                let a = fn(a,b) {1}
-                b
+                let a = Bla()
+                
               }",
         );
         for error in e.errors() {

@@ -5,14 +5,17 @@ mod hover;
 
 use crate::base::SourceDatabaseStorage;
 use crate::def::{DefDatabaseStorage, InternDatabaseStorage};
-use crate::ty::{TyDatabaseStorage, TyDatabase};
-use crate::{Change, Diagnostic, FileId, FileSet, FilePos, SourceRoot, VfsPath, ModuleMap, DefDatabase, SourceDatabase};
+use crate::ty::{TyDatabase, TyDatabaseStorage};
+use crate::{
+    Change, DefDatabase, Diagnostic, FileId, FilePos, FileSet, ModuleMap, SourceDatabase,
+    SourceRoot, VfsPath,
+};
 use salsa::{Database, Durability, ParallelDatabase};
 use std::fmt;
 use syntax::TextRange;
 
-pub use highlight_related::HlRelated;
 pub use goto_definition::GotoDefinitionResult;
+pub use highlight_related::HlRelated;
 pub use hover::HoverResult;
 
 pub const DEFAULT_LRU_CAP: usize = 128;
@@ -28,7 +31,12 @@ pub use salsa::Cancelled;
 
 pub type Cancellable<T> = Result<T, Cancelled>;
 
-#[salsa::database(InternDatabaseStorage, SourceDatabaseStorage, DefDatabaseStorage, TyDatabaseStorage)]
+#[salsa::database(
+    InternDatabaseStorage,
+    SourceDatabaseStorage,
+    DefDatabaseStorage,
+    TyDatabaseStorage
+)]
 
 pub struct RootDatabase {
     storage: salsa::Storage<Self>,
@@ -104,7 +112,10 @@ impl AnalysisHost {
         change.change_file(file, src.into());
         let mut file_set = FileSet::default();
         file_set.insert(file, VfsPath::new(format!("/main.gleam"))); // Hack
-        change.set_roots_and_map(vec![SourceRoot::new_local(file_set, "/".into())], ModuleMap::default());
+        change.set_roots_and_map(
+            vec![SourceRoot::new_local(file_set, "/".into())],
+            ModuleMap::default(),
+        );
         let mut this = Self::new();
         this.apply_change(change);
         (this, file)
@@ -140,6 +151,9 @@ impl Analysis {
     }
 
     //// LSP standard ////
+    pub fn hover(&self, fpos: FilePos) -> Cancellable<Option<HoverResult>> {
+        self.with_db(|db| hover::hover(db, fpos))
+    }
 
     pub fn diagnostics(&self, file: FileId) -> Cancellable<Vec<Diagnostic>> {
         self.with_db(|db| diagnostics::diagnostics(db, file))
@@ -149,7 +163,7 @@ impl Analysis {
         self.with_db(|db| highlight_related::highlight_related(db, fpos).unwrap_or_default())
     }
 
-   pub fn goto_definition(&self, pos: FilePos) -> Cancellable<Option<GotoDefinitionResult>> {
+    pub fn goto_definition(&self, pos: FilePos) -> Cancellable<Option<GotoDefinitionResult>> {
         self.with_db(|db| goto_definition::goto_definition(db, pos))
     }
 }

@@ -1,5 +1,5 @@
 use super::NavigationTarget;
-use crate::def::hir_def::ModuleDefId;
+use crate::def::hir_def::{ModuleDefId, VariantLoc};
 use crate::def::resolver::resolver_for_toplevel;
 use crate::def::resolver_for_expr;
 use crate::def::source_analyzer::find_def;
@@ -83,12 +83,12 @@ pub(crate) fn goto_definition(
                     )
                 }
                 crate::def::resolver::ResolveResult::VariantId(variant_id) => {
-                    let variant = db.lookup_intern_variant(variant_id.clone());
+                    let VariantLoc{value,..} = db.lookup_intern_variant(variant_id.clone());
                     (
-                        db.module_items(variant.file_id)[variant.value]
+                        db.module_items(value.file_id)[value.value]
                             .ast_ptr
                             .syntax_node_ptr(),
-                        variant.file_id,
+                        value.file_id,
                     )
                 },
             };

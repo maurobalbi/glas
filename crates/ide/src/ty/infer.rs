@@ -9,7 +9,7 @@ use crate::{
     base::Dependency,
     def::{
         body::{self, Body},
-        hir_def::FunctionId,
+        hir_def::{FunctionId, AdtId},
         module::{Expr, ExprId, Function, Literal, PatternId, Statement},
         resolver::ResolveResult,
         resolver_for_expr,
@@ -29,6 +29,7 @@ enum Ty {
     Int,
     Float,
     String,
+    Adt { adt_id: AdtId, params: Vec<TyVar> },
     Function { params: Vec<TyVar>, return_: TyVar },
     Tuple { fields: Vec<TyVar> },
 }
@@ -55,7 +56,6 @@ impl InferenceResult {
     pub fn ty_for_expr(&self, expr: ExprId) -> super::Ty {
         self.expr_ty_map[expr].clone()
     }
-
 }
 
 pub(crate) fn infer_function_query(db: &dyn TyDatabase, fn_id: FunctionId) -> Arc<InferenceResult> {
@@ -177,7 +177,19 @@ impl<'db> InferCtx<'db> {
                 }
             }
             super::Ty::Tuple { fields } => todo!(),
-            super::Ty::Adt() => todo!(),
+            super::Ty::Adt { adt_id,  params } => {
+                let mut pars = Vec::new();
+                for param in params.deref().into_iter() {
+                    let par_var = self.new_ty_var();
+                    let par_ty = self.make_type(param.clone(), env);
+                    self.unify_var(par_var, par_ty);
+                    pars.push(par_var);
+                }
+                Ty::Adt {
+                    params: pars,
+                    adt_id
+                }
+            }
         };
         TyVar(self.table.push(ty))
     }
@@ -261,12 +273,7 @@ impl<'db> InferCtx<'db> {
                 }
                 let ret_ty = self.new_ty_var();
                 let fun_ty = self.infer_expr(*func);
-                tracing::info!(
-                    "inferring func {:?} {:?} {:?}",
-                    fun_ty,
-                    self.table.find(arg_tys[0].0),
-                    ret_ty
-                );
+          
                 self.unify_var_ty(
                     fun_ty,
                     Ty::Function {
@@ -293,9 +300,14 @@ impl<'db> InferCtx<'db> {
                         self.make_type(inferred_ty.fn_ty.clone(), &mut env)
                     }
                     Some(ResolveResult::VariantId(var_id)) => {
+                        let adt = db.lookup_intern_variant(var_id);
+                        let mut env = HashMap::new();
+                        self.make_type(super::Ty::Adt { adt_id: adt.parent, params: Arc::new(Vec::new()) }, &mut env)
+                    },
+                    // No resolution found, user error!?! report diagnostic!
+                    None => {
                         self.new_ty_var()
-                    }
-                    None => unreachable!("This is a compiler bug!"),
+                    },
                 }
             }
         }
@@ -449,6 +461,7 @@ impl<'a> Collector<'a> {
                 }
             }
             Ty::Tuple { fields: _ } => todo!(),
+            Ty::Adt { adt_id, params } => super::Ty::Adt { adt_id: *adt_id, params: Arc::new(Vec::new()) },
         }
     }
 }

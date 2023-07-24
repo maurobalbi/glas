@@ -27,7 +27,9 @@ impl_intern!(
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct VariantId(pub salsa::InternId);
-pub type VariantLoc = InFile<Idx<Variant>>;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct VariantLoc { pub parent: AdtId, pub value: InFile<Idx<Variant>> }
 impl_intern!(
     VariantId,
     VariantLoc,

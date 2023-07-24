@@ -52,9 +52,12 @@ fn check_all(src: &str, expect: Expect) {
             crate::def::hir_def::ModuleDefId::FunctionId(fn_id) => {
                 let infer = db.infer_function(fn_id);
                 
-                let got = format!("{:?}", infer);
+                let got = format!("{:?}", infer.fn_ty);
                 expect.assert_eq(&got);
             },
+            crate::def::hir_def::ModuleDefId::AdtId(_) => todo!(),
+            crate::def::hir_def::ModuleDefId::VariantId(_) => todo!(),
+            
         }
     }
 }
@@ -72,7 +75,7 @@ fn check_all(src: &str, expect: Expect) {
 #[traced_test]
 #[test] 
 fn let_in() {
-    check_all("fn bla(a, b) { a }", expect![[r#"
+    check_all("type Bla2 { Bla } fn bla(a, b) { Bla() }", expect![[r#"
         main: Function { params: [Int, Unknown], return_: Int }
         a: Int
         b: Unknown

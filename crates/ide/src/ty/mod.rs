@@ -1,22 +1,21 @@
+mod display;
 mod infer;
 mod union_find;
-mod display;
 
 #[cfg(test)]
 mod tests;
 
-use std::{sync::Arc, collections::HashMap};
+use std::{collections::HashMap, sync::Arc};
 
 pub use infer::InferenceResult;
 
-use crate::{DefDatabase, FileId, def::hir_def::FunctionId, ide::Upcast};
-
+use crate::{def::hir_def::{FunctionId, AdtId}, ide::Upcast, DefDatabase, FileId};
 
 #[salsa::query_group(TyDatabaseStorage)]
-pub trait TyDatabase: DefDatabase + Upcast<dyn DefDatabase>{
+pub trait TyDatabase: DefDatabase + Upcast<dyn DefDatabase> {
     #[salsa::invoke(infer::infer_function_query)]
     fn infer_function(&self, fn_id: FunctionId) -> Arc<InferenceResult>;
-    
+
     #[salsa::invoke(infer::infer_function_group_query)]
     fn infer_function_group(&self, group: Vec<FunctionId>) -> HashMap<FunctionId, InferenceResult>;
 }
@@ -24,16 +23,21 @@ pub trait TyDatabase: DefDatabase + Upcast<dyn DefDatabase>{
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Ty {
     Unknown,
-    Generic { idx: u32 },
+    Generic {
+        idx: u32,
+    },
     Int,
     Float,
     String,
     Function {
-        params: Arc<Vec<Ty>>, 
-        return_: Arc<Ty>
+        params: Arc<Vec<Ty>>,
+        return_: Arc<Ty>,
     },
-    Adt(),
+    Adt {
+        adt_id: AdtId,
+        params: Arc<Vec<Ty>>,
+    },
     Tuple {
-        fields: Arc<Vec<Ty>>
+        fields: Arc<Vec<Ty>>,
     },
 }

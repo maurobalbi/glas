@@ -6,7 +6,7 @@ use petgraph::stable_graph::StableGraph;
 use salsa::InternId;
 use smol_str::SmolStr;
 
-use crate::{DefDatabase, FileId};
+use crate::{DefDatabase, FileId, InFile};
 
 use super::{
     body::{self, Body},
@@ -58,8 +58,8 @@ pub fn module_scope_query(db: &dyn DefDatabase, file_id: FileId) -> Arc<ModuleSc
             let variant = &module_data[variant_id];
             let name = &variant.name;
             let variant_loc = db.intern_variant(VariantLoc{
-                file_id,
-                value: variant_id
+                parent: adt_loc,
+                value: InFile{ value:variant_id, file_id}
             });
             let def = ModuleDefId::VariantId(variant_loc);
             scope.values.insert(name.clone(), def.clone());
@@ -69,8 +69,6 @@ pub fn module_scope_query(db: &dyn DefDatabase, file_id: FileId) -> Arc<ModuleSc
         }
     }
     
-    // collect all defs and imports
-
     Arc::new(scope)
 }
 
@@ -110,7 +108,6 @@ impl ModuleScope {
             ..
         } = import;
         let file_id = db.module_map().file_for_module_name(module.clone())?;
-        // let module = db.module_items(file_id);
         let scope = db.module_scope(file_id);
         let Some((item, Visibility::Public)) = scope.declarations.get(unqualifed_name) else {
             return None
@@ -208,7 +205,6 @@ impl ExprScopes {
                     pattern,
                     body: body_expr,
                 } => {
-                    tracing::info!("SCOPE: {:#?}", scope);
                     self.traverse_expr(body, *body_expr, scope);
                     scope = self.scopes.alloc(ScopeData {
                         parent: Some(scope),

@@ -664,7 +664,11 @@ fn expr_bp(p: &mut Parser, min_bp: u8) {
                         p.bump();
                         lhs = p.finish_node(m, TUPLE_INDEX);
                     }
-                    _ => break,
+                    _ => {
+                        let m = p.start_node_before(lhs);
+                        lhs = p.finish_node(m, FIELD_ACCESS);
+                        break;
+                    },
                 }
             }
             _ => break,

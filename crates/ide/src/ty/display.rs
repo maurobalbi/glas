@@ -71,7 +71,7 @@ impl fmt::Display for TyDisplay<'_> {
                 }
             }
             Ty::Tuple { fields } => todo!(),
-            Ty::Adt() => todo!(),
+            Ty::Adt{adt_id,  params } => todo!(),
         }
     }
 }
