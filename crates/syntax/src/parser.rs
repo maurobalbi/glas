@@ -524,7 +524,11 @@ fn param(p: &mut Parser, is_anon: bool) {
         p.finish_node(n, LABEL);
     }
     let pat = p.start_node();
-    p.expect(IDENT);
+    if p.at(IDENT) || p.at(DISCARD_IDENT) {
+        p.bump()
+    } else {
+        p.error(ErrorKind::ExpectedIdentifier);
+    }
     p.finish_node(pat, PATTERN_VARIABLE);
 
     if p.at(T![":"]) {
@@ -1117,13 +1121,6 @@ fn name(p: &mut Parser) {
     let m = p.start_node();
     p.expect(IDENT);
     p.finish_node(m, NAME);
-}
-
-fn name_ref(p: &mut Parser) {
-    assert!(p.at(IDENT));
-    let m = p.start_node();
-    p.expect(IDENT);
-    p.finish_node(m, NAME_REF);
 }
 
 fn type_name(p: &mut Parser) -> MarkClosed {
