@@ -240,6 +240,11 @@ impl ExprScopes {
             }
             Pattern::Record { args: _ } => todo!(),
             Pattern::Missing => {}
+            Pattern::Tuple { fields } => {
+                for pattern in fields {
+                    self.add_bindings(body, scope, pattern);
+                }
+            },
         }
     }
 }

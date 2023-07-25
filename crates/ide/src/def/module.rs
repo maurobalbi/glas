@@ -121,6 +121,7 @@ pub type PatternId = Idx<Pattern>;
 pub enum Pattern {
     Missing,
     Variable { name: SmolStr },
+    Tuple { fields: Vec<PatternId> },
     Record { args: Vec<PatternId> },
 }
 
