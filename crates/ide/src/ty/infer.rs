@@ -9,7 +9,7 @@ use crate::{
     base::Dependency,
     def::{
         body::{self, Body},
-        hir_def::{FunctionId, AdtId},
+        hir_def::{AdtId, FunctionId},
         module::{Expr, ExprId, Function, Literal, PatternId, Statement},
         resolver::ResolveResult,
         resolver_for_expr,
@@ -177,7 +177,7 @@ impl<'db> InferCtx<'db> {
                 }
             }
             super::Ty::Tuple { fields } => todo!(),
-            super::Ty::Adt { adt_id,  params } => {
+            super::Ty::Adt { adt_id, params } => {
                 let mut pars = Vec::new();
                 for param in params.deref().into_iter() {
                     let par_var = self.new_ty_var();
@@ -187,7 +187,7 @@ impl<'db> InferCtx<'db> {
                 }
                 Ty::Adt {
                     params: pars,
-                    adt_id
+                    adt_id,
                 }
             }
         };
@@ -273,7 +273,7 @@ impl<'db> InferCtx<'db> {
                 }
                 let ret_ty = self.new_ty_var();
                 let fun_ty = self.infer_expr(*func);
-          
+
                 self.unify_var_ty(
                     fun_ty,
                     Ty::Function {
@@ -300,14 +300,18 @@ impl<'db> InferCtx<'db> {
                         self.make_type(inferred_ty.fn_ty.clone(), &mut env)
                     }
                     Some(ResolveResult::VariantId(var_id)) => {
-                        let adt = db.lookup_intern_variant(var_id);
+                        let variant = db.lookup_intern_variant(var_id);
                         let mut env = HashMap::new();
-                        self.make_type(super::Ty::Adt { adt_id: adt.parent, params: Arc::new(Vec::new()) }, &mut env)
-                    },
+                        self.make_type(
+                            super::Ty::Adt {
+                                adt_id: variant.parent,
+                                params: Arc::new(Vec::new()),
+                            },
+                            &mut env,
+                        )
+                    }
                     // No resolution found, user error!?! report diagnostic!
-                    None => {
-                        self.new_ty_var()
-                    },
+                    None => self.new_ty_var(),
                 }
             }
         }
@@ -461,7 +465,10 @@ impl<'a> Collector<'a> {
                 }
             }
             Ty::Tuple { fields: _ } => todo!(),
-            Ty::Adt { adt_id, params } => super::Ty::Adt { adt_id: *adt_id, params: Arc::new(Vec::new()) },
+            Ty::Adt { adt_id, params } => super::Ty::Adt {
+                adt_id: *adt_id,
+                params: Arc::new(Vec::new()),
+            },
         }
     }
 }
