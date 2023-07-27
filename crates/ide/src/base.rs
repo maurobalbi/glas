@@ -202,6 +202,28 @@ impl SourceRoot {
     }
 }
 
+pub fn module_name(root_path: &PathBuf, module_path: &Path) -> Option<SmolStr> {
+    // my/module.gleam
+    let mut module_path = module_path
+        .strip_prefix(root_path)
+        .expect("Stripping package prefix from module path")
+        .to_path_buf();
+
+    // my/module
+    let _ = module_path.set_extension("");
+
+    let module_path: PathBuf = module_path.components().skip(1).collect();
+
+    // Stringify
+    let name = module_path
+        .to_str()
+        .expect("Module name path to str")
+        .to_string();
+
+    // normalise windows paths
+    Some(name.replace("\\", "/").into())
+}
+
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct PackageGraph {
     pub nodes: HashMap<SourceRootId, PackageInfo>,

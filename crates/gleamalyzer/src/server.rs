@@ -6,7 +6,7 @@ use async_lsp::router::Router;
 use async_lsp::{ClientSocket, ErrorCode, LanguageClient, ResponseError};
 use gleam_interop;
 use ide::{
-    Analysis, AnalysisHost, Cancelled, FileSet, ModuleMap, PackageInfo, SourceRoot, VfsPath,
+    Analysis, AnalysisHost, Cancelled, FileSet, ModuleMap, PackageInfo, SourceRoot, VfsPath, module_name,
 };
 use lsp_types::notification::Notification;
 use lsp_types::request::{self as req, Request};
@@ -714,6 +714,7 @@ impl Server {
         }
 
         //sorting by length matches the longest prefix first
+        // e.g. /path/to/module is matched before /path
         prefix_components.sort_by(|a, b| b.len().cmp(&a.len()));
 
         for (file_id, file_path) in vfs.iter() {
@@ -763,28 +764,6 @@ impl Server {
             .collect();
         (source_roots, module_map)
     }
-}
-
-pub(crate) fn module_name(root_path: &PathBuf, module_path: &Path) -> Option<SmolStr> {
-    // my/module.gleam
-    let mut module_path = module_path
-        .strip_prefix(root_path)
-        .expect("Stripping package prefix from module path")
-        .to_path_buf();
-
-    // my/module
-    let _ = module_path.set_extension("");
-
-    let module_path: PathBuf = module_path.components().skip(1).collect();
-
-    // Stringify
-    let name = module_path
-        .to_str()
-        .expect("Module name path to str")
-        .to_string();
-
-    // normalise windows paths
-    Some(name.replace("\\", "/").into())
 }
 
 trait RouterExt: BorrowMut<Router<Server>> {

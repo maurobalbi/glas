@@ -3,12 +3,13 @@ use crate::def::{DefDatabaseStorage, InternDatabaseStorage};
 use crate::ide::Upcast;
 use crate::ty::TyDatabaseStorage;
 use crate::{
-    Change, DefDatabase, FileId, FilePos, FileRange, FileSet, ModuleMap, PackageGraph, PackageInfo,
-    SourceRoot, SourceRootId, VfsPath,
+    module_name, Change, DefDatabase, FileId, FilePos, FileRange, FileSet, ModuleMap, PackageGraph,
+    PackageInfo, SourceRoot, SourceRootId, VfsPath,
 };
 use anyhow::{bail, ensure, Context, Result};
 use indexmap::IndexMap;
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::{mem, ops};
 use syntax::ast::AstNode;
 use syntax::{GleamLanguage, SyntaxNode, TextSize};
@@ -49,14 +50,23 @@ impl TestDB {
         let mut db = Self::default();
         let mut change = Change::default();
         let mut file_set = FileSet::default();
+        let mut module_map = ModuleMap::default();
         for (i, (path, text)) in (0u32..).zip(&f.files) {
             let file = FileId(i);
             file_set.insert(file, path.clone());
+            module_map.insert(
+                file,
+                module_name(
+                    &PathBuf::from(""),
+                    path.as_path().expect("should be a path"),
+                )
+                .expect("expected a module name"),
+            );
             change.change_file(file, text.to_owned().into());
         }
         change.set_roots_and_map(
-            vec![SourceRoot::new_local(file_set, "/test".into())],
-            ModuleMap::default(),
+            vec![SourceRoot::new_local(file_set, "/".into())],
+            module_map,
         );
         let package_graph = PackageGraph {
             nodes: HashMap::from_iter(f.package_info.clone().map(|info| (SourceRootId(0), info))),
@@ -149,7 +159,7 @@ impl Fixture {
             } else {
                 if cur_path.is_none() {
                     missing_header = true;
-                    cur_path = Some(VfsPath::new(format!("/{DEFAULT_IMPORT_FILE}")));
+                    cur_path = Some(VfsPath::new(format!("/test.gleam")));
                 }
 
                 let mut iter = line.chars().peekable();

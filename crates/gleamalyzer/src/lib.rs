@@ -3,7 +3,7 @@ mod config;
 mod convert;
 mod handler;
 mod meter;
-mod server;
+pub mod server;
 mod vfs;
 
 use anyhow::Result;

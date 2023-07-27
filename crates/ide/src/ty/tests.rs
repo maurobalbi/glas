@@ -81,14 +81,29 @@ fn let_in() {
     )
 }
 
-#[traced_test]
 #[test]
-fn use_() {
+fn generic_let() {
     check_all(
-        "fn bla(a, b, c, d) { a + 1 } fn main(a) { main2(bla) } fn main2(b) { b(1.1) }",
+        "fn woosa(a) { let a = a a }",
         expect![[r#"
-        bla: fn(Int, a, b, c) -> Int
-        main: fn(a) -> Int
-        main2: fn(fn(Float) -> a) -> a"#]],
+        "#]]
+    )
+}
+
+#[test]
+fn lablelled_args() {
+    check_all(
+        "fn wobble(b, f a: Int) { a } fn main() { abc(1) }",
+        expect![[r#"
+    wobble: fn(a, b) -> Bla2"#]],
+    )
+}
+
+#[test]
+fn binary() {
+    check_all(
+        "fn bla(a, b, c, d) { a + 1 }",
+        expect![[r#"
+        bla: fn(Int, a, b, c) -> Int"#]],
     )
 }
