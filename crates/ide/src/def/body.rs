@@ -1,6 +1,6 @@
 use std::{collections::HashMap, ops};
 
-use la_arena::{Arena, ArenaMap, RawIdx};
+use la_arena::{Arena, ArenaMap, Idx, IdxRange, RawIdx};
 use smol_str::SmolStr;
 use syntax::{
     ast::{self, AstNode, LiteralKind, StatementExpr},
@@ -10,7 +10,7 @@ use syntax::{
 use crate::{DefDatabase, Diagnostic, FileId, InFile};
 
 use super::{
-    module::{Expr, ExprId, Literal, Pattern, PatternId, Statement},
+    module::{Clause, Expr, ExprId, Literal, Pattern, PatternId, Statement},
     FunctionId,
 };
 
@@ -79,11 +79,11 @@ impl ops::Index<PatternId> for Body {
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct BodySourceMap {
-    pub expr_map: HashMap<ExprSource, ExprId>,
-    pub expr_map_rev: ArenaMap<ExprId, ExprSource>,
+    expr_map: HashMap<ExprSource, ExprId>,
+    expr_map_rev: ArenaMap<ExprId, ExprSource>,
 
-    pub pattern_map: HashMap<PatternSource, PatternId>,
-    pub pattern_map_rev: ArenaMap<PatternId, PatternSource>,
+    pattern_map: HashMap<PatternSource, PatternId>,
+    pattern_map_rev: ArenaMap<PatternId, PatternSource>,
 
     pub diagnostics: Vec<Diagnostic>,
 }
@@ -233,6 +233,33 @@ impl BodyLowerCtx<'_> {
                 let lit = self.lower_literal(lit);
                 self.alloc_expr(lit.map_or(Expr::Missing, Expr::Literal), ptr)
             }
+            ast::Expr::Case(case) => {
+                let start = self.next_expr_idx();
+                for subj in case.subjects() {
+                    self.lower_expr(subj);
+                }
+                let end = self.next_expr_idx();
+
+                let clauses = case.clauses().map(|clause| {
+                    let start = self.next_pattern_idx();
+                    for pattern in clause.patterns() {
+                        self.lower_pattern(pattern);
+                    }
+                    let end = self.next_pattern_idx();
+                    Clause {
+                        expr: self.lower_expr_opt(clause.body()),
+                        patterns: IdxRange::new(start..end),
+                    }
+                }).collect();
+
+                self.alloc_expr(
+                    Expr::Case {
+                        subjects: IdxRange::new(start..end),
+                        clauses
+                    },
+                    ptr,
+                )
+            }
             _ => self.alloc_expr(Expr::Missing, ptr),
         }
     }
@@ -310,7 +337,13 @@ impl BodyLowerCtx<'_> {
                 }
                 self.alloc_pattern(Pattern::Tuple { fields: pats }, ptr)
             }
-            ast::Pattern::AlternativePattern(_) => todo!(),
+            ast::Pattern::AlternativePattern(pat) => {
+                let mut pats = Vec::new();
+                for pat in pat.patterns() {
+                    pats.push(self.lower_pattern(pat));
+                }
+                self.alloc_pattern(Pattern::AlternativePattern{patterns: pats}, ptr)
+            },
         }
     }
 
@@ -319,5 +352,13 @@ impl BodyLowerCtx<'_> {
             Some(pat) => self.lower_pattern(pat),
             None => self.missing_pat(),
         }
+    }
+
+    fn next_expr_idx(&self) -> Idx<Expr> {
+        Idx::from_raw(RawIdx::from(self.body.exprs.len() as u32))
+    }
+
+    fn next_pattern_idx(&self) -> Idx<Pattern> {
+        Idx::from_raw(RawIdx::from(self.body.patterns.len() as u32))
     }
 }

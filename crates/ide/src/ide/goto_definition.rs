@@ -34,7 +34,8 @@ pub(crate) fn goto_definition(
     ) {
         return None;
     }
-    // Refactor to build make module map / data with exprs / other definitions. Its way to much work to use defbodies for no reason!
+
+    // Resolver is not enough for goto definition, some expressions have to be inferred aswell eg. field access
     if ast::NameRef::can_cast(tok.parent()?.kind()) {
         let expr = ast::Expr::cast(tok.parent()?)?;
 
@@ -64,30 +65,41 @@ pub(crate) fn goto_definition(
         let name = SmolStr::from(tok.text());
 
         let targets = resolver.resolve_name(&name).map(|ptr| {
-            let (node, file_id) = match ptr {
-                crate::def::resolver::ResolveResult::LocalBinding(pattern) => (
-                    db.body_source_map(resolver.body_owner()?.clone())
-                        .pattern_map_rev
-                        .get(pattern)?
+            let (full_range, focus_range, file_id) = match ptr {
+                crate::def::resolver::ResolveResult::LocalBinding(pattern) => {
+                    let focus_node = db.body_source_map(resolver.body_owner()?.clone())
+                        .node_for_pattern(pattern)?
                         .value
-                        .syntax_node_ptr(),
+                        .syntax_node_ptr();
+                    let root = db.parse(file_id).syntax_node();
+                    let full_range = focus_node.to_node(&root).parent().unwrap().text_range();
+                (
+                    full_range,
+                    focus_node.text_range(),
                     file_id,
-                ),
+                )}
+                ,
                 crate::def::resolver::ResolveResult::FunctionId(func_id) => {
                     let func = db.lookup_intern_function(func_id.clone());
-                    (
-                        db.module_items(func.file_id)[func.value]
+                    let full_node = db.module_items(func.file_id)[func.value]
                             .ast_ptr
-                            .syntax_node_ptr(),
+                            .syntax_node_ptr();
+                    let root = db.parse(file_id).syntax_node();
+                    let name = ast::Function::cast(full_node.to_node(&root)).unwrap().name().unwrap();
+                    (
+                        full_node.text_range(),
+                        name.token().unwrap().text_range(),
                         func.file_id,
                     )
                 }
                 crate::def::resolver::ResolveResult::VariantId(variant_id) => {
                     let VariantLoc { value, .. } = db.lookup_intern_variant(variant_id.clone());
-                    (
-                        db.module_items(value.file_id)[value.value]
+                    let full_range = db.module_items(value.file_id)[value.value]
                             .ast_ptr
-                            .syntax_node_ptr(),
+                            .syntax_node_ptr().text_range();
+                    (
+                        full_range,
+                        full_range,
                         value.file_id,
                     )
                 }
@@ -101,8 +113,8 @@ pub(crate) fn goto_definition(
             // })?;
             Some(NavigationTarget {
                 file_id,
-                focus_range: node.text_range(),
-                full_range: node.text_range(),
+                focus_range,
+                full_range,
             })
         })?;
 
@@ -123,4 +135,76 @@ pub(crate) fn goto_definition(
         focus_range: TextRange::new(TextSize::from(0), TextSize::from(5)),
         full_range: TextRange::new(TextSize::from(0), TextSize::from(5)),
     }]))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::base::SourceDatabase;
+    use crate::tests::TestDB;
+    use expect_test::{expect, Expect};
+    use tracing_test::traced_test;
+
+    #[track_caller]
+    fn check_no(fixture: &str) {
+        let (db, f) = TestDB::from_fixture(fixture).unwrap();
+        assert_eq!(f.markers().len(), 1, "Missing markers");
+        assert_eq!(goto_definition(&db, f[0]), None);
+    }
+
+    #[track_caller]
+    fn check(fixture: &str, expect: Expect) {
+        let (db, f) = TestDB::from_fixture(fixture).unwrap();
+        tracing::info!("Fixture {:?}", db.module_map());
+        assert_eq!(f.markers().len(), 1, "Missing markers");
+        let mut got = match goto_definition(&db, f[0]).expect("No definition") {
+            GotoDefinitionResult::Path(path) => format!("file://{}", path.display()),
+            GotoDefinitionResult::Targets(targets) => {
+                assert!(!targets.is_empty());
+                targets
+                    .into_iter()
+                    .map(|target| {
+                        tracing::info!("{:?}", target);
+                        assert!(target.full_range.contains_range(target.focus_range));
+                        let src = db.file_content(target.file_id);
+                        let mut full = src[target.full_range].to_owned();
+                        let relative_focus = target.focus_range - target.full_range.start();
+                        full.insert(relative_focus.end().into(), '>');
+                        full.insert(relative_focus.start().into(), '<');
+                        full
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            }
+        };
+        // Prettify.
+        if got.contains('\n') {
+            got += "\n";
+        }
+        expect.assert_eq(&got);
+    }
+
+    #[traced_test]
+    #[test]
+    fn let_expr() {
+        check("fn main(a) { let c = 123 $0c }", expect!["let <c> = 123"]);
+        check(r#"
+#-test.gleam
+fn main() {
+    1
+}
+
+
+#-test2.gleam
+import test
+
+fn bla() {
+    $0main()
+}
+"#, expect![r#"
+fn <main>() {
+    1
+}
+"#]);
+    }
 }

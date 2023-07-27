@@ -13,6 +13,8 @@ use syntax::{
     Parse,
 };
 
+
+
 #[derive(Default, Debug, Eq, PartialEq)]
 pub struct ModuleItemData {
     functions: Arena<Function>,
@@ -20,7 +22,7 @@ pub struct ModuleItemData {
     adts: Arena<Adt>,
 
     variants: Arena<Variant>,
-    diagnostics: Vec<Diagnostic>,
+    pub diagnostics: Vec<Diagnostic>,
 }
 
 impl ModuleItemData {
@@ -187,7 +189,7 @@ impl<'a> LowerCtx<'a> {
                 if let Some(param_name) = param.pattern()?.text() {
                     params.push(Param {
                         name: param_name.into(),
-                        label: param.label().and_then(|n| Some(n.token()?.text().into())),
+                        label: param.label().and_then(|n| Some(n.text()?.into())),
                     });
                 }
             }

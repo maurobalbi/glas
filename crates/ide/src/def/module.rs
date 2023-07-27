@@ -78,6 +78,13 @@ pub enum Visibility {
     Private,
 }
 
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct Clause {
+    pub patterns: IdxRange<Pattern>,
+    // pub guard: Option<ExprId>,
+    pub expr: ExprId,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Statement {
     Let {
@@ -111,6 +118,10 @@ pub enum Expr {
         func: ExprId,
         args: Vec<ExprId>,
     },
+    Case {
+        subjects: IdxRange<Expr>,
+        clauses: Vec<Clause>,
+    },
     NameRef(SmolStr),
 }
 
@@ -122,6 +133,7 @@ pub enum Pattern {
     Variable { name: SmolStr },
     Tuple { fields: Vec<PatternId> },
     Record { args: Vec<PatternId> },
+    AlternativePattern { patterns: Vec<PatternId> },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

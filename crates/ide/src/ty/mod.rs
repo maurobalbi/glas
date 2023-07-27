@@ -1,4 +1,4 @@
-mod display;
+pub mod display;
 mod infer;
 mod union_find;
 

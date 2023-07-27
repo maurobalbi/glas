@@ -3,15 +3,12 @@ use std::{collections::HashMap, mem, ops::Deref, sync::Arc};
 use la_arena::ArenaMap;
 use syntax::ast::BinaryOpKind;
 
-use crate::{
-    def::{
-        body::Body,
-        hir_def::{AdtId, FunctionId},
-        module::{Expr, ExprId, Literal, PatternId, Statement},
-        resolver::ResolveResult,
-        resolver_for_expr,
-    },
-    DefDatabase,
+use crate::def::{
+    body::Body,
+    hir_def::{AdtId, FunctionId},
+    module::{Expr, ExprId, Literal, PatternId, Statement},
+    resolver::ResolveResult,
+    resolver_for_expr,
 };
 
 use super::{union_find::UnionFind, TyDatabase};
@@ -22,7 +19,6 @@ struct TyVar(u32);
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum Ty {
     Unknown { idx: u32 },
-    Generic { idx: u32 },
     Bool,
     Int,
     Float,
@@ -196,10 +192,8 @@ impl<'db> InferCtx<'db> {
     fn infer_function(&mut self, body: &Body) -> TyVar {
         let mut param_tys = Vec::new();
         for param in &body.params {
-            let param_ty = self.new_ty_var();
-            param_tys.push(param_ty);
             let pat_ty = self.ty_for_pattern(*param);
-            self.unify_var(param_ty, pat_ty);
+            param_tys.push(pat_ty);
         }
         let body_ty = self.infer_expr(body.body_expr);
         Ty::Function {
@@ -343,6 +337,9 @@ impl<'db> InferCtx<'db> {
                     None => self.new_ty_var(),
                 }
             }
+            Expr::Case { subjects, clauses } => {
+                self.new_ty_var()
+            }
         }
     }
 
@@ -362,7 +359,6 @@ impl<'db> InferCtx<'db> {
         match (lhs, rhs) {
             (Ty::Unknown { idx }, Ty::Unknown { idx: _ }) => Ty::Unknown { idx },
             (Ty::Unknown { .. }, other) | (other, Ty::Unknown { .. }) => other,
-            (Ty::Generic { idx: _ }, other) | (other, Ty::Generic { idx: _ }) => other,
             (
                 Ty::Function {
                     params: params1,
@@ -478,7 +474,6 @@ impl<'a> Collector<'a> {
         let ty = mem::replace(self.table.get_mut(i), Ty::Unknown { idx: 0 });
         match &ty {
             Ty::Unknown { idx } => super::Ty::Generic { idx: idx.clone() },
-            Ty::Generic { idx } => super::Ty::Generic { idx: idx.clone() },
             Ty::Bool => super::Ty::Bool,
             Ty::Int => super::Ty::Int,
             Ty::Float => super::Ty::Float,

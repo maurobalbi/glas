@@ -183,6 +183,7 @@ enums! {
         StmtUse,
     },
     Expr {
+        Case,
         BitString,
         Literal,
         Block,
@@ -569,7 +570,10 @@ mod tests {
 
     #[test]
     fn assert() {
-        let e = crate::parse_module("fn main() { a +. b }");
+        let e = crate::parse_module("fn dodo(a) {
+            case a {
+              b -> b
+            }}");
         for error in e.errors() {
             println!("{}", error);
         }
@@ -855,6 +859,18 @@ mod tests {
         let mut pats = c.patterns().into_iter();
         pats.next().unwrap().syntax().should_eq("Bird | Snake");
         pats.next().unwrap().syntax().should_eq("a");
+    }
+
+    #[test]
+    fn alt_pattern() {
+        let a = parse::<AlternativePattern>(
+            "fn a() { 
+                    case wobble
+                    { 
+                        Bird | Snake -> 2
+                    }}",
+        );
+        a.syntax().should_eq("Bird | Snake");
     }
 
     #[test]

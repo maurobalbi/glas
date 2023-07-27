@@ -56,6 +56,8 @@ fn scope_for(
         .find_map(|it| scopes.scope_for_expr(it))
 }
 
+// This seems very inefficient
+// ToDo: build a source_map during lowering...
 pub fn find_def(db: &dyn DefDatabase, node: InFile<&SyntaxNode>) -> Option<ModuleDefId> {
     let module = db.module_scope(node.file_id);
     for node in node.ancestors() {

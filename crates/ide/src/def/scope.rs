@@ -11,7 +11,7 @@ use crate::{DefDatabase, FileId, InFile};
 use super::{
     body::Body,
     hir_def::{AdtLoc, FunctionLoc, ModuleDefId, VariantLoc},
-    module::{Expr, ExprId, Import, Pattern, PatternId, Statement, Visibility},
+    module::{Clause, Expr, ExprId, Import, Pattern, PatternId, Statement, Visibility},
     resolver::ResolveResult,
     resolver_for_expr, FunctionId,
 };
@@ -199,6 +199,21 @@ impl ExprScopes {
                 self.traverse_expr(body, *left, scope);
                 self.traverse_expr(body, *right, scope);
             }
+            Expr::Case { subjects, clauses } => {
+                subjects
+                    .clone()
+                    .for_each(|e| self.traverse_expr(body, e, scope));
+                clauses.into_iter().for_each(|Clause { patterns, expr }| {
+                    let clause_scope = self.scopes.alloc(ScopeData {
+                        parent: Some(scope),
+                        entries: Vec::new(),
+                    });
+                    patterns
+                        .clone()
+                        .for_each(|pat| self.add_bindings(body, clause_scope, &pat));
+                    self.traverse_expr(body, *expr, clause_scope);
+                });
+            }
             _ => {}
         }
     }
@@ -248,6 +263,11 @@ impl ExprScopes {
             Pattern::Missing => {}
             Pattern::Tuple { fields } => {
                 for pattern in fields {
+                    self.add_bindings(body, scope, pattern);
+                }
+            }
+            Pattern::AlternativePattern { patterns } => {
+                  for pattern in patterns {
                     self.add_bindings(body, scope, pattern);
                 }
             }

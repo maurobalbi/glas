@@ -7,8 +7,8 @@ pub(crate) fn diagnostics(db: &dyn DefDatabase, file: FileId) -> Vec<Diagnostic>
     let parse = db.parse(file);
     diags.extend(parse.errors().iter().map(|&err| Diagnostic::from(err)));
 
-    // let source_map = db.source_map(file);
-    // diags.extend(source_map.diagnostics().iter().cloned());
+    let items = db.module_items(file);
+    diags.extend(items.diagnostics.iter().cloned());
 
     diags
 }
