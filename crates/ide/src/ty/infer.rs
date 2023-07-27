@@ -26,6 +26,7 @@ struct TyVar(u32);
 enum Ty {
     Unknown { idx: u32 },
     Generic { idx: u32 },
+    Bool,
     Int,
     Float,
     String,
