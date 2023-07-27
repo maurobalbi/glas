@@ -44,7 +44,7 @@ pub trait DefDatabase: SourceDatabase + InternDatabase {
 
     fn body(&self, function_id: FunctionId) -> Arc<Body>;
 
-    fn source_map(&self, funcion_id: FunctionId) -> Arc<BodySourceMap>;
+    fn body_source_map(&self, funcion_id: FunctionId) -> Arc<BodySourceMap>;
 
     fn module_items(&self, file_id: FileId) -> Arc<ModuleItemData>;
 
@@ -81,7 +81,7 @@ fn body_with_source_map(
     (Arc::new(body), Arc::new(body_source_map))
 }
 
-fn source_map(db: &dyn DefDatabase, function_id: FunctionId) -> Arc<BodySourceMap> {
+fn body_source_map(db: &dyn DefDatabase, function_id: FunctionId) -> Arc<BodySourceMap> {
     db.body_with_source_map(function_id).1
 }
 

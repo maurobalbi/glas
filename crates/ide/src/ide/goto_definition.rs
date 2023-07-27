@@ -48,7 +48,7 @@ pub(crate) fn goto_definition(
         // Find resolver based on where cursor is! not depending on luck!
         let resolver = match find_def(db, expr_ptr) {
             Some(ModuleDefId::FunctionId(id)) => {
-                let source_map = db.source_map(id);
+                let source_map = db.body_source_map(id);
                 let expr_ptr = expr_ptr.with_value(&expr);
                 resolver_for_expr(db, id, source_map.expr_for_node(expr_ptr)?)
             },
@@ -66,7 +66,7 @@ pub(crate) fn goto_definition(
         let targets = resolver.resolve_name(&name).map(|ptr| {
             let (node, file_id) = match ptr {
                 crate::def::resolver::ResolveResult::LocalBinding(pattern) => (
-                    db.source_map(resolver.body_owner()?.clone())
+                    db.body_source_map(resolver.body_owner()?.clone())
                         .pattern_map_rev
                         .get(pattern)?
                         .value
