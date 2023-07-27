@@ -26,6 +26,7 @@ pub enum Ty {
     Generic {
         idx: u32,
     },
+    Bool,
     Int,
     Float,
     String,

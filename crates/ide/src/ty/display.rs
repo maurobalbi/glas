@@ -176,6 +176,7 @@ impl TyDisplay for Ty {
     ) -> Result<(), TyDisplayError> {
         match self {
             Ty::Unknown => write!(f, "?"),
+            Ty::Bool => write!(f, "Bool"),
             Ty::Int => write!(f, "Int"),
             Ty::Float => write!(f, "Float"),
             Ty::String => write!(f, "String"),

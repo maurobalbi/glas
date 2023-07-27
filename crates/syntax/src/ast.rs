@@ -8,10 +8,23 @@ pub use rowan::ast::{AstChildren, AstNode};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum BinaryOpKind {
-    Add,
-    Sub,
-    Mul,
-    Div,
+    IntAdd,
+    IntSub,
+    IntMul,
+    IntDiv,
+    IntMod,
+    IntGT,
+    IntLT,
+    IntGTE,
+    IntLTE,
+    FloatAdd,
+    FloatSub,
+    FloatMul,
+    FloatDiv,
+    FloatGT,
+    FloatLT,
+    FloatGTE,
+    FloatLTE
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -226,10 +239,24 @@ asts! {
             self.syntax().children_with_tokens().find_map(|n| {
                 let tok = n.into_token()?;
                 let op = match tok.kind() {
-                    T!["+"] => BinaryOpKind::Add,
-                    T!["-"] => BinaryOpKind::Sub,
-                    T!["*"] => BinaryOpKind::Mul,
-                    T!["/"] => BinaryOpKind::Div,
+                    T!["+"] => BinaryOpKind::IntAdd,
+                    T!["-"] => BinaryOpKind::IntSub,
+                    T!["*"] => BinaryOpKind::IntMul,
+                    T!["/"] => BinaryOpKind::IntDiv,
+                    T!["%"] => BinaryOpKind::IntMod,
+                    T![">"] => BinaryOpKind::IntGT,
+                    T!["<"] => BinaryOpKind::IntLT,
+                    T![">="] => BinaryOpKind::IntGTE,
+                    T!["<="] => BinaryOpKind::IntLTE,
+
+                    T!["+."] => BinaryOpKind::FloatAdd,
+                    T!["-."] => BinaryOpKind::FloatSub,
+                    T!["*."] => BinaryOpKind::FloatMul,
+                    T!["/."] => BinaryOpKind::FloatDiv,
+                    T![">."] => BinaryOpKind::FloatGT,
+                    T!["<."] => BinaryOpKind::FloatLT,
+                    T![">=."] => BinaryOpKind::FloatGTE,
+                    T!["<=."] => BinaryOpKind::FloatGTE,
                     _ => return None,
                 };
                 Some((tok, op))
@@ -536,12 +563,10 @@ mod tests {
 
     #[test]
     fn apply() {
-        let e = parse::<Block>("fn main() { 1 }");
+        let e = parse::<PatternTuple>("fn main() { let #(1,2) = #(1,2) }");
         println!(
             "{:?}",
-            ast::StmtExpr::cast(e.expressions().next().unwrap().syntax().clone())
-                .unwrap()
-                .expr()
+            e.field_patterns().next().unwrap().syntax()
         );
         // println!("{:?}", e.statements().next().unwrap().syntax());
     }
@@ -549,10 +574,7 @@ mod tests {
     #[test]
     fn assert() {
         let e = crate::parse_module(
-            "fn bla2(a) {
-                let a = Bla()
-                
-              }",
+            "fn main() { a +. b }",
         );
         for error in e.errors() {
             println!("{}", error);

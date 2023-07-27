@@ -157,6 +157,7 @@ impl<'db> InferCtx<'db> {
                     }
                 }
             }
+            super::Ty::Bool => Ty::Bool,
             super::Ty::Int => Ty::Int,
             super::Ty::Float => Ty::Float,
             super::Ty::String => Ty::String,
@@ -253,14 +254,45 @@ impl<'db> InferCtx<'db> {
                 let rhs_ty = self.infer_expr(*right);
                 let Some(op) = op else { return self.new_ty_var() };
                 match op {
-                    BinaryOpKind::Add
-                    | BinaryOpKind::Sub
-                    | BinaryOpKind::Mul
-                    | BinaryOpKind::Div => {
+                    BinaryOpKind::IntAdd
+                    | BinaryOpKind::IntSub
+                    | BinaryOpKind::IntMul
+                    | BinaryOpKind::IntDiv
+                    | BinaryOpKind::IntMod => {
                         // TODO: Arguments have type: int | float.
+                        self.unify_var_ty(lhs_ty, Ty::Int);
                         self.unify_var(lhs_ty, rhs_ty);
                         lhs_ty
                     }
+                    BinaryOpKind::FloatAdd
+                    | BinaryOpKind::FloatSub
+                    | BinaryOpKind::FloatMul
+                    | BinaryOpKind::FloatDiv => {
+                        self.unify_var_ty(lhs_ty, Ty::Float);
+                        self.unify_var(lhs_ty, rhs_ty);
+                        lhs_ty
+                    }
+                    BinaryOpKind::IntGT
+                    | BinaryOpKind::IntLT
+                    | BinaryOpKind::IntGTE
+                    | BinaryOpKind::IntLTE => {
+                        self.unify_var_ty(lhs_ty, Ty::Int);
+                        self.unify_var(lhs_ty, rhs_ty);
+                        let bin_var = self.new_ty_var();
+                        self.unify_var_ty(bin_var, Ty::Bool);
+                        bin_var
+                    }
+                    BinaryOpKind::FloatGT
+                    | BinaryOpKind::FloatLT
+                    | BinaryOpKind::FloatGTE
+                    | BinaryOpKind::FloatLTE => {
+                        self.unify_var_ty(lhs_ty, Ty::Float);
+                        self.unify_var(lhs_ty, rhs_ty);
+                        let bin_var = self.new_ty_var();
+                        self.unify_var_ty(bin_var, Ty::Bool);
+                        bin_var
+                    }
+
                 }
             }
             Expr::Call { func, args } => {
@@ -450,6 +482,7 @@ impl<'a> Collector<'a> {
         match &ty {
             Ty::Unknown { idx } => super::Ty::Generic { idx: idx.clone() },
             Ty::Generic { idx } => super::Ty::Generic { idx: idx.clone() },
+            Ty::Bool => super::Ty::Bool,
             Ty::Int => super::Ty::Int,
             Ty::Float => super::Ty::Float,
             Ty::String => super::Ty::String,
