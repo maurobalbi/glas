@@ -1,8 +1,8 @@
-use smol_str::SmolStr;
 use crate::SyntaxKind::{self, *};
 use crate::{GleamLanguage, SyntaxNode, SyntaxToken};
 use rowan::ast::support::{child, children};
 use rowan::NodeOrToken;
+use smol_str::SmolStr;
 
 pub use rowan::ast::{AstChildren, AstNode};
 
@@ -24,7 +24,7 @@ pub enum BinaryOpKind {
     FloatGT,
     FloatLT,
     FloatGTE,
-    FloatLTE
+    FloatLTE,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -313,7 +313,7 @@ asts! {
         label: Label,
         type_: TypeExpr,
     },
-    LAMBDA = Lambda { 
+    LAMBDA = Lambda {
         param_list: ParamList,
         return_type: TypeExpr,
         body: Block,
@@ -534,10 +534,9 @@ asts! {
 
 #[cfg(test)]
 mod tests {
-    
 
     use super::*;
-    use crate::{ast, tests::parse};
+    use crate::tests::parse;
 
     trait HasSyntaxNode {
         fn has_syntax_node(&self) -> &SyntaxNode;
@@ -564,18 +563,13 @@ mod tests {
     #[test]
     fn apply() {
         let e = parse::<PatternTuple>("fn main() { let #(1,2) = #(1,2) }");
-        println!(
-            "{:?}",
-            e.field_patterns().next().unwrap().syntax()
-        );
+        println!("{:?}", e.field_patterns().next().unwrap().syntax());
         // println!("{:?}", e.statements().next().unwrap().syntax());
     }
 
     #[test]
     fn assert() {
-        let e = crate::parse_module(
-            "fn main() { a +. b }",
-        );
+        let e = crate::parse_module("fn main() { a +. b }");
         for error in e.errors() {
             println!("{}", error);
         }
@@ -650,7 +644,7 @@ mod tests {
         let _ = fields.next().is_some();
         let _ = fields.next().is_none();
     }
-    
+
     #[test]
     fn type_variant_generic() {
         let e = parse::<Adt>(
@@ -660,7 +654,6 @@ mod tests {
         }",
         );
         e.name().unwrap().syntax().should_eq("Wobbles");
-
     }
 
     #[test]
@@ -750,17 +743,21 @@ mod tests {
 
     #[test]
     fn type_name() {
-        let e = parse::<Variant>("type Wobble(a) {
+        let e = parse::<Variant>(
+            "type Wobble(a) {
             Wobble1(a)
-        }");
+        }",
+        );
         e.name().unwrap().syntax().should_eq("Wobble1");
     }
-    
+
     #[test]
     fn constructor_field() {
-        let e = parse::<ConstructorField>("type Wobble(a) {
+        let e = parse::<ConstructorField>(
+            "type Wobble(a) {
             Wobble1(a: int.Wobbles)
-        }");
+        }",
+        );
         e.label().unwrap().syntax().should_eq("a");
         e.type_().unwrap().syntax().should_eq("int.Wobbles")
     }

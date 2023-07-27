@@ -3,19 +3,15 @@ use std::ops::Index;
 use crate::{base::Target, ty, Diagnostic, DiagnosticKind};
 
 use super::{
-    module::{
-        ConstructorField, Adt, Expr, ExprId, Param, Function, Import, Label, Literal,
-        Pattern, PatternId, Variant, Statement, Visibility
-    },
+    module::{Adt, ConstructorField, Function, Import, Param, Variant, Visibility},
     AstPtr, DefDatabase,
 };
 use la_arena::{Arena, Idx, IdxRange, RawIdx};
 use smol_str::SmolStr;
 use syntax::{
-    ast::{self, AstNode, LiteralKind, StatementExpr},
+    ast::{self, AstNode},
     Parse,
 };
-use tracing::field;
 
 #[derive(Default, Debug, Eq, PartialEq)]
 pub struct ModuleItemData {
@@ -32,12 +28,10 @@ impl ModuleItemData {
         self.imports.iter()
     }
 
-    pub fn adts(
-        &self,
-    ) -> impl Iterator<Item = (Idx<Adt>, &Adt)> + ExactSizeIterator + '_ {
+    pub fn adts(&self) -> impl Iterator<Item = (Idx<Adt>, &Adt)> + ExactSizeIterator + '_ {
         self.adts.iter()
     }
-    
+
     pub fn variants(
         &self,
     ) -> impl Iterator<Item = (Idx<Variant>, &Variant)> + ExactSizeIterator + '_ {
@@ -100,10 +94,7 @@ impl<'a> LowerCtx<'a> {
         id
     }
 
-    fn alloc_variant(
-        &mut self,
-        constructor: Variant,
-    ) -> Idx<Variant> {
+    fn alloc_variant(&mut self, constructor: Variant) -> Idx<Variant> {
         let id = self.module_items.variants.alloc(constructor);
         id
     }
@@ -238,10 +229,7 @@ impl<'a> LowerCtx<'a> {
         IdxRange::new(start..end)
     }
 
-    fn lower_constructor(
-        &mut self,
-        constructor: &ast::Variant,
-    ) -> Option<Idx<Variant>> {
+    fn lower_constructor(&mut self, constructor: &ast::Variant) -> Option<Idx<Variant>> {
         let ast_ptr = AstPtr::new(constructor);
         let name = constructor.name()?.text()?;
 
@@ -251,7 +239,10 @@ impl<'a> LowerCtx<'a> {
                 if let (Some(label), Some(type_ref)) =
                     (field.label(), self.ty_from_ast_opt(field.type_()))
                 {
-                    fields_vec.push(ConstructorField { label: label.text(), type_ref })
+                    fields_vec.push(ConstructorField {
+                        label: label.text(),
+                        type_ref,
+                    })
                 }
             }
         }
@@ -272,7 +263,7 @@ impl<'a> LowerCtx<'a> {
 
     fn ty_from_ast(&self, ast_expr: ast::TypeExpr) -> ty::Ty {
         match ast_expr {
-            ast::TypeExpr::FnType(fn_type) => todo!(),
+            ast::TypeExpr::FnType(_fn_type) => todo!(),
             ast::TypeExpr::VarType(_) => todo!(),
             ast::TypeExpr::TupleType(_) => todo!(),
             ast::TypeExpr::TypeNameRef(_) => todo!(),

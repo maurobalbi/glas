@@ -1,8 +1,11 @@
-use std::{marker::PhantomData, hash::{Hash, Hasher}};
+use std::{
+    hash::{Hash, Hasher},
+    marker::PhantomData,
+};
 
 use rowan::{ast::AstNode, TextRange};
 
-use crate::{SyntaxNodePtr, SyntaxNode, GleamLanguage};
+use crate::{GleamLanguage, SyntaxNode, SyntaxNodePtr};
 
 #[derive(Debug)]
 pub struct AstPtr<N: AstNode> {
@@ -12,7 +15,10 @@ pub struct AstPtr<N: AstNode> {
 
 impl<N: AstNode> Clone for AstPtr<N> {
     fn clone(&self) -> AstPtr<N> {
-        AstPtr { raw: self.raw.clone(), _ty: PhantomData }
+        AstPtr {
+            raw: self.raw.clone(),
+            _ty: PhantomData,
+        }
     }
 }
 
@@ -32,7 +38,10 @@ impl<N: AstNode> Hash for AstPtr<N> {
 
 impl<N: AstNode<Language = GleamLanguage>> AstPtr<N> {
     pub fn new(node: &N) -> AstPtr<N> {
-        AstPtr { raw: SyntaxNodePtr::new(node.syntax()), _ty: PhantomData }
+        AstPtr {
+            raw: SyntaxNodePtr::new(node.syntax()),
+            _ty: PhantomData,
+        }
     }
 
     pub fn to_node(&self, root: &SyntaxNode) -> N {
@@ -52,19 +61,28 @@ impl<N: AstNode<Language = GleamLanguage>> AstPtr<N> {
         if !U::can_cast(self.raw.kind()) {
             return None;
         }
-        Some(AstPtr { raw: self.raw, _ty: PhantomData })
+        Some(AstPtr {
+            raw: self.raw,
+            _ty: PhantomData,
+        })
     }
 
     pub fn upcast<M: AstNode>(self) -> AstPtr<M>
     where
         N: Into<M>,
     {
-        AstPtr { raw: self.raw, _ty: PhantomData }
+        AstPtr {
+            raw: self.raw,
+            _ty: PhantomData,
+        }
     }
 
     /// Like `SyntaxNodePtr::cast` but the trait bounds work out.
     pub fn try_from_raw(raw: SyntaxNodePtr) -> Option<AstPtr<N>> {
-        N::can_cast(raw.kind()).then_some(AstPtr { raw, _ty: PhantomData })
+        N::can_cast(raw.kind()).then_some(AstPtr {
+            raw,
+            _ty: PhantomData,
+        })
     }
 }
 

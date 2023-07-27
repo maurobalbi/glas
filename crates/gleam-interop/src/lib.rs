@@ -21,7 +21,10 @@ pub async fn load_package_info() -> Result<()> {
 
     if !output.status.success() {
         let err_msg = String::from_utf8(output.stderr)?.to_owned();
-        return Err(anyhow!(format!("The gleam binary had this to say: {}",err_msg)));
+        return Err(anyhow!(format!(
+            "The gleam binary had this to say: {}",
+            err_msg
+        )));
     }
     Ok(())
 }

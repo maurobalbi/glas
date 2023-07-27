@@ -1,8 +1,5 @@
-use std::fmt::Write;
-use syntax::ast::{self, AstNode};
-use syntax::{best_token_at_offset, match_ast, AstPtr, TextRange, TextSize};
+use syntax::{best_token_at_offset, TextRange};
 
-use crate::def::source_analyzer::SourceAnalyzer;
 use crate::ty::TyDatabase;
 use crate::FilePos;
 
@@ -14,7 +11,7 @@ pub struct HoverResult {
 
 pub(crate) fn hover(db: &dyn TyDatabase, FilePos { file_id, pos }: FilePos) -> Option<HoverResult> {
     let parse = db.parse(file_id);
-    let tok = best_token_at_offset(&parse.syntax_node(), pos)?;
+    let _tok = best_token_at_offset(&parse.syntax_node(), pos)?;
 
     Some(HoverResult {
         range: TextRange::new(pos, pos.checked_add(5.into()).unwrap()),
@@ -26,7 +23,7 @@ pub(crate) fn hover(db: &dyn TyDatabase, FilePos { file_id, pos }: FilePos) -> O
 mod tests {
     use crate::base::SourceDatabase;
     use crate::tests::TestDB;
-    use expect_test::{expect, Expect};
+    use expect_test::Expect;
 
     #[track_caller]
     fn check(fixture: &str, full: &str, expect: Expect) {
@@ -48,6 +45,4 @@ mod tests {
         assert_eq!(f.markers().len(), 1);
         assert_eq!(super::hover(&db, f[0]), None);
     }
-
-  
 }

@@ -1,10 +1,10 @@
 use crate::base::{SourceDatabaseStorage, Target};
-use crate::def::{ InternDatabaseStorage, DefDatabaseStorage };
+use crate::def::{DefDatabaseStorage, InternDatabaseStorage};
 use crate::ide::Upcast;
-use crate::ty::{TyDatabaseStorage, TyDatabase};
+use crate::ty::TyDatabaseStorage;
 use crate::{
-    Change, DefDatabase, FileId, FilePos, FileRange, FileSet, PackageGraph, PackageInfo, SourceRoot,
-    SourceRootId, VfsPath, ModuleMap,
+    Change, DefDatabase, FileId, FilePos, FileRange, FileSet, ModuleMap, PackageGraph, PackageInfo,
+    SourceRoot, SourceRootId, VfsPath,
 };
 use anyhow::{bail, ensure, Context, Result};
 use indexmap::IndexMap;
@@ -17,7 +17,12 @@ use crate::DEFAULT_IMPORT_FILE;
 
 pub const MARKER_INDICATOR: char = '$';
 
-#[salsa::database(InternDatabaseStorage, SourceDatabaseStorage, DefDatabaseStorage, TyDatabaseStorage)]
+#[salsa::database(
+    InternDatabaseStorage,
+    SourceDatabaseStorage,
+    DefDatabaseStorage,
+    TyDatabaseStorage
+)]
 #[derive(Default)]
 pub struct TestDB {
     storage: salsa::Storage<Self>,
@@ -49,7 +54,10 @@ impl TestDB {
             file_set.insert(file, path.clone());
             change.change_file(file, text.to_owned().into());
         }
-        change.set_roots_and_map(vec![SourceRoot::new_local(file_set, "/test".into())], ModuleMap::default());
+        change.set_roots_and_map(
+            vec![SourceRoot::new_local(file_set, "/test".into())],
+            ModuleMap::default(),
+        );
         let package_graph = PackageGraph {
             nodes: HashMap::from_iter(f.package_info.clone().map(|info| (SourceRootId(0), info))),
         };
@@ -123,13 +131,12 @@ impl Fixture {
                         .and_then(|input| input.split_once('='))
                     {
                         let _target = VfsPath::new(target);
-                        this.package_info
-                            .get_or_insert_with(|| PackageInfo {
-                                root_manifest: cur_file,
-                                dependencies: Default::default(),
-                                target: Target::default(),
-                                display_name: "Test".into()
-                            });
+                        this.package_info.get_or_insert_with(|| PackageInfo {
+                            root_manifest: cur_file,
+                            dependencies: Default::default(),
+                            target: Target::default(),
+                            display_name: "Test".into(),
+                        });
                     } else {
                         bail!("Unknow property {prop}");
                     }

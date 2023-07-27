@@ -74,7 +74,7 @@ impl fmt::Display for ErrorKind {
             Self::OpaqueAlias => "Type alias can't be opaque",
             Self::ExpectedPattern => "Expected Pattern",
             Self::UnexpectedLabel => "Label not allowed in anonymous function",
-            Self::ExpectedBitString => "Expected bit string expression"
+            Self::ExpectedBitString => "Expected bit string expression",
         }
         .fmt(f)
     }
@@ -157,7 +157,7 @@ pub fn best_token_at_offset(node: &SyntaxNode, offset: TextSize) -> Option<Synta
     match node.token_at_offset(offset) {
         TokenAtOffset::None => None,
         TokenAtOffset::Single(tok) => Some(tok),
-       TokenAtOffset::Between(lhs, rhs) => {
+        TokenAtOffset::Between(lhs, rhs) => {
             // Slightly prefer RHS.
             if score(lhs.kind()) > score(rhs.kind()) {
                 Some(lhs)

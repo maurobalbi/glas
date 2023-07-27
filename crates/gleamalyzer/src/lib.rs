@@ -97,5 +97,3 @@ pub async fn run_server_stdio() -> Result<()> {
     let output = tokio::io::stdout();
     Ok(frontend.run(input, output).await?)
 }
-
-

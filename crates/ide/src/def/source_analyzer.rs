@@ -2,13 +2,16 @@ use std::sync::Arc;
 
 use syntax::{
     ast::{self, AstNode},
-    SyntaxNode, TextSize, AstPtr,
+    AstPtr, SyntaxNode,
 };
 
-use crate::{DefDatabase, InFile, FileId, ty::{InferenceResult, TyDatabase}};
+use crate::{
+    ty::{InferenceResult, TyDatabase},
+    DefDatabase, FileId, InFile,
+};
 
 use super::{
-    body::{BodySourceMap, Body},
+    body::{Body, BodySourceMap},
     hir_def::{FunctionId, ModuleDefId},
     resolver::{resolver_for_scope, Resolver},
     scope::{ExprScopes, ScopeId},
@@ -71,7 +74,7 @@ pub fn find_def(db: &dyn DefDatabase, node: InFile<&SyntaxNode>) -> Option<Modul
                             _ => {}
                         }
                     }
-                },
+                }
                 _ => {}
             }
         }

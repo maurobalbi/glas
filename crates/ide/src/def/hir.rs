@@ -2,9 +2,7 @@ use la_arena::Idx;
 
 use crate::{impl_from, DefDatabase, SourceRootId};
 
-use super::{
-    scope::ExprScopes, FunctionId,
-};
+use super::{scope::ExprScopes, FunctionId};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Package {

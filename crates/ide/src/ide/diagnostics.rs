@@ -35,14 +35,16 @@ mod tests {
 
     #[test]
     fn syntax_error() {
-        check("bla = bla", expect![[r#"
+        check(
+            "bla = bla",
+            expect![[r#"
             0..3: SyntaxError(ExpectedStatement)
             4..5: SyntaxError(ExpectedStatement)
             6..9: SyntaxError(ExpectedStatement)
-        "#]]);
+        "#]],
+        );
     }
 
-    
     // #[test]
     // fn duplicated_param() {
     //     check("fn bla(a, a) {}", expect![[r#"
@@ -50,12 +52,15 @@ mod tests {
     //             7..8: Previously defined here
     //     "#]]);
     // }
-    
+
     #[test]
     fn unused_target() {
-        check("if javascript {} const a", expect![[r#"
+        check(
+            "if javascript {} const a",
+            expect![[r#"
             24..24: SyntaxError(ExpectToken(EQ))
             24..24: SyntaxError(ExpectedConstantExpression)
-        "#]]);
+        "#]],
+        );
     }
 }

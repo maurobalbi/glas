@@ -1,10 +1,13 @@
 use crate::UrlExt;
 use anyhow::{ensure, Context, Result};
-use ide::{Change, FileId, FileSet, PackageGraph, PackageInfo, SourceRoot, SourceRootId, VfsPath, ModuleMap};
+use ide::{
+    Change, FileId, FileSet, ModuleMap, PackageGraph, PackageInfo, SourceRoot, SourceRootId,
+    VfsPath,
+};
 use lsp_types::Url;
+use slab::Slab;
 use std::collections::HashMap;
 use std::sync::Arc;
-use slab::Slab;
 use std::{fmt, mem};
 use text_size::{TextRange, TextSize};
 
@@ -44,7 +47,6 @@ impl Vfs {
     pub fn set_roots_and_map(&mut self, roots: Vec<SourceRoot>, module_map: ModuleMap) {
         self.change.set_roots_and_map(roots, module_map);
     }
-    
 
     pub fn set_path_content(&mut self, path: VfsPath, text: String) -> FileId {
         let (text, line_map) = LineMap::normalize(text);
@@ -125,7 +127,7 @@ impl Vfs {
     }
 
     pub fn take_change(&mut self) -> Change {
-      mem::take(&mut self.change)
+        mem::take(&mut self.change)
     }
 
     pub fn content_for_file(&self, file: FileId) -> Arc<str> {
@@ -135,7 +137,7 @@ impl Vfs {
     pub fn line_map_for_file(&self, file: FileId) -> Arc<LineMap> {
         self.files[file.0 as usize].1.clone()
     }
-    
+
     pub fn iter(&mut self) -> impl Iterator<Item = (FileId, &VfsPath)> + '_ {
         self.local_file_set.iter()
     }

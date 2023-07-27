@@ -18,7 +18,7 @@ use syntax::{AstPtr, Parse};
 pub use syntax::ast::{AstNode, BinaryOpKind as BinaryOp, Expr, UnaryOpKind as UnaryOp};
 
 use self::body::{Body, BodySourceMap};
-use self::hir_def::{FunctionId, FunctionLoc, AdtLoc, AdtId, VariantLoc, VariantId};
+use self::hir_def::{AdtId, AdtLoc, FunctionId, FunctionLoc, VariantId, VariantLoc};
 use self::lower::lower_module;
 pub use self::lower::ModuleItemData;
 use self::scope::{dependency_order_query, module_scope_query, ExprScopes, ModuleScope};
@@ -31,7 +31,7 @@ pub trait InternDatabase: SourceDatabase {
 
     #[salsa::interned]
     fn intern_adt(&self, loc: AdtLoc) -> AdtId;
-    
+
     #[salsa::interned]
     fn intern_variant(&self, loc: VariantLoc) -> VariantId;
 }

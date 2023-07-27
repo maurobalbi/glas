@@ -18,7 +18,6 @@ pub enum DiagnosticKind {
     // Name resolution.
     InactiveTarget,
     DuplicatedParam,
-
     // Liveness.
 }
 
@@ -64,7 +63,7 @@ impl Diagnostic {
         match self.kind {
             DiagnosticKind::SyntaxError(kind) => return kind.to_string(),
             DiagnosticKind::InactiveTarget => "Inactive Target",
-            DiagnosticKind::DuplicatedParam => "Duplicated Param"
+            DiagnosticKind::DuplicatedParam => "Duplicated Param",
         }
         .into()
     }

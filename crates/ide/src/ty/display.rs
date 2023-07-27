@@ -199,7 +199,7 @@ impl TyDisplay for Ty {
                     }
                 }
             }
-            Ty::Tuple { fields } => todo!(),
+            Ty::Tuple { fields: _ } => todo!(),
             Ty::Adt { adt_id, params } => {
                 let adt = db.lookup_intern_adt(*adt_id);
                 let adt = &db.module_items(adt.file_id)[adt.value];
@@ -211,7 +211,7 @@ impl TyDisplay for Ty {
                 } else {
                     write!(f, "{}", adt.name)
                 }
-            },
+            }
         }
     }
 }

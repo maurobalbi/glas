@@ -1,6 +1,6 @@
 use lsp_types::{
-    InitializeParams, OneOf, ServerCapabilities, TextDocumentSyncCapability,
-    TextDocumentSyncKind, TextDocumentSyncOptions, HoverProviderCapability,
+    HoverProviderCapability, InitializeParams, OneOf, ServerCapabilities,
+    TextDocumentSyncCapability, TextDocumentSyncKind, TextDocumentSyncOptions,
 };
 
 macro_rules! test {
@@ -48,13 +48,13 @@ pub(crate) fn negotiate_capabilities(
     };
 
     let server_caps = ServerCapabilities {
-       text_document_sync: Some(TextDocumentSyncCapability::Options(
+        text_document_sync: Some(TextDocumentSyncCapability::Options(
             TextDocumentSyncOptions {
                 open_close: Some(true),
                 change: Some(TextDocumentSyncKind::INCREMENTAL),
                 will_save: None,
                 will_save_wait_until: None,
-                save: None, 
+                save: None,
             },
         )),
         hover_provider: Some(HoverProviderCapability::Simple(true)),

@@ -1,4 +1,4 @@
-use std::{collections::HashMap, iter, ops, sync::Arc};
+use std::{ops, sync::Arc};
 
 use indexmap::IndexMap;
 use la_arena::{Arena, ArenaMap, Idx};
@@ -9,9 +9,8 @@ use smol_str::SmolStr;
 use crate::{DefDatabase, FileId, InFile};
 
 use super::{
-    body::{self, Body},
-    hir::{Module, ModuleDef},
-    hir_def::{FunctionLoc, ModuleDefId, AdtLoc, AdtId, VariantLoc},
+    body::Body,
+    hir_def::{AdtLoc, FunctionLoc, ModuleDefId, VariantLoc},
     module::{Expr, ExprId, Import, Pattern, PatternId, Statement, Visibility},
     resolver::ResolveResult,
     resolver_for_expr, FunctionId,
@@ -25,8 +24,8 @@ pub fn module_scope_query(db: &dyn DefDatabase, file_id: FileId) -> Arc<ModuleSc
     for (_, import) in module_data.imports() {
         if let Some(val) = scope.resolve_import(db, import) {
             match val {
-                ModuleDefId::AdtId(_) =>  scope.types.insert(import.local_name(), val),
-                _ => scope.values.insert(import.local_name(), val)
+                ModuleDefId::AdtId(_) => scope.types.insert(import.local_name(), val),
+                _ => scope.values.insert(import.local_name(), val),
             };
         }
     }
@@ -46,29 +45,36 @@ pub fn module_scope_query(db: &dyn DefDatabase, file_id: FileId) -> Arc<ModuleSc
 
     for (adt_id, adt) in module_data.adts() {
         let name = &adt.name;
-        let adt_loc = db.intern_adt(AdtLoc{
+        let adt_loc = db.intern_adt(AdtLoc {
             file_id,
-            value: adt_id
+            value: adt_id,
         });
         let def = ModuleDefId::AdtId(adt_loc);
         scope.types.insert(name.clone(), def.clone());
-        scope.declarations.insert(name.clone(), (def, adt.visibility.clone()));
+        scope
+            .declarations
+            .insert(name.clone(), (def, adt.visibility.clone()));
 
         for variant_id in adt.constructors.clone() {
             let variant = &module_data[variant_id];
             let name = &variant.name;
-            let variant_loc = db.intern_variant(VariantLoc{
+            let variant_loc = db.intern_variant(VariantLoc {
                 parent: adt_loc,
-                value: InFile{ value:variant_id, file_id}
+                value: InFile {
+                    value: variant_id,
+                    file_id,
+                },
             });
             let def = ModuleDefId::VariantId(variant_loc);
             scope.values.insert(name.clone(), def.clone());
 
             //use visibility of adt
-            scope.declarations.insert(name.clone(), (def, adt.visibility.clone()));
+            scope
+                .declarations
+                .insert(name.clone(), (def, adt.visibility.clone()));
         }
     }
-    
+
     Arc::new(scope)
 }
 
@@ -244,7 +250,7 @@ impl ExprScopes {
                 for pattern in fields {
                     self.add_bindings(body, scope, pattern);
                 }
-            },
+            }
         }
     }
 }
@@ -320,7 +326,7 @@ pub(crate) fn dependency_order_query(
             ModuleDefId::FunctionId(owner_id) => {
                 let body = db.body(owner_id.clone());
                 edges.push((owner_id.clone().0.as_u32(), owner_id.clone().0.as_u32()));
-                body.exprs().for_each(|(e_id, expr)| 
+                body.exprs().for_each(|(e_id, expr)|
                     match expr {
                         Expr::NameRef(name) => {
                             let resolver = resolver_for_expr(db, owner_id.clone(), e_id);

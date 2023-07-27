@@ -1,10 +1,10 @@
 use salsa::Durability;
 use smol_str::SmolStr;
 use std::collections::HashMap;
-use std::{fmt, iter};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use syntax::{TextRange, TextSize, SyntaxNode};
+use std::{fmt, iter};
+use syntax::{SyntaxNode, TextRange, TextSize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct FileId(pub u32);
@@ -104,7 +104,7 @@ impl From<&'_ Path> for VfsPath {
 #[derive(Debug, Default, Eq, PartialEq, Clone)]
 pub struct ModuleMap {
     module_names: HashMap<FileId, SmolStr>,
-    files: HashMap<SmolStr, FileId>
+    files: HashMap<SmolStr, FileId>,
 }
 
 impl ModuleMap {
@@ -173,12 +173,20 @@ pub struct SourceRoot {
 }
 
 impl SourceRoot {
-    pub fn new_local(file_set: FileSet, root_path: PathBuf ) -> Self {
-        Self { file_set, root_path,  is_library: false}
+    pub fn new_local(file_set: FileSet, root_path: PathBuf) -> Self {
+        Self {
+            file_set,
+            root_path,
+            is_library: false,
+        }
     }
 
     pub fn new_library(file_set: FileSet, root_path: PathBuf) -> SourceRoot {
-        SourceRoot { is_library: true, root_path, file_set }
+        SourceRoot {
+            is_library: true,
+            root_path,
+            file_set,
+        }
     }
 
     pub fn file_for_path(&self, path: &VfsPath) -> Option<FileId> {
@@ -212,14 +220,14 @@ pub struct PackageInfo {
 pub enum Target {
     #[default]
     Erlang,
-    Javascript
+    Javascript,
 }
 
 impl From<&str> for Target {
     fn from(value: &str) -> Self {
         match value {
             "javascript" => Self::Javascript,
-            _ => Self::default()
+            _ => Self::default(),
         }
     }
 }
@@ -240,7 +248,7 @@ impl<T> InFile<T> {
     pub fn new(file_id: FileId, value: T) -> Self {
         Self { file_id, value }
     }
-    
+
     pub fn with_value<U>(&self, value: U) -> InFile<U> {
         InFile::new(self.file_id, value)
     }
@@ -264,7 +272,7 @@ impl<T: Clone> InFile<&T> {
 }
 
 impl<'a> InFile<&'a SyntaxNode> {
-    pub fn ancestors(self)-> impl Iterator<Item = InFile<SyntaxNode>> + Clone {
+    pub fn ancestors(self) -> impl Iterator<Item = InFile<SyntaxNode>> + Clone {
         iter::successors(Some(self.cloned()), move |node| match node.value.parent() {
             Some(parent) => Some(node.with_value(parent)),
             None => None,
@@ -325,7 +333,10 @@ pub trait SourceDatabase {
     fn module_map(&self) -> Arc<ModuleMap>;
 }
 
-fn source_root_package_info(db: &dyn SourceDatabase, sid: SourceRootId) -> Option<Arc<PackageInfo>> {
+fn source_root_package_info(
+    db: &dyn SourceDatabase,
+    sid: SourceRootId,
+) -> Option<Arc<PackageInfo>> {
     db.package_graph().nodes.get(&sid).cloned().map(Arc::new)
 }
 

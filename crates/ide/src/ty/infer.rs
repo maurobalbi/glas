@@ -1,20 +1,17 @@
-use std::{
-    borrow::BorrowMut, collections::HashMap, default, hash::Hash, mem, ops::Deref, sync::Arc,
-};
+use std::{collections::HashMap, mem, ops::Deref, sync::Arc};
 
-use la_arena::{Arena, ArenaMap};
+use la_arena::ArenaMap;
 use syntax::ast::BinaryOpKind;
 
 use crate::{
-    base::Dependency,
     def::{
-        body::{self, Body},
+        body::Body,
         hir_def::{AdtId, FunctionId},
-        module::{Expr, ExprId, Function, Literal, PatternId, Statement},
+        module::{Expr, ExprId, Literal, PatternId, Statement},
         resolver::ResolveResult,
         resolver_for_expr,
     },
-    DefDatabase, FileId,
+    DefDatabase,
 };
 
 use super::{union_find::UnionFind, TyDatabase};
@@ -178,7 +175,7 @@ impl<'db> InferCtx<'db> {
                     return_: ret,
                 }
             }
-            super::Ty::Tuple { fields } => todo!(),
+            super::Ty::Tuple { fields: _ } => todo!(),
             super::Ty::Adt { adt_id, params } => {
                 let mut pars = Vec::new();
                 for param in params.deref().into_iter() {
@@ -293,7 +290,6 @@ impl<'db> InferCtx<'db> {
                         self.unify_var_ty(bin_var, Ty::Bool);
                         bin_var
                     }
-
                 }
             }
             Expr::Call { func, args } => {
@@ -499,7 +495,7 @@ impl<'a> Collector<'a> {
                 }
             }
             Ty::Tuple { fields: _ } => todo!(),
-            Ty::Adt { adt_id, params } => super::Ty::Adt {
+            Ty::Adt { adt_id, params: _ } => super::Ty::Adt {
                 adt_id: *adt_id,
                 params: Arc::new(Vec::new()),
             },

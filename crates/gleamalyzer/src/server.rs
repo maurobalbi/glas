@@ -15,10 +15,10 @@ use lsp_types::{
     DidChangeTextDocumentParams, DidChangeWatchedFilesParams,
     DidChangeWatchedFilesRegistrationOptions, DidCloseTextDocumentParams,
     DidOpenTextDocumentParams, FileChangeType, FileEvent, FileSystemWatcher, GlobPattern,
-    InitializeParams, InitializeResult, InitializedParams, MessageType, NumberOrString, OneOf, ProgressParams,
-    ProgressParamsValue, PublishDiagnosticsParams, Registration, RegistrationParams,
-    RelativePattern, ServerInfo, ShowMessageParams, Url,
-    WorkDoneProgress, WorkDoneProgressBegin, WorkDoneProgressCreateParams, WorkDoneProgressEnd,
+    InitializeParams, InitializeResult, InitializedParams, MessageType, NumberOrString, OneOf,
+    ProgressParams, ProgressParamsValue, PublishDiagnosticsParams, Registration,
+    RegistrationParams, RelativePattern, ServerInfo, ShowMessageParams, Url, WorkDoneProgress,
+    WorkDoneProgressBegin, WorkDoneProgressCreateParams, WorkDoneProgressEnd,
     WorkDoneProgressReport,
 };
 
@@ -546,10 +546,8 @@ impl Server {
 
     fn on_set_package_info(&mut self, info: SetPackageInfoEvent) -> NotifyResult {
         tracing::debug!("Set package info: {:#?}", info.0);
-        let mut vfs = self.vfs
-            .write()
-            .unwrap();
-            
+        let mut vfs = self.vfs.write().unwrap();
+
         vfs.set_package_info(info.0.as_ref().map(|i| i.0.clone()));
 
         let roots = info
@@ -562,7 +560,7 @@ impl Server {
         vfs.set_roots_and_map(root_sets, module_map);
 
         drop(vfs);
-        
+
         self.apply_vfs_change();
 
         // This is currently mostly to get proper diagnostics on startup
@@ -694,8 +692,6 @@ impl Server {
 
     fn apply_vfs_change(&mut self) {
         let mut vfs = self.vfs.write().unwrap();
-        
-
 
         let changes = vfs.take_change();
         drop(vfs);

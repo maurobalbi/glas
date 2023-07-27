@@ -17,16 +17,16 @@ pub struct Adt {
     pub params: Vec<TypeParam>,
     pub visibility: Visibility,
 
-    pub ast_ptr: AstPtr<ast::Adt>
+    pub ast_ptr: AstPtr<ast::Adt>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Variant {
     pub name: SmolStr,
-    
+
     pub fields: Vec<ConstructorField>,
 
-    pub ast_ptr: AstPtr<ast::Variant>
+    pub ast_ptr: AstPtr<ast::Variant>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -34,7 +34,6 @@ pub struct ConstructorField {
     pub label: Option<SmolStr>,
     pub type_ref: ty::Ty,
 }
-
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct TypeParam(SmolStr);

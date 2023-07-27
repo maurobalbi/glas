@@ -1,6 +1,6 @@
 use crate::{DefDatabase, FilePos};
 
-use syntax::{TextRange};
+use syntax::TextRange;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct HlRelated {
@@ -9,16 +9,16 @@ pub struct HlRelated {
 }
 
 pub(crate) fn highlight_related(db: &dyn DefDatabase, fpos: FilePos) -> Option<Vec<HlRelated>> {
-  let _parse = db.parse(fpos.file_id);
-  // let source_map = db.souce_map(fpos.file_id);
-  None
+    let _parse = db.parse(fpos.file_id);
+    // let source_map = db.souce_map(fpos.file_id);
+    None
 }
 
 #[cfg(test)]
 mod tests {
     use crate::tests::TestDB;
     use crate::SourceDatabase;
-    use expect_test::{Expect};
+    use expect_test::Expect;
 
     #[track_caller]
     fn check(fixture: &str, expect: Expect) {
@@ -44,7 +44,6 @@ mod tests {
     // #[test]
     // fn definition() {
     //     check("const b = 1 const a = $0b", expect!["const <b> = 1 const a = <<b>>"]);
-    
-    // }
 
+    // }
 }

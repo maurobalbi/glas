@@ -337,7 +337,7 @@ fn statement(p: &mut Parser) {
     match p.nth(0) {
         T!["const"] => module_const(p, m),
         T!["fn"] => {
-                function(p, m, false);
+            function(p, m, false);
         }
         T!["import"] => {
             if is_pub {
@@ -488,7 +488,7 @@ fn function(p: &mut Parser, m: MarkOpened, is_anon: bool) -> MarkClosed {
     }
 
     if is_anon {
-        return p.finish_node(m, LAMBDA)   
+        return p.finish_node(m, LAMBDA);
     }
     p.finish_node(m, FUNCTION)
 }
@@ -582,8 +582,7 @@ fn stmt_use(p: &mut Parser) {
             if !p.at(T!["<-"]) {
                 p.expect(T![","]);
             }
-        }
-        else {
+        } else {
             if p.at_any(STMT_EXPR_RECOVERY) {
                 break;
             }
@@ -594,7 +593,7 @@ fn stmt_use(p: &mut Parser) {
     if p.at_any(EXPR_FIRST) {
         expr(p);
     } else {
-       p.error(ErrorKind::ExpectedExpression);
+        p.error(ErrorKind::ExpectedExpression);
     }
     p.finish_node(m, STMT_USE);
 }
@@ -622,7 +621,7 @@ fn stmt_let(p: &mut Parser) {
     if p.at_any(EXPR_FIRST) {
         expr(p);
     } else {
-       p.error(ErrorKind::ExpectedExpression);
+        p.error(ErrorKind::ExpectedExpression);
     }
     p.finish_node(m, STMT_LET);
 }
@@ -672,7 +671,7 @@ fn expr_bp(p: &mut Parser, min_bp: u8) {
                         let m = p.start_node_before(lhs);
                         lhs = p.finish_node(m, FIELD_ACCESS);
                         break;
-                    },
+                    }
                 }
             }
             _ => break,
@@ -1271,7 +1270,7 @@ fn type_expr(p: &mut Parser) {
         U_IDENT => {
             type_application = true;
             type_name_ref(p)
-        },
+        }
         // tuple
         T!("#") => tuple_type(p),
         _ => {

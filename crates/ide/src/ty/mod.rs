@@ -9,7 +9,11 @@ use std::{collections::HashMap, sync::Arc};
 
 pub use infer::InferenceResult;
 
-use crate::{def::hir_def::{FunctionId, AdtId}, ide::Upcast, DefDatabase, FileId};
+use crate::{
+    def::hir_def::{AdtId, FunctionId},
+    ide::Upcast,
+    DefDatabase,
+};
 
 #[salsa::query_group(TyDatabaseStorage)]
 pub trait TyDatabase: DefDatabase + Upcast<dyn DefDatabase> {

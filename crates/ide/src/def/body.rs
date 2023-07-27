@@ -10,7 +10,7 @@ use syntax::{
 use crate::{DefDatabase, Diagnostic, FileId, InFile};
 
 use super::{
-    module::{Expr, ExprId, Literal,Pattern, PatternId, Statement},
+    module::{Expr, ExprId, Literal, Pattern, PatternId, Statement},
     FunctionId,
 };
 
@@ -144,7 +144,12 @@ pub(super) fn lower(db: &dyn DefDatabase, function_id: FunctionId) -> (Body, Bod
         }
     }
 
-    let expr_id = ctx.lower_expr_opt(ast::Expr::cast(ast.body().expect("Expected a body, this is a compiler bug!").syntax().clone()));
+    let expr_id = ctx.lower_expr_opt(ast::Expr::cast(
+        ast.body()
+            .expect("Expected a body, this is a compiler bug!")
+            .syntax()
+            .clone(),
+    ));
     ctx.body.body_expr = expr_id;
 
     (ctx.body, ctx.source_map)
@@ -302,9 +307,9 @@ impl BodyLowerCtx<'_> {
                 let mut pats = Vec::new();
                 for pat in pat.field_patterns() {
                     pats.push(self.lower_pattern(pat));
-                };
+                }
                 self.alloc_pattern(Pattern::Tuple { fields: pats }, ptr)
-            },
+            }
             ast::Pattern::AlternativePattern(_) => todo!(),
         }
     }

@@ -5,7 +5,6 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("lexer", |b| {
         b.iter(|| GleamLexer::new(black_box("This is a test file!!")).collect::<Vec<_>>())
     });
-
 }
 
 criterion_group!(benches, criterion_benchmark);

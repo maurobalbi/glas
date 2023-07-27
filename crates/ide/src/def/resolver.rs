@@ -1,4 +1,4 @@
-use std::{ops::Deref, sync::Arc};
+use std::sync::Arc;
 
 use smol_str::SmolStr;
 
@@ -6,7 +6,6 @@ use crate::{DefDatabase, FileId};
 
 use super::{
     hir_def::VariantId,
-    lower::ModuleItemData,
     module::{ExprId, PatternId},
     scope::{ModuleScope, ScopeId},
     ExprScopes, FunctionId,
@@ -65,9 +64,7 @@ impl Resolver {
                 super::hir_def::ModuleDefId::FunctionId(it) => {
                     return Some(ResolveResult::FunctionId(it))
                 }
-                super::hir_def::ModuleDefId::AdtId(_) => {
-                        
-                },
+                super::hir_def::ModuleDefId::AdtId(_) => {}
                 super::hir_def::ModuleDefId::VariantId(it) => {
                     return Some(ResolveResult::VariantId(it))
                 }

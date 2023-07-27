@@ -1,7 +1,9 @@
 use crate::{convert, StateSnapshot};
 use anyhow::Result;
 use ide::{FileRange, GotoDefinitionResult};
-use lsp_types::{Diagnostic, GotoDefinitionParams, GotoDefinitionResponse, Url, HoverParams, Hover};
+use lsp_types::{
+    Diagnostic, GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverParams, Url,
+};
 
 const MAX_DIAGNOSTICS_CNT: usize = 128;
 
@@ -11,7 +13,6 @@ pub(crate) fn hover(snap: StateSnapshot, params: HoverParams) -> Result<Option<H
     let ret = snap.analysis.hover(fpos)?;
     Ok(ret.map(|hover| convert::to_hover(&line_map, hover)))
 }
-
 
 pub(crate) fn diagnostics(snap: StateSnapshot, uri: &Url) -> Result<Vec<Diagnostic>> {
     let (file, line_map) = {

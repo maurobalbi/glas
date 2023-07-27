@@ -1,6 +1,6 @@
 use crate::{LineMap, Result, Vfs};
-use async_lsp::{ResponseError, ErrorCode};
-use ide::{Diagnostic, FileId, HoverResult, FilePos, FileRange, Severity, DiagnosticKind};
+use async_lsp::{ErrorCode, ResponseError};
+use ide::{Diagnostic, DiagnosticKind, FileId, FilePos, FileRange, HoverResult, Severity};
 use lsp::{DiagnosticTag, Hover, MarkupContent, MarkupKind};
 use lsp_types::{
     self as lsp, DiagnosticRelatedInformation, DiagnosticSeverity, Location, NumberOrString,
@@ -95,7 +95,7 @@ pub(crate) fn to_diagnostics(
             tags: {
                 let mut tags = Vec::new();
                 if diag.kind == DiagnosticKind::InactiveTarget {
-                  tags.push(DiagnosticTag::UNNECESSARY);
+                    tags.push(DiagnosticTag::UNNECESSARY);
                 }
                 Some(tags)
             },
