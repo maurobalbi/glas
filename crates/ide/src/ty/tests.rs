@@ -75,6 +75,17 @@ fn lablelled_args() {
 }
 
 #[test]
+fn case_expr() {
+    check_all(
+        "type Massa { Much } fn bla() { case Massa {
+            Much -> 1
+        }  }",
+        expect![[r#"
+        bla: fn(Int, a, b, c) -> Int"#]],
+    )
+}
+
+#[test]
 fn binary() {
     check_all(
         "fn bla(a, b, c, d) { a + 1 }",

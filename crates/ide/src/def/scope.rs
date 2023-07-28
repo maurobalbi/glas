@@ -271,6 +271,7 @@ impl ExprScopes {
                     self.add_bindings(body, scope, pattern);
                 }
             }
+            Pattern::Hole => {},
         }
     }
 }

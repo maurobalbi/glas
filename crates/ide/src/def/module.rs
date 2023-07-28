@@ -130,6 +130,7 @@ pub type PatternId = Idx<Pattern>;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Pattern {
     Missing,
+    Hole,
     Variable { name: SmolStr },
     Tuple { fields: Vec<PatternId> },
     Record { args: Vec<PatternId> },

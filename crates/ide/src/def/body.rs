@@ -344,6 +344,7 @@ impl BodyLowerCtx<'_> {
                 }
                 self.alloc_pattern(Pattern::AlternativePattern{patterns: pats}, ptr)
             },
+            ast::Pattern::Hole(_) => self.alloc_pattern(Pattern::Hole, ptr),
         }
     }
 

@@ -209,6 +209,7 @@ enums! {
         PatternTuple,
         AlternativePattern,
         Literal,
+        Hole,
     },
     TypeNameOrName {
         Name,
@@ -570,10 +571,9 @@ mod tests {
 
     #[test]
     fn assert() {
-        let e = crate::parse_module("fn dodo(a) {
-            case a {
-              b -> b
-            }}");
+        let e = crate::parse_module("type Massa { Much(Int) } fn bla() { case Massa {
+            Much(_) -> 1
+        }  }");
         for error in e.errors() {
             println!("{}", error);
         }
