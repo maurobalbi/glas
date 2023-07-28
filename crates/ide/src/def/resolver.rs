@@ -48,9 +48,7 @@ impl Resolver {
                 Scope::ExprScope(scope) => {
                     let entry = scope
                         .expr_scopes
-                        .entries(scope.scope_id)
-                        .iter()
-                        .find(|entry| entry.name() == name);
+                        .resolve_name_in_scope(scope.scope_id, name);
 
                     if let Some(e) = entry {
                         return Some(ResolveResult::LocalBinding(e.pat()));

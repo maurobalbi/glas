@@ -53,8 +53,8 @@ impl InferenceResult {
 }
 
 pub(crate) fn infer_function_query(db: &dyn TyDatabase, fn_id: FunctionId) -> Arc<InferenceResult> {
-    let fn_i = db.lookup_intern_function(fn_id);
-    let deps = db.dependency_order(fn_i.file_id);
+    let fun = db.lookup_intern_function(fn_id);
+    let deps = db.dependency_order(fun.file_id);
     let group = deps
         .into_iter()
         .find(|v| v.contains(&fn_id))
@@ -66,16 +66,8 @@ pub(crate) fn infer_function_group_query(
     db: &dyn TyDatabase,
     group: Vec<FunctionId>,
 ) -> HashMap<FunctionId, InferenceResult> {
-    // let fn_in_file = db.lookup_intern_function(fn_id);
-    // let deps = db.dependency_order(fn_in_file.file_id);
-
-    // let func_group: Vec<u32> = deps
-    //     .into_iter()
-    //     .filter(|v| v.contains(&fn_id.0.as_u32()))
-    //     .flatten()
-    //     .collect();
     let mut idx = 0;
-    let mut table = UnionFind::new(0, |_| {
+    let mut table = UnionFind::new(group.len(), |_| {
         idx += 1;
         Ty::Unknown { idx }
     });
@@ -83,21 +75,23 @@ pub(crate) fn infer_function_group_query(
     let mut fn_to_ctx = HashMap::new();
     let mut fn_to_ty_var = HashMap::new();
 
-    for f in group.into_iter() {
-        let body = db.body(f);
+    for (i, f) in group.iter().enumerate() {
+        let body = db.body(*f);
         let mut ctx = InferCtx {
             db,
             table: &mut table,
             idx,
-            fn_id: f,
+            group: &group,
+            fn_id: *f,
             body: body.deref(),
             body_ctx: BodyCtx::default(),
         };
         let ty = ctx.infer_function(&body);
-        fn_to_ty_var.insert(f, ty);
+        fn_to_ty_var.insert(*f, ty);
+        ctx.unify_var(TyVar(i as u32), ty);
 
         let inferred_ctx = mem::replace(&mut ctx.body_ctx, BodyCtx::default());
-        fn_to_ctx.insert(f, inferred_ctx);
+        fn_to_ctx.insert(*f, inferred_ctx);
     }
 
     finish_infer(table, fn_to_ctx, fn_to_ty_var)
@@ -113,10 +107,8 @@ struct InferCtx<'db> {
     body_ctx: BodyCtx,
     idx: u32,
     fn_id: FunctionId,
+    group: &'db Vec<FunctionId>,
     body: &'db Body,
-    /// The arena for both unification and interning.
-    /// First `module.names().len() + module.exprs().len()` elements are types of each names and
-    /// exprs, to allow recursive definition.
     table: &'db mut UnionFind<Ty>,
 }
 
@@ -251,7 +243,6 @@ impl<'db> InferCtx<'db> {
                     | BinaryOpKind::IntMul
                     | BinaryOpKind::IntDiv
                     | BinaryOpKind::IntMod => {
-                        // TODO: Arguments have type: int | float.
                         self.unify_var_ty(lhs_ty, Ty::Int);
                         self.unify_var(lhs_ty, rhs_ty);
                         lhs_ty
@@ -318,9 +309,16 @@ impl<'db> InferCtx<'db> {
                         }
                     }
                     Some(ResolveResult::FunctionId(fn_id)) => {
-                        let inferred_ty = self.db.infer_function(fn_id);
-                        let mut env = HashMap::new();
-                        self.make_type(inferred_ty.fn_ty.clone(), &mut env)
+                        // check if resolved funcion is in group being inferred to avoid cycles
+                        let group_ty = self.group.iter().enumerate().find(|f| *f.1 == fn_id);
+                        match group_ty {
+                            Some(grp) => TyVar(grp.0 as u32),
+                            None => {
+                                let inferred_ty = self.db.infer_function(fn_id);
+                                let mut env = HashMap::new();
+                                self.make_type(inferred_ty.fn_ty.clone(), &mut env)
+                            }
+                        }
                     }
                     Some(ResolveResult::VariantId(var_id)) => {
                         let variant = db.lookup_intern_variant(var_id);
@@ -337,9 +335,7 @@ impl<'db> InferCtx<'db> {
                     None => self.new_ty_var(),
                 }
             }
-            Expr::Case { subjects, clauses } => {
-                self.new_ty_var()
-            }
+            Expr::Case { subjects, clauses } => self.new_ty_var(),
         }
     }
 
