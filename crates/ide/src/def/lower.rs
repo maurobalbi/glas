@@ -13,8 +13,6 @@ use syntax::{
     Parse,
 };
 
-
-
 #[derive(Default, Debug, Eq, PartialEq)]
 pub struct ModuleItemData {
     functions: Arena<Function>,
@@ -162,12 +160,11 @@ impl<'a> LowerCtx<'a> {
         for unqualified in i.unqualified() {
             if let Some(unqualified_name) = unqualified
                 .name()
-                .and_then(|t| t.token().map(|t| SmolStr::from(t.text())))
+                .map(|t| t.text())
             {
                 let unqualified_as_name: Option<SmolStr> = unqualified
                     .as_name()
-                    .and_then(|t| t.token())
-                    .map(|t| t.text().into());
+                    .map(|t| t.text());
 
                 self.alloc_import(Import {
                     module: module_name.clone(),
@@ -189,14 +186,14 @@ impl<'a> LowerCtx<'a> {
                 if let Some(param_name) = param.pattern()?.text() {
                     params.push(Param {
                         name: param_name.into(),
-                        label: param.label().and_then(|n| Some(n.text()?.into())),
+                        label: param.label().map(|n| n.text()),
                     });
                 }
             }
         };
 
         Some(self.alloc_function(Function {
-            name: fun.name()?.token()?.text().into(),
+            name: fun.name()?.text(),
             params,
             visibility: Visibility::Public,
             ast_ptr: ast_ptr,
@@ -205,7 +202,7 @@ impl<'a> LowerCtx<'a> {
 
     fn lower_custom_type(&mut self, ct: &ast::Adt) -> Option<Idx<Adt>> {
         let ast_ptr = AstPtr::new(ct);
-        let name = ct.name()?.token()?.text().into();
+        let name = ct.name()?.text();
 
         let visibility = Visibility::Public;
 
@@ -233,16 +230,16 @@ impl<'a> LowerCtx<'a> {
 
     fn lower_constructor(&mut self, constructor: &ast::Variant) -> Option<Idx<Variant>> {
         let ast_ptr = AstPtr::new(constructor);
-        let name = constructor.name()?.text()?;
+        let name = constructor.name()?.text();
 
         let mut fields_vec = Vec::new();
         if let Some(fields) = constructor.field_list() {
             for field in fields.fields() {
-                if let (Some(label), Some(type_ref)) =
-                    (field.label(), self.ty_from_ast_opt(field.type_()))
+                if let Some(type_ref) =
+                    self.ty_from_ast_opt(field.type_())
                 {
                     fields_vec.push(ConstructorField {
-                        label: label.text(),
+                        label: field.label().map(|t| t.text()),
                         type_ref,
                     })
                 }

@@ -3,7 +3,7 @@ use std::{collections::HashMap, ops};
 use la_arena::{Arena, ArenaMap, Idx, IdxRange, RawIdx};
 use smol_str::SmolStr;
 use syntax::{
-    ast::{self, AstNode, LiteralKind, StatementExpr},
+    ast::{self, AstNode, LiteralKind, StatementExpr, Name},
     AstPtr,
 };
 
@@ -193,9 +193,7 @@ impl BodyLowerCtx<'_> {
         let ptr = AstPtr::new(&expr);
         match expr {
             ast::Expr::NameRef(e) => {
-                let name = e
-                    .token()
-                    .map_or_else(Default::default, |tok| tok.text().into());
+                let name = e.text();
                 self.alloc_expr(Expr::NameRef(name), ptr)
             }
             ast::Expr::Block(defs) => {
@@ -214,11 +212,29 @@ impl BodyLowerCtx<'_> {
                         arg_ids.push(self.lower_expr_opt(arg.value()));
                     }
                 }
-
                 self.alloc_expr(
                     Expr::Call {
                         func,
                         args: arg_ids,
+                    },
+                    ptr,
+                )
+            }
+            ast::Expr::VariantConstructor(constr) => {
+                // this is a bit of a hack
+                // we're lowering the name to be able to get a scope for the expr
+                self.lower_expr_opt(constr.name().map(ast::Expr::from));
+                let name = constr.name().map_or_else(Name::missing, |n| n.text());
+                let mut fields = Vec::new();
+                if let Some(args) = constr.args(){
+                    for field in args.args() {
+                        fields.push(self.lower_expr_opt(field.value()));
+                    }
+                }
+                self.alloc_expr(
+                    Expr::VariantLiteral {
+                        name,
+                        fields,
                     },
                     ptr,
                 )
@@ -259,6 +275,11 @@ impl BodyLowerCtx<'_> {
                     },
                     ptr,
                 )
+            }
+            ast::Expr::FieldAccessExpr(field) => {
+               let container = self.lower_expr_opt(field.base());
+               let label = self.lower_expr_opt(field.label().map(ast::Expr::from));
+               self.alloc_expr(Expr::FieldAccess { base: container, label }, ptr)
             }
             _ => self.alloc_expr(Expr::Missing, ptr),
         }

@@ -5,6 +5,7 @@ use rowan::NodeOrToken;
 use smol_str::SmolStr;
 
 pub use rowan::ast::{AstChildren, AstNode};
+use tracing::field::Field;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum BinaryOpKind {
@@ -192,7 +193,8 @@ enums! {
         BinaryOp,
         UnaryOp,
         ExprCall,
-        FieldAccess,
+        VariantConstructor,
+        FieldAccessExpr,
         TupleIndex,
     },
     TypeExpr {
@@ -217,11 +219,40 @@ enums! {
     },
 }
 
+impl From<FieldAccessExpr> for Expr {
+    fn from(field: FieldAccessExpr) -> Self {
+        Expr::FieldAccessExpr(field)
+    }
+}
+
+impl From<NameRef> for Expr {
+    fn from(name: NameRef) -> Self {
+        Expr::NameRef(name)
+    }
+}
+
 impl TypeNameOrName {
-    pub fn token(&self) -> Option<SyntaxToken> {
+    pub fn token(&self) -> SyntaxToken {
         match self {
             TypeNameOrName::Name(name) => name.token(),
             TypeNameOrName::TypeName(type_name) => type_name.token(),
+        }
+    }
+
+    pub fn text(&self) -> SmolStr {
+        self.token().text().into()
+    }
+}
+
+impl FieldAccessExpr {
+    pub fn for_label_name_ref(label: &NameRef) -> Option<FieldAccessExpr> {
+        let syn = label.syntax();
+        let candidate = syn.parent()
+            .and_then(FieldAccessExpr::cast)?;
+        if candidate.label().as_ref() == Some(&Expr::from(label.clone())) {
+            Some(candidate)
+        } else {
+            None
         }
     }
 }
@@ -308,6 +339,10 @@ asts! {
         name: Name,
         field_list: ConstructorFieldList,
     },
+    VARIANT_CONSTRUCTOR = VariantConstructor {
+        name: NameRef,
+        args: ArgList,
+    },
     CONSTRUCTOR_FIELD_LIST = ConstructorFieldList {
         fields: [ConstructorField],
     },
@@ -337,13 +372,13 @@ asts! {
         label: Label,
         value: Expr,
     },
-    FIELD_ACCESS = FieldAccess {
-        label: NameRef,
-        container: Expr,
+    FIELD_ACCESS = FieldAccessExpr {
+        base: Expr,
+        label[1]: Expr,
     },
     TUPLE_INDEX = TupleIndex {
         index: Literal,
-        container: Expr,
+        base: Expr,
     },
     IMPORT = Import {
         module_path: [Path],
@@ -369,25 +404,29 @@ asts! {
         }
     },
     NAME = Name {
-        pub fn token(&self) -> Option<SyntaxToken> {
-            self.0.children_with_tokens().find_map(NodeOrToken::into_token)
+        pub fn token(&self) -> SyntaxToken {
+            self.0.children_with_tokens().find_map(NodeOrToken::into_token).unwrap()
         }
 
-        pub fn text(&self) -> Option<SmolStr> {
-            self.token().map(|t| t.text().into())
+        pub fn text(&self) -> SmolStr {
+            self.token().text().into()
         }
     },
     TYPE_NAME = TypeName {
-        pub fn token(&self) -> Option<SyntaxToken> {
-            self.0.children_with_tokens().find_map(NodeOrToken::into_token)
+        pub fn token(&self) -> SyntaxToken {
+            self.0.children_with_tokens().find_map(NodeOrToken::into_token).unwrap()
+        }
+
+        pub fn text(&self) -> SmolStr {
+            self.token().text().into()
         }
     },
     LABEL = Label {
-        pub fn token(&self) -> Option<SyntaxToken> {
-            self.0.children_with_tokens().find_map(NodeOrToken::into_token)
+        pub fn token(&self) -> SyntaxToken {
+            self.0.children_with_tokens().find_map(NodeOrToken::into_token).unwrap()
         }
-        pub fn text(&self) -> Option<SmolStr> {
-            self.token().map(|t| t.text().into())
+        pub fn text(&self) -> SmolStr {
+            self.token().text().into()
         }
     },
     TARGET = Target {
@@ -492,8 +531,12 @@ asts! {
         name: Name,
     },
     NAME_REF = NameRef {
-        pub fn token(&self) -> Option<SyntaxToken> {
-            self.0.children_with_tokens().find_map(NodeOrToken::into_token)
+        pub fn token(&self) -> SyntaxToken {
+            self.0.children_with_tokens().find_map(NodeOrToken::into_token).unwrap()
+        }
+
+        pub fn text(&self) -> SmolStr {
+            self.token().text().into()
         }
     },
     CASE = Case {
@@ -534,6 +577,12 @@ asts! {
     },
 }
 
+impl Name {
+    pub fn missing() -> SmolStr {
+        "[missing]".into()
+    }
+}
+
 #[cfg(test)]
 mod tests {
 
@@ -571,9 +620,7 @@ mod tests {
 
     #[test]
     fn assert() {
-        let e = crate::parse_module("type Massa { Much(Int) } fn bla() { case Massa {
-            Much(_) -> 1
-        }  }");
+        let e = crate::parse_module("fn wops() { Mogie(name: 1).name}");
         for error in e.errors() {
             println!("{}", error);
         }
@@ -922,5 +969,24 @@ mod tests {
             .unwrap()
             .syntax()
             .should_eq("manager: Int");
+    }
+
+    #[test]
+    fn field_access() {
+        let f = parse::<FieldAccessExpr>("fn wops() { Mogie(name: 1).name}");
+
+        f.label().unwrap().syntax().should_eq("name");
+        f.base().unwrap().syntax().should_eq("Mogie(name: 1)");
+        
+        let f = parse::<FieldAccessExpr>("fn wops() { base.label}");
+        f.label().unwrap().syntax().should_eq("label");
+        f.base().unwrap().syntax().should_eq("base")
+    }
+    
+    #[test]
+    fn variant_constructor() {
+        let f = parse::<VariantConstructor>("fn fields() { Muddle(name: 5) }");
+        f.args().unwrap().syntax().should_eq("(name: 5)");
+        f.name().unwrap().syntax().should_eq("Muddle");
     }
 }

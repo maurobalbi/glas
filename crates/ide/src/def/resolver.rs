@@ -127,12 +127,6 @@ impl Resolver {
         self
     }
 
-    // fn push_generic_params_scope(self, db: &dyn DefDatabase, def: GenericDefId) -> Resolver {
-    //     let params = db.generic_params(def);
-    //     self.push_scope(Scope::GenericParams { def, params })
-    //     self
-    // }
-
     fn push_expr_scope(
         self,
         owner: FunctionId,

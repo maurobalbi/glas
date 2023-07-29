@@ -1,6 +1,6 @@
 use std::cell::Cell;
 
-use crate::ast::{AstNode, SourceFile};
+use crate::ast::{AstNode, SourceFile, NameRef};
 use crate::lexer::{GleamLexer, LexToken};
 use crate::token_set::TokenSet;
 use crate::SyntaxKind::{self, *};
@@ -657,9 +657,11 @@ fn expr_bp(p: &mut Parser, min_bp: u8) {
             T!["."] => {
                 p.expect(T!["."]);
                 match p.nth(0) {
-                    U_IDENT | IDENT => {
+                    IDENT => {
                         let m = p.start_node_before(lhs);
+                        let n = p.start_node();
                         p.bump();
+                        p.finish_node(n, NAME_REF);
                         lhs = p.finish_node(m, FIELD_ACCESS);
                     }
                     INTEGER => {
@@ -712,10 +714,20 @@ fn expr_unit(p: &mut Parser) -> Option<MarkClosed> {
             p.bump();
             p.finish_node(m, LITERAL)
         }
-        IDENT | U_IDENT => {
+        IDENT => {
             let m = p.start_node();
             p.bump();
             p.finish_node(m, NAME_REF)
+        }
+        U_IDENT => {
+            let b = p.start_node();
+            let m = p.start_node();
+            p.bump();
+            let c = p.finish_node(m, NAME_REF);
+            if p.at(T!["("]) {
+                arg_list(p);
+            }
+            p.finish_node(b, VARIANT_CONSTRUCTOR)
         }
         DISCARD_IDENT => {
             let m = p.start_node();

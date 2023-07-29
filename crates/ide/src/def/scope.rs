@@ -199,6 +199,13 @@ impl ExprScopes {
                 self.traverse_expr(body, *left, scope);
                 self.traverse_expr(body, *right, scope);
             }
+            Expr::FieldAccess {
+                base: container,
+                label,
+            } => {
+                self.traverse_expr(body, *container, scope);
+                self.traverse_expr(body, *label, scope);
+            }
             Expr::Case { subjects, clauses } => {
                 subjects
                     .clone()
@@ -267,11 +274,11 @@ impl ExprScopes {
                 }
             }
             Pattern::AlternativePattern { patterns } => {
-                  for pattern in patterns {
+                for pattern in patterns {
                     self.add_bindings(body, scope, pattern);
                 }
             }
-            Pattern::Hole => {},
+            Pattern::Hole => {}
         }
     }
 }
@@ -295,46 +302,8 @@ impl ScopeEntry {
 #[derive(Debug, PartialEq, Eq)]
 pub struct ScopeData {
     parent: Option<ScopeId>,
-    // label: Option<(LabelId, Name)>,
     entries: Vec<ScopeEntry>,
 }
-
-// // Refactor to rust resolution
-// /// Name resolution of all references.
-// #[derive(Default, Debug, Clone, PartialEq, Eq)]
-// pub struct LocalNameResolution {
-//     // `None` value for unresolved names.
-//     // Mauro: Make an enum for all potential resolvable names. E.g. Generics, etc
-//     resolve_map: HashMap<ExprId, Option<PatternId>>,
-//     // // All names from the common pattern `inherit (builtins) ...`.
-//     // // This is used for tracking builtins names even through alising.
-//     // inherited_builtins: HashSet<NameId>,
-// }
-
-// impl LocalNameResolution {
-//     pub(crate) fn name_resolution_query(
-//         db: &dyn DefDatabase,
-//         function_id: FunctionId,
-//     ) -> Arc<Self> {
-//         let loc = db.lookup_intern_function(function_id);
-//         let body = db.body(function_id);
-//         let scopes = db.scopes(function_id);
-//         tracing::info!("Scopes: {:#?}", scopes);
-//         let resolve_map = body
-//             .exprs()
-//             .filter_map(|(e, kind)| match kind {
-//                 Expr::NameRef(name) => Some((e, scopes.resolve_name(e, name))),
-//                 _ => None,
-//             })
-//             .collect::<HashMap<_, _>>();
-
-//         Arc::new(Self { resolve_map })
-//     }
-
-//     pub fn get(&self, expr: ExprId) -> Option<&ResolveResult> {
-//         self.resolve_map.get(&expr)?.as_ref()
-//     }
-// }
 
 pub(crate) fn dependency_order_query(
     db: &dyn DefDatabase,
@@ -370,5 +339,4 @@ pub(crate) fn dependency_order_query(
                 .collect()
         })
         .collect()
-    // graph::into_dependency_order(graph).into_iter().map(|v| v.into_iter().map(|v| v.index()).collect()).collect()
 }

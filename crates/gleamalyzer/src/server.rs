@@ -469,7 +469,6 @@ impl Server {
         let manifest_src = std::fs::read_to_string(config.root_path.join(MANIFEST_TOML));
 
         let gleam_toml = gleam_src.parse::<Table>().unwrap();
-        tracing::info!("{:#?}", gleam_toml);
 
         let target = gleam_toml["target"]
             .as_str()

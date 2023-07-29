@@ -114,6 +114,14 @@ pub enum Expr {
         right: ExprId,
         op: Option<BinaryOpKind>,
     },
+    FieldAccess {
+        base: ExprId,
+        label: ExprId,
+    },
+    VariantLiteral {
+        name: SmolStr,
+        fields: Vec<ExprId>,
+    },
     Call {
         func: ExprId,
         args: Vec<ExprId>,

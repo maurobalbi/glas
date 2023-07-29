@@ -60,8 +60,7 @@ fn generic_let() {
     check_all(
         "fn woosa(a) { let a = a a }",
         expect![[r#"
-        woosa: fn(a) -> a
-        "#]],
+        woosa: fn(a) -> a"#]],
     )
 }
 
@@ -93,3 +92,13 @@ fn binary() {
         bla: fn(Int, a, b, c) -> Int"#]],
     )
 }
+
+#[test]
+fn adt_resolve() {
+    check_all(
+        "fn bla(a, b, c, d) { a + 1 }",
+        expect![[r#"
+        bla: fn(Int, a, b, c) -> Int"#]],
+    )
+}
+

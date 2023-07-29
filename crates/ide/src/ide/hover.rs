@@ -47,19 +47,17 @@ pub(crate) fn hover(db: &dyn TyDatabase, FilePos { file_id, pos }: FilePos) -> O
             _ => resolver_for_toplevel(db.upcast(), file_id),
         };
 
-        tracing::info!("Name_res: {:#?}", resolver);
         // let ResolveResult((name, file_id)) = name_res.get(expr_id)?;
 
         // let source_map = db.source_map(*file_id);
         let deps = db.dependency_order(file_id);
-        tracing::info!("WERE DOING SOMETHING {:?}", deps);
         let name = SmolStr::from(tok.text());
 
         let hover: Option<HoverResult> = resolver.resolve_name(&name).map(|res| {
             match res {
                 def::resolver::ResolveResult::LocalBinding(pattern) => {
                     let infer = db.infer_function(resolver.body_owner()?);
-                    let ty = infer.ty_for_pat(pattern);
+                    let ty = infer.ty_for_pattern(pattern);
                     Some(HoverResult {
                         range: TextRange::new(pos, pos.checked_add(5.into()).unwrap()),
                         markup: format!("```gleam\n{}\n```", ty.display(db)),

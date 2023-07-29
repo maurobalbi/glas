@@ -1,11 +1,12 @@
 use super::NavigationTarget;
-use crate::def::hir_def::{ModuleDefId, VariantLoc};
+use crate::def::hir_def::{AdtLoc, ModuleDefId, VariantLoc};
 use crate::def::resolver::resolver_for_toplevel;
 use crate::def::resolver_for_expr;
-use crate::def::source_analyzer::find_def;
+use crate::def::source_analyzer::{find_def, SourceAnalyzer};
+use crate::ty::TyDatabase;
 use crate::{DefDatabase, FilePos, InFile, VfsPath};
 use smol_str::SmolStr;
-use syntax::ast::{self, AstNode};
+use syntax::ast::{self, AstNode, FieldAccessExpr};
 use syntax::{best_token_at_offset, TextRange, TextSize};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -15,7 +16,7 @@ pub enum GotoDefinitionResult {
 }
 
 pub(crate) fn goto_definition(
-    db: &dyn DefDatabase,
+    db: &dyn TyDatabase,
     FilePos { file_id, pos }: FilePos,
 ) -> Option<GotoDefinitionResult> {
     let parse = db.parse(file_id).syntax_node();
@@ -23,18 +24,38 @@ pub(crate) fn goto_definition(
     // let module_data = db.module_items(file_id);
     // let source_map = db.source_map(file_id);
 
-    tracing::info!(
-        "Module name: {:?}",
-        db.module_map().module_name_for_file(file_id)
-    );
-    //If tok.parent is field access or tuple access, it will be necessary to infer type first
-    if matches!(
-        tok.parent()?.kind(),
-        syntax::SyntaxKind::FIELD_ACCESS | syntax::SyntaxKind::TUPLE_INDEX
-    ) {
-        return None;
-    }
 
+    //If tok.parent is field access or tuple access, it will be necessary to infer type first
+    if let Some(name_ref_tok) = ast::NameRef::cast(tok.parent()?) {
+        if let Some(tok) = FieldAccessExpr::for_label_name_ref(&name_ref_tok) {
+            let expr_ptr = InFile {
+                file_id: file_id,
+                value: &tok.label()?,
+            };
+            match find_def(db.upcast(), expr_ptr.with_value(tok.syntax())) {
+                Some(ModuleDefId::FunctionId(fn_id)) => {
+                    let analyzer = SourceAnalyzer::new_for_function(
+                        db,
+                        fn_id,
+                        expr_ptr.with_value(tok.syntax()),
+                    );
+                    let ast = ast::NameRef::cast(tok.label()?.clone().syntax().clone())?;
+                    let adt_id = analyzer.resolve_field(db.upcast(), &ast)?;
+                    let adtloc = db.lookup_intern_adt(adt_id.clone());
+                    let full_range = db.module_items(adtloc.file_id)[adtloc.value]
+                        .ast_ptr
+                        .syntax_node_ptr()
+                        .text_range();
+                    return Some(GotoDefinitionResult::Targets(vec![NavigationTarget {
+                        file_id: adtloc.file_id,
+                        focus_range: full_range,
+                        full_range: full_range,
+                    }]));
+                }
+                _ => {}
+            }
+        }
+    }
     // Resolver is not enough for goto definition, some expressions have to be inferred aswell eg. field access
     if ast::NameRef::can_cast(tok.parent()?.kind()) {
         let expr = ast::Expr::cast(tok.parent()?)?;
@@ -44,64 +65,56 @@ pub(crate) fn goto_definition(
             value: &tok.parent()?,
         };
 
-        // dangerous find_map because iterating hashmap has not always same order!
-        // ToDo: Make diagnostic when multiple values declared
-        // Find resolver based on where cursor is! not depending on luck!
-        let resolver = match find_def(db, expr_ptr) {
+        let resolver = match find_def(db.upcast(), expr_ptr) {
             Some(ModuleDefId::FunctionId(id)) => {
                 let source_map = db.body_source_map(id);
                 let expr_ptr = expr_ptr.with_value(&expr);
-                resolver_for_expr(db, id, source_map.expr_for_node(expr_ptr)?)
+                resolver_for_expr(db.upcast(), id, source_map.expr_for_node(expr_ptr)?)
             }
-            _ => resolver_for_toplevel(db, file_id),
+            _ => resolver_for_toplevel(db.upcast(), file_id),
         };
 
-        tracing::info!("Name_res: {:#?}", resolver);
         // let ResolveResult((name, file_id)) = name_res.get(expr_id)?;
 
         // let source_map = db.source_map(*file_id);
         let deps = db.dependency_order(file_id);
-        tracing::info!("WERE DOING SOMETHING {:?}", deps);
         let name = SmolStr::from(tok.text());
 
         let targets = resolver.resolve_name(&name).map(|ptr| {
             let (full_range, focus_range, file_id) = match ptr {
                 crate::def::resolver::ResolveResult::LocalBinding(pattern) => {
-                    let focus_node = db.body_source_map(resolver.body_owner()?.clone())
+                    let focus_node = db
+                        .body_source_map(resolver.body_owner()?.clone())
                         .node_for_pattern(pattern)?
                         .value
                         .syntax_node_ptr();
                     let root = db.parse(file_id).syntax_node();
                     let full_range = focus_node.to_node(&root).parent().unwrap().text_range();
-                (
-                    full_range,
-                    focus_node.text_range(),
-                    file_id,
-                )}
-                ,
+                    (full_range, focus_node.text_range(), file_id)
+                }
                 crate::def::resolver::ResolveResult::FunctionId(func_id) => {
                     let func = db.lookup_intern_function(func_id.clone());
                     let full_node = db.module_items(func.file_id)[func.value]
-                            .ast_ptr
-                            .syntax_node_ptr();
+                        .ast_ptr
+                        .syntax_node_ptr();
                     let root = db.parse(file_id).syntax_node();
-                    let name = ast::Function::cast(full_node.to_node(&root)).unwrap().name().unwrap();
+                    let name = ast::Function::cast(full_node.to_node(&root))
+                        .unwrap()
+                        .name()
+                        .unwrap();
                     (
                         full_node.text_range(),
-                        name.token().unwrap().text_range(),
+                        name.token().text_range(),
                         func.file_id,
                     )
                 }
                 crate::def::resolver::ResolveResult::VariantId(variant_id) => {
                     let VariantLoc { value, .. } = db.lookup_intern_variant(variant_id.clone());
                     let full_range = db.module_items(value.file_id)[value.value]
-                            .ast_ptr
-                            .syntax_node_ptr().text_range();
-                    (
-                        full_range,
-                        full_range,
-                        value.file_id,
-                    )
+                        .ast_ptr
+                        .syntax_node_ptr()
+                        .text_range();
+                    (full_range, full_range, value.file_id)
                 }
             };
 
@@ -155,7 +168,6 @@ mod tests {
     #[track_caller]
     fn check(fixture: &str, expect: Expect) {
         let (db, f) = TestDB::from_fixture(fixture).unwrap();
-        tracing::info!("Fixture {:?}", db.module_map());
         assert_eq!(f.markers().len(), 1, "Missing markers");
         let mut got = match goto_definition(&db, f[0]).expect("No definition") {
             GotoDefinitionResult::Path(path) => format!("file://{}", path.display()),
@@ -164,7 +176,6 @@ mod tests {
                 targets
                     .into_iter()
                     .map(|target| {
-                        tracing::info!("{:?}", target);
                         assert!(target.full_range.contains_range(target.focus_range));
                         let src = db.file_content(target.file_id);
                         let mut full = src[target.full_range].to_owned();
@@ -184,16 +195,54 @@ mod tests {
         expect.assert_eq(&got);
     }
 
-    #[traced_test]
     #[test]
     fn let_expr() {
         check("fn main(a) { let c = 123 $0c }", expect!["let <c> = 123"]);
-        check(r#"
+    }
+
+    #[test]
+    fn case() {
+        check("fn wops() { case 1 { a -> $0a} a}", expect!["<a>"]);
+        check_no("fn wops() { case 1 { a -> a} $0a}")
+    }
+
+    #[test]
+    fn variant_constructor() {
+        check(
+            "type Mogie { Mogie(name: Int) } fn wops() { $0Mogie(name: 1)}",
+            expect!["<Mogie(name: Int)>"],
+        );
+    }
+
+    #[test]
+    fn field_resolution() {
+        check(
+            "type Mogie { Mogie(name: Int) } fn wops() { Mogie(name: 1).$0name}",
+            expect!["<type Mogie { Mogie(name: Int) }>"],
+        );
+    }
+
+    #[traced_test]
+    #[test]
+    fn field_access() {
+        check(
+            "type Mogie { Mogie(name: Int) } fn wops() { let bobo = Mogie(name: 1) $0bobo.name}",
+            expect!["let <bobo> = Mogie(name: 1)"],
+        );
+        check(
+            "type Mogie { Mogie(name: Int) } fn wops() { let bobo = Mogie(name: 1) bobo.$0name}",
+            expect!["<type Mogie { Mogie(name: Int) }>"],
+        );
+    }
+
+    #[test]
+    fn module_res() {
+        check(
+            r#"
 #-test.gleam
 fn main() {
     1
 }
-
 
 #-test2.gleam
 import test
@@ -201,10 +250,14 @@ import test
 fn bla() {
     $0main()
 }
-"#, expect![r#"
+"#,
+            expect![
+                r#"
 fn <main>() {
     1
 }
-"#]);
+"#
+            ],
+        );
     }
 }

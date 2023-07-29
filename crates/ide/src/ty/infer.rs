@@ -38,17 +38,21 @@ impl Ty {
 pub struct InferenceResult {
     pattern_ty_map: ArenaMap<PatternId, super::Ty>,
     expr_ty_map: ArenaMap<ExprId, super::Ty>,
-    // field_resolution: HashMap<ExprId, FieldId>,
+    field_resolution: HashMap<ExprId, AdtId>,
     pub fn_ty: super::Ty,
 }
 
 impl InferenceResult {
-    pub fn ty_for_pat(&self, pattern: PatternId) -> super::Ty {
+    pub fn ty_for_pattern(&self, pattern: PatternId) -> super::Ty {
         self.pattern_ty_map[pattern].clone()
     }
 
     pub fn ty_for_expr(&self, expr: ExprId) -> super::Ty {
         self.expr_ty_map[expr].clone()
+    }
+
+    pub fn resolve_field(&self, expr: ExprId) -> Option<AdtId> {
+        self.field_resolution.get(&expr).cloned()
     }
 }
 
@@ -101,6 +105,8 @@ pub(crate) fn infer_function_group_query(
 struct BodyCtx {
     pattern_to_ty: HashMap<PatternId, TyVar>,
     expr_to_ty: HashMap<ExprId, TyVar>,
+    
+    field_resolution: HashMap<ExprId, AdtId>,
 }
 struct InferCtx<'db> {
     db: &'db dyn TyDatabase,
@@ -197,9 +203,12 @@ impl<'db> InferCtx<'db> {
 
     fn infer_stmt(&mut self, stmt: Statement) -> TyVar {
         match stmt {
-            Statement::Let { pattern: _, body } => {
+            Statement::Let { pattern, body } => {
                 //infer pat
-                self.infer_expr(body)
+                let pat_ty = self.ty_for_pattern(pattern);
+                let infer = self.infer_expr(body);
+                self.unify_var(pat_ty, infer);
+                pat_ty
             }
             Statement::Expr { expr } => self.infer_expr(expr),
             Statement::Use {
@@ -229,7 +238,6 @@ impl<'db> InferCtx<'db> {
                 let mut tail = self.new_ty_var();
                 for stmt in stmts {
                     tail = self.infer_stmt(stmt.clone());
-                    tracing::info!("STATEMNT: {:?} {:?}", stmt, tail);
                 }
                 tail
             }
@@ -320,22 +328,50 @@ impl<'db> InferCtx<'db> {
                             }
                         }
                     }
-                    Some(ResolveResult::VariantId(var_id)) => {
-                        let variant = db.lookup_intern_variant(var_id);
-                        let mut env = HashMap::new();
-                        self.make_type(
-                            super::Ty::Adt {
-                                adt_id: variant.parent,
-                                params: Arc::new(Vec::new()),
-                            },
-                            &mut env,
-                        )
-                    }
                     // No resolution found, user error!?! report diagnostic!
-                    None => self.new_ty_var(),
+                    _ => self.new_ty_var(),
                 }
             }
             Expr::Case { subjects, clauses } => self.new_ty_var(),
+            Expr::FieldAccess { base: container, label } => {
+                let ty = self.infer_expr(*container);
+                let field_var = self.new_ty_var();
+                let field_ty = match self.table.get_mut(ty.0) {
+                    Ty::Adt { adt_id, params } => {
+                        self.body_ctx.field_resolution.insert(*label, *adt_id);
+                        match params.iter().next() {
+                           Some(var) => *var,
+                           None => self.new_ty_var()
+                        }
+                    },
+                    a => {
+                        self.new_ty_var()
+                    }
+                };
+                self.unify_var(field_ty, field_var);
+                field_ty
+            },
+            Expr::VariantLiteral { name, fields } => {
+                let db = self.db;
+                let resolver = resolver_for_expr(db.upcast(), self.fn_id, e);
+                let mut params = Vec::new();
+                for field in fields {
+                    params.push(self.infer_expr(*field));
+                }
+                match resolver.resolve_name(name) {
+                    Some(ResolveResult::VariantId(var_id)) => {
+                        let variant = db.lookup_intern_variant(var_id);
+                        Ty::Adt {
+                                adt_id: variant.parent,
+                                params,
+                            }.intern(self)
+                    }
+                    _ => {
+                        // ToDo: Add diagnostics
+                        self.new_ty_var()
+                    }
+                }
+            },
         }
     }
 
@@ -431,6 +467,8 @@ fn finish_infer(
             fn_id,
             InferenceResult {
                 fn_ty: i.collect(*fn_ty.get(&fn_id).expect("Compiler error")),
+                
+                field_resolution: ctx.field_resolution,
                 pattern_ty_map,
                 expr_ty_map,
             },
