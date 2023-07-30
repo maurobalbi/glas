@@ -2,7 +2,7 @@ use crate::{convert, StateSnapshot};
 use anyhow::Result;
 use ide::{FileRange, GotoDefinitionResult};
 use lsp_types::{
-    Diagnostic, GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverParams, Url,
+    Diagnostic, GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverParams, Url, CompletionParams, CompletionResponse,
 };
 
 const MAX_DIAGNOSTICS_CNT: usize = 128;
@@ -12,6 +12,24 @@ pub(crate) fn hover(snap: StateSnapshot, params: HoverParams) -> Result<Option<H
         convert::from_file_pos(&snap.vfs(), &params.text_document_position_params)?;
     let ret = snap.analysis.hover(fpos)?;
     Ok(ret.map(|hover| convert::to_hover(&line_map, hover)))
+}
+
+pub(crate) fn completion(
+    snap: StateSnapshot,
+    params: CompletionParams,
+) -> Result<Option<CompletionResponse>> {
+    let (fpos, line_map) = convert::from_file_pos(&snap.vfs(), &params.text_document_position)?;
+    let trigger_char = params
+        .context
+        .and_then(|ctx| ctx.trigger_character?.chars().next());
+    let Some(items) = snap.analysis.completions(fpos, trigger_char)? else {
+        return Ok(None);
+    };
+    let items = items
+        .into_iter()
+        .map(|item| convert::to_completion_item(&line_map, item))
+        .collect::<Vec<_>>();
+    Ok(Some(CompletionResponse::Array(items)))
 }
 
 pub(crate) fn diagnostics(snap: StateSnapshot, uri: &Url) -> Result<Vec<Diagnostic>> {

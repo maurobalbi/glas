@@ -98,6 +98,7 @@ impl Server {
             .notification::<notif::DidChangeWatchedFiles>(Self::on_did_change_watched_files)
             //// Requests ////
             .request_snap::<req::GotoDefinition>(handler::goto_definition)
+            .request_snap::<req::Completion>(handler::completion)
             .request_snap::<req::HoverRequest>(handler::hover)
             //// Events ////
             .event(Self::on_set_package_info)

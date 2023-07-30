@@ -1,6 +1,6 @@
 use lsp_types::{
     HoverProviderCapability, InitializeParams, OneOf, ServerCapabilities,
-    TextDocumentSyncCapability, TextDocumentSyncKind, TextDocumentSyncOptions,
+    TextDocumentSyncCapability, TextDocumentSyncKind, TextDocumentSyncOptions, CompletionOptions,
 };
 
 macro_rules! test {
@@ -57,6 +57,10 @@ pub(crate) fn negotiate_capabilities(
                 save: None,
             },
         )),
+        completion_provider: Some(CompletionOptions {
+            trigger_characters: Some(vec![".".into()]),
+            ..Default::default()
+        }),
         hover_provider: Some(HoverProviderCapability::Simple(true)),
         definition_provider: Some(OneOf::Left(true)),
         ..Default::default()

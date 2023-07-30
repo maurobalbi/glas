@@ -9,10 +9,13 @@ mod tests;
 
 pub const DEFAULT_IMPORT_FILE: &str = "gleam.toml";
 
-pub use self::ide::{Analysis, AnalysisHost, Cancelled, GotoDefinitionResult, HoverResult};
+pub use self::ide::{
+    Analysis, AnalysisHost, Cancelled, CompletionItem, CompletionItemKind, GotoDefinitionResult,
+    HoverResult,
+};
 pub use base::{
-    Change, FileId, FilePos, FileRange, FileSet, InFile, ModuleMap, PackageGraph, PackageInfo,
-    SourceDatabase, SourceRoot, SourceRootId, VfsPath, module_name
+    module_name, Change, FileId, FilePos, FileRange, FileSet, InFile, ModuleMap, PackageGraph,
+    PackageInfo, SourceDatabase, SourceRoot, SourceRootId, VfsPath,
 };
 pub use def::DefDatabase;
 pub use diagnostic::{Diagnostic, DiagnosticKind, Severity};

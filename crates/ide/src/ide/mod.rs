@@ -2,6 +2,7 @@ mod diagnostics;
 mod goto_definition;
 mod highlight_related;
 mod hover;
+mod completion;
 
 use crate::base::SourceDatabaseStorage;
 use crate::def::{DefDatabaseStorage, InternDatabaseStorage};
@@ -17,6 +18,7 @@ use syntax::TextRange;
 pub use goto_definition::GotoDefinitionResult;
 pub use highlight_related::HlRelated;
 pub use hover::HoverResult;
+pub use completion::{CompletionItem, CompletionItemKind};
 
 pub const DEFAULT_LRU_CAP: usize = 128;
 
@@ -153,6 +155,14 @@ impl Analysis {
     //// LSP standard ////
     pub fn hover(&self, fpos: FilePos) -> Cancellable<Option<HoverResult>> {
         self.with_db(|db| hover::hover(db, fpos))
+    }
+
+    pub fn completions(
+        &self,
+        pos: FilePos,
+        trigger_char: Option<char>,
+    ) -> Cancellable<Option<Vec<CompletionItem>>> {
+        self.with_db(|db| completion::completions(db, pos, trigger_char))
     }
 
     pub fn diagnostics(&self, file: FileId) -> Cancellable<Vec<Diagnostic>> {

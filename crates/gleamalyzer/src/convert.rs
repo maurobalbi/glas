@@ -1,7 +1,7 @@
 use crate::{LineMap, Result, Vfs};
 use async_lsp::{ErrorCode, ResponseError};
-use ide::{Diagnostic, DiagnosticKind, FileId, FilePos, FileRange, HoverResult, Severity};
-use lsp::{DiagnosticTag, Hover, MarkupContent, MarkupKind};
+use ide::{Diagnostic, DiagnosticKind, FileId, FilePos, FileRange, HoverResult, Severity, CompletionItem, CompletionItemKind};
+use lsp::{DiagnosticTag, Hover, MarkupContent, MarkupKind,  Documentation};
 use lsp_types::{
     self as lsp, DiagnosticRelatedInformation, DiagnosticSeverity, Location, NumberOrString,
     Position, PrepareRenameResponse, Range, TextDocumentIdentifier, TextDocumentPositionParams,
@@ -59,6 +59,40 @@ pub(crate) fn to_hover(line_map: &LineMap, hover: HoverResult) -> Hover {
             kind: MarkupKind::Markdown,
             value: hover.markup,
         }),
+    }
+}
+
+pub(crate) fn to_completion_item(line_map: &LineMap, item: CompletionItem) -> lsp::CompletionItem {
+    let kind = match item.kind {
+        CompletionItemKind::Keyword => lsp::CompletionItemKind::KEYWORD,
+        CompletionItemKind::Param => lsp::CompletionItemKind::VARIABLE,
+        CompletionItemKind::LetBinding => lsp::CompletionItemKind::VARIABLE,
+        CompletionItemKind::Field => lsp::CompletionItemKind::FIELD,
+    };
+    lsp::CompletionItem {
+        label: item.label.into(),
+        kind: Some(kind),
+        insert_text: None,
+        insert_text_format: Some(lsp::InsertTextFormat::PLAIN_TEXT),
+        // We don't support indentation yet.
+        insert_text_mode: Some(lsp::InsertTextMode::ADJUST_INDENTATION),
+        text_edit: Some(lsp::CompletionTextEdit::Edit(lsp::TextEdit {
+            range: to_range(line_map, item.source_range),
+            new_text: item.replace.into(),
+        })),
+        detail: item.description,
+        documentation: item.documentation.map(|doc| {
+            Documentation::MarkupContent(MarkupContent {
+                kind: MarkupKind::Markdown,
+                value: doc,
+            })
+        }),
+        label_details: Some(lsp::CompletionItemLabelDetails {
+            detail: item.signature.map(|sig| format!(": {sig}")),
+            description: None,
+        }),
+
+        ..lsp::CompletionItem::default()
     }
 }
 
