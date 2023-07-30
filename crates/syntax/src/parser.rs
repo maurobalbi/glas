@@ -723,7 +723,7 @@ fn expr_unit(p: &mut Parser) -> Option<MarkClosed> {
             let b = p.start_node();
             let m = p.start_node();
             p.bump();
-            let c = p.finish_node(m, NAME_REF);
+            p.finish_node(m, NAME_REF);
             if p.at(T!["("]) {
                 arg_list(p);
             }
