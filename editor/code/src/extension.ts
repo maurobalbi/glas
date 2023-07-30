@@ -13,7 +13,7 @@ export function activate(context: vscode.ExtensionContext) {
   client = createLanguageClient();
   // Start the client. This will also launch the server
   client.start();
-  let disposable = vscode.commands.registerCommand('helloworld.helloWorld', () => {
+  let disposable = vscode.commands.registerCommand('gleamalyzer.syntaxTree', () => {
     // The code you place here will be executed every time your command is executed
 
     // Display a message box to the user
