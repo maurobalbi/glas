@@ -69,7 +69,8 @@ fn lablelled_args() {
     check_all(
         "fn wobble(b, f a: Int) { a } fn main() { abc(1) }",
         expect![[r#"
-    wobble: fn(a, b) -> Bla2"#]],
+            wobble: fn(a, b) -> b
+            main: fn() -> a"#]],
     )
 }
 
