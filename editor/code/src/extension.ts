@@ -6,21 +6,78 @@ import {
   ServerOptions,
   TransportKind,
 } from "vscode-languageclient/node";
+import * as lc from "vscode-languageclient";
 
-let client: LanguageClient | undefined;
+let client: LanguageClient;
+
+export type SyntaxTreeParams = {
+  textDocument: lc.TextDocumentIdentifier;
+};
+
+export const syntaxTree = new lc.RequestType<SyntaxTreeParams, string, void>(
+  "gleamalyzer/syntaxTree"
+);
 
 export function activate(context: vscode.ExtensionContext) {
   client = createLanguageClient();
   // Start the client. This will also launch the server
   client.start();
-  let disposable = vscode.commands.registerCommand('gleamalyzer.syntaxTree', () => {
-    // The code you place here will be executed every time your command is executed
 
-    // Display a message box to the user
-    vscode.window.showInformationMessage('Hello World!');
-  });
+  const uri = vscode.Uri.parse('gleamalyzer-syntaxTree:' + "syntax");
+  // register a content provider for the cowsay-scheme
+  const myScheme = 'gleamalyzer-syntaxTree';
+  const syntaxTreeProvider = new class implements vscode.TextDocumentContentProvider {
+    constructor() {
+      vscode.workspace.onDidChangeTextDocument(
+        this.onDidChangeTextDocument,
+        this
+      );
+      vscode.window.onDidChangeActiveTextEditor(
+        this.onDidChangeActiveTextEditor,
+        this
+      );
+    }
 
-  context.subscriptions.push(disposable);
+    onDidChangeTextDocument(event: vscode.TextDocumentChangeEvent) {
+      console.log('changed doc')
+      if (isGleamDocument(event.document)) {
+        // We need to order this after language server updates, but there's no API for that.
+        // Hence, good old sleep().
+        void sleep(10).then(() => this.eventEmitter.fire(this.uri));
+      }
+    }
+    onDidChangeActiveTextEditor(editor: vscode.TextEditor | undefined) {
+      if (editor && isGleamEditor(editor)) {
+        this.eventEmitter.fire(this.uri);
+      }
+    }
+
+    uri = uri
+    // emitter and its event
+    eventEmitter = new vscode.EventEmitter<vscode.Uri>();
+    onDidChange = this.eventEmitter.event;
+
+    provideTextDocumentContent(uri: vscode.Uri, ct: lc.CancellationToken) {
+      // simply invoke cowsay, use uri-path as text
+      const gleamEditor = vscode.window.activeTextEditor;
+      if (!(gleamEditor?.document.uri.scheme == "file") || !(gleamEditor.document.languageId == "gleam")) {
+        return ""
+      }
+
+      const params = { textDocument: { uri: gleamEditor.document.uri.toString() } };
+      return client.sendRequest(syntaxTree, params, ct)
+    }
+  };
+  context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider(myScheme, syntaxTreeProvider));
+  context.subscriptions.push(vscode.commands.registerCommand('gleamalyzer.syntaxTree', async () => {
+    const doc = await vscode.workspace.openTextDocument(uri); // calls back into the provider
+    await vscode.window.showTextDocument(doc, {
+      viewColumn: vscode.ViewColumn.Two,
+      preserveFocus: true,
+      preview: false
+    });
+  }));
+
 }
 
 // this method is called when your extension is deactivated
@@ -59,4 +116,24 @@ function createLanguageClient(): LanguageClient {
     serverOptions,
     clientOptions
   );
+}
+
+
+export type GleamDocument = vscode.TextDocument & { languageId: "rust" };
+export type GleamEditor = vscode.TextEditor & { document: GleamDocument };
+
+export function isGleamDocument(document: vscode.TextDocument): document is GleamDocument {
+  // Prevent corrupted text (particularly via inlay hints) in diff views
+  // by allowing only `file` schemes
+  // unfortunately extensions that use diff views not always set this
+  // to something different than 'file' (see ongoing bug: #4608)
+  return document.languageId === "gleam" && document.uri.scheme === "file";
+}
+
+export function isGleamEditor(editor: vscode.TextEditor): editor is GleamEditor {
+  return isGleamDocument(editor.document);
+}
+
+export function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

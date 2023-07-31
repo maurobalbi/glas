@@ -1,4 +1,4 @@
-use crate::{convert, StateSnapshot};
+use crate::{convert, StateSnapshot, lsp_ext::SyntaxTreeParams};
 use anyhow::Result;
 use ide::{FileRange, GotoDefinitionResult};
 use lsp_types::{
@@ -61,4 +61,13 @@ pub(crate) fn goto_definition(
         _ => return Ok(None),
     };
     Ok(Some(GotoDefinitionResponse::Array(targets)))
+}
+
+pub(crate) fn syntax_tree(
+    snap: StateSnapshot,
+    params: SyntaxTreeParams,
+) -> Result<String> {
+    let (file, _) = convert::from_file(&snap.vfs(), &params.text_document)?;
+    let syntax_tree = snap.analysis.syntax_tree(file)?;
+    Ok(syntax_tree)
 }

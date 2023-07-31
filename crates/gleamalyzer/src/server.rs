@@ -1,6 +1,6 @@
 use crate::capabilities::{negotiate_capabilities, NegotiatedCapabilities};
 use crate::config::{Config, CONFIG_KEY};
-use crate::{convert, handler, UrlExt, Vfs, MAX_FILE_LEN};
+use crate::{convert, handler, UrlExt, Vfs, MAX_FILE_LEN, lsp_ext};
 use anyhow::{bail, Context, Result};
 use async_lsp::router::Router;
 use async_lsp::{ClientSocket, ErrorCode, LanguageClient, ResponseError};
@@ -100,6 +100,7 @@ impl Server {
             .request_snap::<req::GotoDefinition>(handler::goto_definition)
             .request_snap::<req::Completion>(handler::completion)
             .request_snap::<req::HoverRequest>(handler::hover)
+            .request_snap::<lsp_ext::SyntaxTree>(handler::syntax_tree)
             //// Events ////
             .event(Self::on_set_package_info)
             .event(Self::on_update_config)

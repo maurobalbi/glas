@@ -5,6 +5,7 @@ mod handler;
 mod meter;
 pub mod server;
 mod vfs;
+mod lsp_ext;
 
 use anyhow::Result;
 use async_lsp::client_monitor::ClientProcessMonitorLayer;

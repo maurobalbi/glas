@@ -3,6 +3,7 @@ mod goto_definition;
 mod highlight_related;
 mod hover;
 mod completion;
+mod syntax_tree;
 
 use crate::base::SourceDatabaseStorage;
 use crate::def::{DefDatabaseStorage, InternDatabaseStorage};
@@ -175,5 +176,12 @@ impl Analysis {
 
     pub fn goto_definition(&self, pos: FilePos) -> Cancellable<Option<GotoDefinitionResult>> {
         self.with_db(|db| goto_definition::goto_definition(db, pos))
+    }
+    
+    pub fn syntax_tree(
+        &self,
+        file_id: FileId,
+    ) -> Cancellable<String> {
+        self.with_db(|db| syntax_tree::syntax_tree(db, file_id))
     }
 }

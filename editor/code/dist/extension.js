@@ -4097,6 +4097,122 @@ module.exports = validRange
 
 /***/ }),
 
+/***/ "./src/extension.ts":
+/*!**************************!*\
+  !*** ./src/extension.ts ***!
+  \**************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.sleep = exports.isGleamEditor = exports.isGleamDocument = exports.deactivate = exports.activate = exports.syntaxTree = void 0;
+const vscode = __webpack_require__(/*! vscode */ "vscode");
+const vscode_1 = __webpack_require__(/*! vscode */ "vscode");
+const node_1 = __webpack_require__(/*! vscode-languageclient/node */ "./node_modules/vscode-languageclient/node.js");
+const lc = __webpack_require__(/*! vscode-languageclient */ "./node_modules/vscode-languageclient/lib/node/main.js");
+let client;
+exports.syntaxTree = new lc.RequestType("gleamalyzer/syntaxTree");
+function activate(context) {
+    client = createLanguageClient();
+    // Start the client. This will also launch the server
+    client.start();
+    const uri = vscode.Uri.parse('gleamalyzer-syntaxTree:' + "syntax");
+    // register a content provider for the cowsay-scheme
+    const myScheme = 'gleamalyzer-syntaxTree';
+    const syntaxTreeProvider = new class {
+        constructor() {
+            this.uri = uri;
+            // emitter and its event
+            this.eventEmitter = new vscode.EventEmitter();
+            this.onDidChange = this.eventEmitter.event;
+            vscode.workspace.onDidChangeTextDocument(this.onDidChangeTextDocument, this);
+            vscode.window.onDidChangeActiveTextEditor(this.onDidChangeActiveTextEditor, this);
+        }
+        onDidChangeTextDocument(event) {
+            console.log('changed doc');
+            if (isGleamDocument(event.document)) {
+                // We need to order this after language server updates, but there's no API for that.
+                // Hence, good old sleep().
+                void sleep(10).then(() => this.eventEmitter.fire(this.uri));
+            }
+        }
+        onDidChangeActiveTextEditor(editor) {
+            if (editor && isGleamEditor(editor)) {
+                this.eventEmitter.fire(this.uri);
+            }
+        }
+        provideTextDocumentContent(uri, ct) {
+            // simply invoke cowsay, use uri-path as text
+            const gleamEditor = vscode.window.activeTextEditor;
+            if (!(gleamEditor?.document.uri.scheme == "file") || !(gleamEditor.document.languageId == "gleam")) {
+                return "";
+            }
+            const params = { textDocument: { uri: gleamEditor.document.uri.toString() } };
+            return client.sendRequest(exports.syntaxTree, params, ct);
+        }
+    };
+    context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider(myScheme, syntaxTreeProvider));
+    context.subscriptions.push(vscode.commands.registerCommand('gleamalyzer.syntaxTree', async () => {
+        const doc = await vscode.workspace.openTextDocument(uri); // calls back into the provider
+        await vscode.window.showTextDocument(doc, {
+            viewColumn: vscode.ViewColumn.Two,
+            preserveFocus: true,
+            preview: false
+        });
+    }));
+}
+exports.activate = activate;
+// this method is called when your extension is deactivated
+function deactivate() {
+    return client?.stop();
+}
+exports.deactivate = deactivate;
+function createLanguageClient() {
+    let clientOptions = {
+        documentSelector: [{ scheme: "file", language: "gleam" }],
+        synchronize: {
+            fileEvents: [
+                vscode_1.workspace.createFileSystemWatcher("**/gleam.toml"),
+                vscode_1.workspace.createFileSystemWatcher("**/manifest.toml"),
+                vscode_1.workspace.createFileSystemWatcher("**/*.gleam"),
+            ],
+        },
+    };
+    let serverOptions = {
+        command: "/users/maurobalbi/Documents/repos/gleamalyzer/target/debug/gleamalyzer",
+        // args: ["lsp"],
+        transport: node_1.TransportKind.stdio,
+        options: {
+            env: Object.assign(process.env, {
+                GLEAM_LOG: "debug",
+                GLEAM_LOG_PATH: "/Users/maurobalbi/Documents/repos/gleamalyzer/log.log",
+                GLEAM_LOG_NOCOLOUR: "1",
+            }),
+        },
+    };
+    return new node_1.LanguageClient("gleam_language_server", "Gleam Language Server", serverOptions, clientOptions);
+}
+function isGleamDocument(document) {
+    // Prevent corrupted text (particularly via inlay hints) in diff views
+    // by allowing only `file` schemes
+    // unfortunately extensions that use diff views not always set this
+    // to something different than 'file' (see ongoing bug: #4608)
+    return document.languageId === "gleam" && document.uri.scheme === "file";
+}
+exports.isGleamDocument = isGleamDocument;
+function isGleamEditor(editor) {
+    return isGleamDocument(editor.document);
+}
+exports.isGleamEditor = isGleamEditor;
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+exports.sleep = sleep;
+
+
+/***/ }),
+
 /***/ "./node_modules/vscode-jsonrpc/lib/common/api.js":
 /*!*******************************************************!*\
   !*** ./node_modules/vscode-jsonrpc/lib/common/api.js ***!
@@ -18497,67 +18613,13 @@ module.exports = require("util");
 /******/ 	})();
 /******/ 	
 /************************************************************************/
-var __webpack_exports__ = {};
-// This entry need to be wrapped in an IIFE because it need to be in strict mode.
-(() => {
-"use strict";
-var exports = __webpack_exports__;
-/*!**************************!*\
-  !*** ./src/extension.ts ***!
-  \**************************/
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.deactivate = exports.activate = void 0;
-const vscode = __webpack_require__(/*! vscode */ "vscode");
-const vscode_1 = __webpack_require__(/*! vscode */ "vscode");
-const node_1 = __webpack_require__(/*! vscode-languageclient/node */ "./node_modules/vscode-languageclient/node.js");
-let client;
-function activate(context) {
-    client = createLanguageClient();
-    // Start the client. This will also launch the server
-    client.start();
-    let disposable = vscode.commands.registerCommand('helloworld.helloWorld', () => {
-        // The code you place here will be executed every time your command is executed
-        // Display a message box to the user
-        vscode.window.showInformationMessage('Hello World!');
-    });
-    context.subscriptions.push(disposable);
-}
-exports.activate = activate;
-// this method is called when your extension is deactivated
-function deactivate() {
-    return client?.stop();
-}
-exports.deactivate = deactivate;
-function createLanguageClient() {
-    let clientOptions = {
-        documentSelector: [{ scheme: "file", language: "gleam" }],
-        synchronize: {
-            fileEvents: [
-                vscode_1.workspace.createFileSystemWatcher("**/gleam.toml"),
-                vscode_1.workspace.createFileSystemWatcher("**/manifest.toml"),
-                vscode_1.workspace.createFileSystemWatcher("**/*.gleam"),
-            ],
-        },
-    };
-    let serverOptions = {
-        command: "/users/maurobalbi/Documents/repos/gleamalyzer/target/debug/gleamalyzer",
-        // args: ["lsp"],
-        transport: node_1.TransportKind.stdio,
-        options: {
-            env: Object.assign(process.env, {
-                GLEAM_LOG: "debug",
-                GLEAM_LOG_PATH: "/Users/maurobalbi/Documents/repos/gleamalyzer/log.log",
-                GLEAM_LOG_NOCOLOUR: "1",
-            }),
-        },
-    };
-    return new node_1.LanguageClient("gleam_language_server", "Gleam Language Server", serverOptions, clientOptions);
-}
-
-})();
-
-module.exports = __webpack_exports__;
+/******/ 	
+/******/ 	// startup
+/******/ 	// Load entry module and return exports
+/******/ 	// This entry module is referenced by other modules so it can't be inlined
+/******/ 	var __webpack_exports__ = __webpack_require__("./src/extension.ts");
+/******/ 	module.exports = __webpack_exports__;
+/******/ 	
 /******/ })()
 ;
 //# sourceMappingURL=extension.js.map

@@ -73,7 +73,7 @@ pub(crate) fn to_completion_item(line_map: &LineMap, item: CompletionItem) -> ls
         label: item.label.into(),
         kind: Some(kind),
         insert_text: None,
-        insert_text_format: Some(lsp::InsertTextFormat::PLAIN_TEXT),
+        insert_text_format: Some(lsp::InsertTextFormat::SNIPPET),
         // We don't support indentation yet.
         insert_text_mode: Some(lsp::InsertTextMode::ADJUST_INDENTATION),
         text_edit: Some(lsp::CompletionTextEdit::Edit(lsp::TextEdit {
@@ -91,7 +91,6 @@ pub(crate) fn to_completion_item(line_map: &LineMap, item: CompletionItem) -> ls
             detail: item.signature.map(|sig| format!(": {sig}")),
             description: None,
         }),
-
         ..lsp::CompletionItem::default()
     }
 }

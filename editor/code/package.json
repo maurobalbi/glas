@@ -50,8 +50,8 @@
     },
     "commands": [
       {
-        "command": "helloworld.helloWorld",
-        "title": "Hello World"
+        "command": "gleamalyzer.syntaxTree",
+        "title": "gleamalyzer: Show Syntax Tree"
       }
     ]
   },

@@ -44,10 +44,11 @@ pub(crate) fn completions(
         SyntaxKind::IDENT => tok.text_range(),
         _ => return None,
     };
+
     Some(vec![CompletionItem {
         label: "blabal".into(),
         source_range: source_range,
-        replace: "blabal".into(),
+        replace: "blabal($0)".into(),
         kind: CompletionItemKind::Keyword,
         signature: None,
         description: None,

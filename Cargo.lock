@@ -417,6 +417,7 @@ dependencies = [
  "log",
  "lsp-types",
  "rustix",
+ "serde",
  "serde_json",
  "slab",
  "smol_str",
