@@ -2,7 +2,7 @@ use la_arena::{Idx, IdxRange};
 use ordered_float::OrderedFloat;
 use smol_str::SmolStr;
 use syntax::{
-    ast::{self, BinaryOpKind},
+    ast::{self, BinaryOpKind, LiteralKind},
     AstPtr,
 };
 
@@ -105,7 +105,7 @@ pub type ExprId = Idx<Expr>;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Expr {
     Missing,
-    Literal(Literal),
+    Literal(LiteralKind),
     Block {
         stmts: Vec<Statement>,
     },
@@ -116,7 +116,7 @@ pub enum Expr {
     },
     FieldAccess {
         base: ExprId,
-        label: ExprId,
+        label: SmolStr,
     },
     VariantLiteral {
         name: SmolStr,
@@ -126,11 +126,15 @@ pub enum Expr {
         func: ExprId,
         args: Vec<ExprId>,
     },
+    Lambda {
+        body: ExprId,
+        params: IdxRange<Pattern>
+    },
     Case {
         subjects: IdxRange<Expr>,
         clauses: Vec<Clause>,
     },
-    NameRef(SmolStr),
+    Variable(SmolStr),
 }
 
 pub type PatternId = Idx<Pattern>;
@@ -141,15 +145,10 @@ pub enum Pattern {
     Hole,
     Variable { name: SmolStr },
     Tuple { fields: Vec<PatternId> },
-    Record { args: Vec<PatternId> },
+    Record { constructor: PatternId, args: Vec<PatternId> },
+    Literal {kind: LiteralKind },
+    VariantRef {name: SmolStr, module: Option<SmolStr>, fields: Vec<PatternId>},
     AlternativePattern { patterns: Vec<PatternId> },
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum Literal {
-    Int(i64),
-    Float(OrderedFloat<f64>),
-    String(SmolStr),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

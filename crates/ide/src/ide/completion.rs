@@ -38,6 +38,7 @@ pub(crate) fn completions(
 ) -> Option<Vec<CompletionItem>> {
     let parse = db.parse(file_id);
 
+
     let tok = best_token_at_offset(&parse.syntax_node(), pos)?;
     let source_range = match tok.kind() {
         T!["."] => TextRange::empty(pos),
@@ -88,5 +89,15 @@ mod tests {
         completed.replace_range(source_range, &item.replace);
         let got = format!("({:?}) {}", item.kind, completed);
         expect.assert_eq(&got);
+    }
+    
+    #[track_caller]
+    fn check(fixture: &str, label: &str, expect: Expect) {
+        check_trigger(fixture, None, label, expect);
+    }
+
+    #[test]
+    fn keyword() {
+        check("i$0", "import", expect!["(Keyword) import"]);
     }
 }

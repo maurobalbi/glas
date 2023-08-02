@@ -1,6 +1,6 @@
 use std::cell::Cell;
 
-use crate::ast::{AstNode, SourceFile, NameRef};
+use crate::ast::{AstNode, NameRef, SourceFile};
 use crate::lexer::{GleamLexer, LexToken};
 use crate::token_set::TokenSet;
 use crate::SyntaxKind::{self, *};
@@ -15,13 +15,14 @@ const STMT_RECOVERY: TokenSet = TokenSet::new(&[
     T!["pub"],
     T!["if"],
 ]);
-const STMT_EXPR_RECOVERY: TokenSet = TokenSet::new(&[T!["let"], T!["use"]]).union(STMT_RECOVERY);
+const STMT_EXPR_RECOVERY: TokenSet =
+    TokenSet::new(&[T!["let"], T!["use"], T!["}"], T!["{"]]).union(STMT_RECOVERY);
 
 const PARAM_LIST_RECOVERY: TokenSet = TokenSet::new(&[T!["->"], T!["{"]]).union(STMT_RECOVERY);
 const GENERIC_PARAM_LIST_RECOVERY: TokenSet =
     TokenSet::new(&[T!["{"], T!["="]]).union(STMT_RECOVERY);
 const IMPORT_RECOVERY: TokenSet = TokenSet::new(&[T!["as"]]).union(STMT_RECOVERY);
-const PATTERN_RECOVERY: TokenSet = TokenSet::new(&[T!["->"], T!["="]]).union(STMT_RECOVERY);
+const PATTERN_RECOVERY: TokenSet = TokenSet::new(&[T!["->"], T!["="], T!["}"], T!["{"]]).union(STMT_RECOVERY);
 
 const PATTERN_FIRST: TokenSet = TokenSet::new(&[
     IDENT,
@@ -554,7 +555,7 @@ fn block(p: &mut Parser) -> MarkClosed {
                 if p.at_any(EXPR_FIRST) {
                     stmt_expr(p)
                 } else {
-                    if p.at_any(STMT_RECOVERY) {
+                    if p.at_any(STMT_EXPR_RECOVERY) {
                         break;
                     }
                     p.bump_with_error(ErrorKind::ExpectedStatement);
@@ -659,9 +660,7 @@ fn expr_bp(p: &mut Parser, min_bp: u8) {
                 match p.nth(0) {
                     IDENT => {
                         let m = p.start_node_before(lhs);
-                        let n = p.start_node();
-                        p.bump();
-                        p.finish_node(n, NAME_REF);
+                        name_ref(p);
                         lhs = p.finish_node(m, FIELD_ACCESS);
                     }
                     INTEGER => {
@@ -715,15 +714,13 @@ fn expr_unit(p: &mut Parser) -> Option<MarkClosed> {
             p.finish_node(m, LITERAL)
         }
         IDENT => {
-            let m = p.start_node();
-            p.bump();
-            p.finish_node(m, NAME_REF)
+            let v = p.start_node();
+            name_ref(p);
+            p.finish_node(v, VARIABLE)
         }
         U_IDENT => {
             let b = p.start_node();
-            let m = p.start_node();
-            p.bump();
-            p.finish_node(m, NAME_REF);
+            name_ref(p);
             if p.at(T!["("]) {
                 arg_list(p);
             }
@@ -739,6 +736,11 @@ fn expr_unit(p: &mut Parser) -> Option<MarkClosed> {
         T!["#"] => tuple(p),
         T!["["] => list(p),
         T!["case"] => case(p),
+        T!["panic"] | T!["todo"] => {
+            let m = p.start_node();
+            p.bump();
+            p.finish_node(m, MISSING)
+        }
         T!["fn"] => {
             let m = p.start_node();
             function(p, m, true)
@@ -767,43 +769,46 @@ fn case(p: &mut Parser) -> MarkClosed {
     assert!(p.at(T!["case"]));
     let m = p.start_node();
     p.expect(T!["case"]);
-    while !p.at(T!["{"]) && !p.eof() {
+    while !p.eof() {
         if p.at_any(EXPR_FIRST) {
             expr(p);
-            if !p.at(T!["{"]) {
-                p.expect(T![","])
+            if !p.eat(T![","]) {
+                break;
             }
         } else {
-            if p.at_any(STMT_RECOVERY) {
+            if p.at_any(STMT_EXPR_RECOVERY) {
                 break;
             }
             p.error(ErrorKind::ExpectedExpression);
         }
     }
-    p.expect(T!["{"]);
 
-    while !p.at(T!["}"]) && !p.eof() {
-        if p.at_any(PATTERN_FIRST) {
-            clause(p);
-        } else {
-            if p.at_any(EXPR_FIRST.union(STMT_RECOVERY)) {
-                break;
+    if p.eat(T!["{"]) {
+        while !p.at(T!["}"]) && !p.eof() {
+            if p.at_any(PATTERN_FIRST) {
+                clause(p);
+            } else {
+                if p.at_any(EXPR_FIRST.union(STMT_EXPR_RECOVERY)) {
+                    break;
+                }
+                p.bump_with_error(ErrorKind::ExpectedExpression)
             }
-            p.bump_with_error(ErrorKind::ExpectedExpression)
         }
+        p.expect(T!["}"]);
+    } else {
+        p.error(ErrorKind::ExpectToken(T!["{"]));
     }
-    p.expect(T!["}"]);
 
     p.finish_node(m, CASE)
 }
 
 fn clause(p: &mut Parser) {
     let m = p.start_node();
-    while !p.at(T!["->"]) && !p.eof() {
+    while !p.eof() {
         if p.at_any(PATTERN_FIRST) {
             alternative_pattern(p);
-            if !p.at(T!["->"]) && !p.at(T!["if"]) {
-                p.expect(T![","]);
+            if !p.eat(T![","]) {
+                break;
             }
         } else {
             if p.at_any(PATTERN_RECOVERY) {
@@ -829,11 +834,11 @@ fn clause(p: &mut Parser) {
 
 fn alternative_pattern(p: &mut Parser) {
     let m = p.start_node();
-    while !p.at(T!["->"]) && !p.at(T![","]) && !p.eof() {
+    while !p.at(T![","]) && !p.eof() {
         if p.at_any(PATTERN_FIRST) {
             pattern(p);
-            if p.at(T!["|"]) {
-                p.expect(T!["|"])
+            if !p.eat(T!["|"]) {
+                break;
             }
         } else {
             if p.at_any(EXPR_FIRST) {
@@ -864,19 +869,21 @@ fn pattern(p: &mut Parser) {
             let module_m = p.finish_node(m, MODULE_NAME);
             let t_ref = p.start_node_before(module_m);
             p.expect(T!["."]);
-            let t = p.start_node();
-            p.expect(U_IDENT);
-            p.finish_node(t, TYPE_NAME);
-            p.finish_node(t_ref, TYPE_NAME_REF)
+            name_ref(p);
+            if p.at(T!["("]) {
+                pattern_constructor_arg_list(p);
+            }
+            p.finish_node(t_ref, VARIANT_REF)
         }
         // constructor
         U_IDENT => {
             parse_application = true;
             let m = p.start_node();
-            let t = p.start_node();
-            p.expect(U_IDENT);
-            p.finish_node(t, TYPE_NAME);
-            p.finish_node(m, TYPE_NAME_REF)
+            name_ref(p);
+            if p.at(T!["("]) {
+                pattern_constructor_arg_list(p);
+            }
+            p.finish_node(m, VARIANT_REF)
         }
         DISCARD_IDENT => {
             let m = p.start_node();
@@ -899,15 +906,6 @@ fn pattern(p: &mut Parser) {
     if !parse_application {
         return;
     }
-
-    match p.nth(0) {
-        T!["("] => {
-            let m = p.start_node_before(res);
-            pattern_constructor_arg_list(p);
-            p.finish_node(m, PATTERN_CONSTRUCTOR_APPLICATION);
-        }
-        _ => {}
-    }
 }
 
 fn pattern_list(p: &mut Parser<'_>) -> MarkClosed {
@@ -922,7 +920,7 @@ fn pattern_list(p: &mut Parser<'_>) -> MarkClosed {
                 p.expect(T![","]);
             }
         } else {
-            if p.at_any(STMT_RECOVERY) {
+            if p.at_any(STMT_EXPR_RECOVERY) {
                 break;
             }
             p.bump_with_error(ErrorKind::ExpectedExpression)
@@ -942,7 +940,7 @@ fn pattern_constructor_arg_list(p: &mut Parser) {
         if p.at_any(PATTERN_FIRST) {
             pattern_constructor_arg(p);
         } else {
-            if p.at_any(STMT_RECOVERY) {
+            if p.at_any(STMT_EXPR_RECOVERY) {
                 break;
             }
             p.bump_with_error(ErrorKind::ExpectedExpression)
@@ -950,7 +948,7 @@ fn pattern_constructor_arg_list(p: &mut Parser) {
     }
     p.expect(T![")"]);
 
-    p.finish_node(m, PATTERN_CONSTRUCTOR_ARG_LIST);
+    p.finish_node(m, VARIANT_REF_FIELD_LIST);
 }
 
 fn pattern_constructor_arg(p: &mut Parser) {
@@ -962,7 +960,7 @@ fn pattern_constructor_arg(p: &mut Parser) {
     if !p.at(T![")"]) {
         p.expect(T![","]);
     }
-    p.finish_node(m, PATTERN_CONSTRUCTOR_ARG);
+    p.finish_node(m, VARIANT_REF_FIELD);
 }
 
 fn pattern_tuple(p: &mut Parser) -> MarkClosed {
@@ -1150,6 +1148,19 @@ fn type_name_ref(p: &mut Parser) -> MarkClosed {
     p.finish_node(m, TYPE_NAME_REF)
 }
 
+fn name_ref(p: &mut Parser) {
+    let n = p.start_node();
+    if p.eat(IDENT) {
+        p.finish_node(n, NAME_REF);
+        return;
+    }
+    if p.eat(U_IDENT) {
+        p.finish_node(n, NAME_REF);
+        return;
+    }
+    p.error(ErrorKind::ExpectedIdentifier);
+}
+
 fn module_const(p: &mut Parser, m: MarkOpened) {
     assert!(p.at(T!["const"]));
     p.bump();
@@ -1176,9 +1187,7 @@ fn const_expr(p: &mut Parser) {
             block(p);
         }
         IDENT | U_IDENT => {
-            let n = p.start_node();
-            p.bump();
-            p.finish_node(n, NAME_REF);
+            name_ref(p);
         }
         T!["#"] => {
             const_tuple(p);

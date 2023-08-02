@@ -204,7 +204,6 @@ impl ExprScopes {
                 label,
             } => {
                 self.traverse_expr(body, *container, scope);
-                self.traverse_expr(body, *label, scope);
             }
             Expr::Case { subjects, clauses } => {
                 subjects
@@ -220,6 +219,13 @@ impl ExprScopes {
                         .for_each(|pat| self.add_bindings(body, clause_scope, &pat));
                     self.traverse_expr(body, *expr, clause_scope);
                 });
+            }
+            Expr::Lambda { body: lam_body, params } => {
+                let body_scope = self.scopes.alloc(ScopeData { parent: Some(scope), entries: Vec::new() });
+                for param in params.clone() {
+                    self.add_bindings(body, body_scope, &param);
+                };
+                self.traverse_expr(body, *lam_body, body_scope);
             }
             _ => {}
         }
@@ -266,7 +272,7 @@ impl ExprScopes {
                     pat: *pattern_id,
                 });
             }
-            Pattern::Record { args: _ } => todo!(),
+            Pattern::Record {constructor,  args: _ } => todo!(),
             Pattern::Missing => {}
             Pattern::Tuple { fields } => {
                 for pattern in fields {
@@ -279,6 +285,8 @@ impl ExprScopes {
                 }
             }
             Pattern::Hole => {}
+            Pattern::VariantRef { name, module, fields } => {},
+            Pattern::Literal { kind } => {},
         }
     }
 }
@@ -318,7 +326,7 @@ pub(crate) fn dependency_order_query(
                 edges.push((owner_id.clone().0.as_u32(), owner_id.clone().0.as_u32()));
                 body.exprs().for_each(|(e_id, expr)|
                     match expr {
-                        Expr::NameRef(name) => {
+                        Expr::Variable(name) => {
                             let resolver = resolver_for_expr(db, owner_id.clone(), e_id);
                             let Some(ResolveResult::FunctionId(fn_id)) = resolver.resolve_name(name) else {return};
                             edges.push((owner_id.clone().0.as_u32(), fn_id.0.as_u32()))

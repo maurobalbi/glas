@@ -91,7 +91,7 @@ impl SourceAnalyzer {
         Some(ty)
     }
     
-    pub(crate) fn resolve_field(&self, db: &dyn DefDatabase, call: &ast::NameRef) -> Option<AdtId> {
+    pub(crate) fn resolve_field(&self, db: &dyn DefDatabase, call: &ast::FieldAccessExpr) -> Option<AdtId> {
         let expr_id = self.expr_id(&call.clone().into())?;
         self.infer.as_ref().and_then(|i| i.resolve_field(expr_id)).clone()
     }

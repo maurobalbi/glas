@@ -3,14 +3,14 @@ use std::{collections::HashMap, ops};
 use la_arena::{Arena, ArenaMap, Idx, IdxRange, RawIdx};
 use smol_str::SmolStr;
 use syntax::{
-    ast::{self, AstNode, LiteralKind, StatementExpr, Name},
+    ast::{self, AstNode, Lambda, LiteralKind, Name, StatementExpr},
     AstPtr,
 };
 
 use crate::{DefDatabase, Diagnostic, FileId, InFile};
 
 use super::{
-    module::{Clause, Expr, ExprId, Literal, Pattern, PatternId, Statement},
+    module::{Clause, Expr, ExprId, Pattern, PatternId, Statement},
     FunctionId,
 };
 
@@ -192,9 +192,9 @@ impl BodyLowerCtx<'_> {
     fn lower_expr(&mut self, expr: ast::Expr) -> ExprId {
         let ptr = AstPtr::new(&expr);
         match expr {
-            ast::Expr::NameRef(e) => {
+            ast::Expr::Variable(e) => {
                 let name = e.text();
-                self.alloc_expr(Expr::NameRef(name), ptr)
+                self.alloc_expr(Expr::Variable(name), ptr)
             }
             ast::Expr::Block(defs) => {
                 let mut stmts = Vec::new();
@@ -221,23 +221,14 @@ impl BodyLowerCtx<'_> {
                 )
             }
             ast::Expr::VariantConstructor(constr) => {
-                // this is a bit of a hack
-                // we're lowering the name to be able to get a scope for the expr
-                self.lower_expr_opt(constr.name().map(ast::Expr::from));
                 let name = constr.name().map_or_else(Name::missing, |n| n.text());
                 let mut fields = Vec::new();
-                if let Some(args) = constr.args(){
+                if let Some(args) = constr.args() {
                     for field in args.args() {
                         fields.push(self.lower_expr_opt(field.value()));
                     }
                 }
-                self.alloc_expr(
-                    Expr::VariantLiteral {
-                        name,
-                        fields,
-                    },
-                    ptr,
-                )
+                self.alloc_expr(Expr::VariantLiteral { name, fields }, ptr)
             }
             ast::Expr::BinaryOp(e) => {
                 let left = self.lower_expr_opt(e.lhs());
@@ -246,8 +237,7 @@ impl BodyLowerCtx<'_> {
                 self.alloc_expr(Expr::Binary { op, left, right }, ptr)
             }
             ast::Expr::Literal(lit) => {
-                let lit = self.lower_literal(lit);
-                self.alloc_expr(lit.map_or(Expr::Missing, Expr::Literal), ptr)
+                self.alloc_expr(lit.kind().map_or(Expr::Missing, Expr::Literal), ptr)
             }
             ast::Expr::Case(case) => {
                 let start = self.next_expr_idx();
@@ -256,30 +246,55 @@ impl BodyLowerCtx<'_> {
                 }
                 let end = self.next_expr_idx();
 
-                let clauses = case.clauses().map(|clause| {
-                    let start = self.next_pattern_idx();
-                    for pattern in clause.patterns() {
-                        self.lower_pattern(pattern);
-                    }
-                    let end = self.next_pattern_idx();
-                    Clause {
-                        expr: self.lower_expr_opt(clause.body()),
-                        patterns: IdxRange::new(start..end),
-                    }
-                }).collect();
+                let clauses = case
+                    .clauses()
+                    .map(|clause| {
+                        let start = self.next_pattern_idx();
+                        for pattern in clause.patterns() {
+                            self.lower_pattern(pattern);
+                        }
+                        let end = self.next_pattern_idx();
+                        Clause {
+                            expr: self.lower_expr_opt(clause.body()),
+                            patterns: IdxRange::new(start..end),
+                        }
+                    })
+                    .collect();
 
                 self.alloc_expr(
                     Expr::Case {
                         subjects: IdxRange::new(start..end),
-                        clauses
+                        clauses,
                     },
                     ptr,
                 )
             }
             ast::Expr::FieldAccessExpr(field) => {
-               let container = self.lower_expr_opt(field.base());
-               let label = self.lower_expr_opt(field.label().map(ast::Expr::from));
-               self.alloc_expr(Expr::FieldAccess { base: container, label }, ptr)
+                let container = self.lower_expr_opt(field.base());
+                self.alloc_expr(
+                    Expr::FieldAccess {
+                        base: container,
+                        label: field.label().map_or(Name::missing(), |t| t.text()),
+                    },
+                    ptr,
+                )
+            }
+            ast::Expr::Lambda(lambda) => {
+                if let Some(param_list) = lambda.param_list() {
+                    let start = self.next_pattern_idx();
+                    for param in param_list.params() {
+                        if let Some(pattern) = param.pattern() {
+                            let pat_id = self.lower_pattern(ast::Pattern::PatternVariable(pattern));
+                        }
+                    }
+                    let end = self.next_pattern_idx();
+                    let body = self.lower_expr_opt(lambda.body().map(|b| ast::Expr::Block(b)));
+                    return self.alloc_expr(Expr::Lambda {
+                        body, 
+                        params: IdxRange::new(start..end),
+                    }, ptr);
+                }
+                return self.alloc_expr(Expr::Missing, ptr)
             }
             _ => self.alloc_expr(Expr::Missing, ptr),
         }
@@ -329,18 +344,6 @@ impl BodyLowerCtx<'_> {
         }
     }
 
-    fn lower_literal(&mut self, lit: ast::Literal) -> Option<Literal> {
-        let kind = lit.kind()?;
-        let tok = lit.token().unwrap();
-        let text = tok.text();
-
-        Some(match kind {
-            LiteralKind::Int => Literal::Int(text.parse::<i64>().ok()?),
-            LiteralKind::Float => Literal::Float(text.parse::<f64>().unwrap().into()),
-            LiteralKind::String => Literal::String(text.into()),
-        })
-    }
-
     fn lower_pattern(&mut self, pattern: ast::Pattern) -> PatternId {
         let ptr = AstPtr::new(&pattern);
         match pattern {
@@ -348,9 +351,29 @@ impl BodyLowerCtx<'_> {
                 let name = var.text().unwrap_or(SmolStr::new_inline("[missing text]"));
                 self.alloc_pattern(Pattern::Variable { name }, ptr)
             }
-            ast::Pattern::Literal(_) => todo!(),
-            ast::Pattern::TypeNameRef(_) => todo!(),
-            ast::Pattern::PatternConstructorApplication(_) => todo!(),
+            ast::Pattern::Literal(lit) => match lit.kind() {
+                Some(kind) => self.alloc_pattern(Pattern::Literal { kind }, ptr),
+                None => self.missing_pat(),
+            },
+            ast::Pattern::VariantRef(pat) => {
+                let Some(var) = pat.variant() else { return self.missing_pat() };
+                let mut fields = Vec::new();
+                if let Some(field_list) = pat.field_list() {
+                    for field in field_list.fields() {
+                        if let Some(field) = field.field() {
+                            fields.push(self.lower_pattern(field));
+                        }
+                    }
+                }
+                self.alloc_pattern(
+                    Pattern::VariantRef {
+                        name: var.text(),
+                        module: pat.module().map(|t| t.text()),
+                        fields,
+                    },
+                    ptr,
+                )
+            }
             ast::Pattern::PatternTuple(pat) => {
                 let mut pats = Vec::new();
                 for pat in pat.field_patterns() {
@@ -363,8 +386,8 @@ impl BodyLowerCtx<'_> {
                 for pat in pat.patterns() {
                     pats.push(self.lower_pattern(pat));
                 }
-                self.alloc_pattern(Pattern::AlternativePattern{patterns: pats}, ptr)
-            },
+                self.alloc_pattern(Pattern::AlternativePattern { patterns: pats }, ptr)
+            }
             ast::Pattern::Hole(_) => self.alloc_pattern(Pattern::Hole, ptr),
         }
     }

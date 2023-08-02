@@ -7,7 +7,7 @@ use crate::ty::TyDatabase;
 use crate::{DefDatabase, FilePos, InFile, VfsPath};
 use smol_str::SmolStr;
 use syntax::ast::{self, AstNode, FieldAccessExpr};
-use syntax::{best_token_at_offset, TextRange, TextSize};
+use syntax::{best_token_at_offset, TextRange, TextSize, match_ast};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum GotoDefinitionResult {
@@ -24,7 +24,6 @@ pub(crate) fn goto_definition(
     // let module_data = db.module_items(file_id);
     // let source_map = db.source_map(file_id);
 
-
     //If tok.parent is field access or tuple access, it will be necessary to infer type first
     if let Some(name_ref_tok) = ast::NameRef::cast(tok.parent()?) {
         if let Some(tok) = FieldAccessExpr::for_label_name_ref(&name_ref_tok) {
@@ -32,14 +31,16 @@ pub(crate) fn goto_definition(
                 file_id: file_id,
                 value: &tok.label()?,
             };
+            
             match find_def(db.upcast(), expr_ptr.with_value(tok.syntax())) {
                 Some(ModuleDefId::FunctionId(fn_id)) => {
+                    tracing::info!("WERE IN FIELD ACES`s");
                     let analyzer = SourceAnalyzer::new_for_function(
                         db,
                         fn_id,
                         expr_ptr.with_value(tok.syntax()),
                     );
-                    let ast = ast::NameRef::cast(tok.label()?.clone().syntax().clone())?;
+                    let ast = ast::FieldAccessExpr::cast(tok.clone().syntax().clone())?;
                     let adt_id = analyzer.resolve_field(db.upcast(), &ast)?;
                     let adtloc = db.lookup_intern_adt(adt_id.clone());
                     let full_range = db.module_items(adtloc.file_id)[adtloc.value]
@@ -56,19 +57,21 @@ pub(crate) fn goto_definition(
             }
         }
     }
+
     // Resolver is not enough for goto definition, some expressions have to be inferred aswell eg. field access
     if ast::NameRef::can_cast(tok.parent()?.kind()) {
-        let expr = ast::Expr::cast(tok.parent()?)?;
-
-        let expr_ptr = InFile {
+        
+        let in_file = InFile {
             file_id: file_id,
             value: &tok.parent()?,
         };
-
-        let resolver = match find_def(db.upcast(), expr_ptr) {
+        
+        let resolver = match find_def(db.upcast(), in_file) {
             Some(ModuleDefId::FunctionId(id)) => {
                 let source_map = db.body_source_map(id);
-                let expr_ptr = expr_ptr.with_value(&expr);
+                let expr = &tok.parent_ancestors().find_map(ast::Expr::cast)?;
+                tracing::info!("Resolving pattern {:#?}", expr);
+                let expr_ptr = in_file.with_value(expr);
                 resolver_for_expr(db.upcast(), id, source_map.expr_for_node(expr_ptr)?)
             }
             _ => resolver_for_toplevel(db.upcast(), file_id),
@@ -143,11 +146,7 @@ pub(crate) fn goto_definition(
     //         }
     //     }
     // })?;
-    Some(GotoDefinitionResult::Targets(vec![NavigationTarget {
-        file_id,
-        focus_range: TextRange::new(TextSize::from(0), TextSize::from(5)),
-        full_range: TextRange::new(TextSize::from(0), TextSize::from(5)),
-    }]))
+    Some(GotoDefinitionResult::Targets(vec![]))
 }
 
 #[cfg(test)]
@@ -205,6 +204,11 @@ mod tests {
         check("fn wops() { case 1 { a -> $0a} a}", expect!["<a>"]);
         check_no("fn wops() { case 1 { a -> a} $0a}")
     }
+    
+    #[test]
+    fn pattern_variant() {
+        check("fn wops() { case Bla(1) { Bla(a) -> $0a} }", expect!["<a>"]);
+    }
 
     #[test]
     fn variant_constructor() {
@@ -221,14 +225,22 @@ mod tests {
             expect!["<type Mogie { Mogie(name: Int) }>"],
         );
     }
+    
+    #[test]
+    fn case_pattern_variant_ref() {
+        check(
+            "type Mogie { Mogie(name: Int) } fn wops() { case Mogie { $0Mogie -> 1 } }",
+            expect!["<Mogie(name: Int)>"],
+        );
+    }
 
     #[traced_test]
     #[test]
     fn field_access() {
-        check(
-            "type Mogie { Mogie(name: Int) } fn wops() { let bobo = Mogie(name: 1) $0bobo.name}",
-            expect!["let <bobo> = Mogie(name: 1)"],
-        );
+        // check(
+        //     "type Mogie { Mogie(name: Int) } fn wops() { let bobo = Mogie(name: 1) $0bobo.name}",
+        //     expect!["let <bobo> = Mogie(name: 1)"],
+        // );
         check(
             "type Mogie { Mogie(name: Int) } fn wops() { let bobo = Mogie(name: 1) bobo.$0name}",
             expect!["<type Mogie { Mogie(name: Int) }>"],

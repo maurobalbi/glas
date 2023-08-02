@@ -77,12 +77,38 @@ fn lablelled_args() {
 #[test]
 fn case_expr() {
     check_all(
-        "type Massa { Much } fn bla() { case Massa {
+        "type Massa { Much } fn bla() { case Much {
             Much -> 1
         }  }",
         expect![[r#"
-        bla: fn(Int, a, b, c) -> Int"#]],
+        bla: fn() -> Int"#]],
     )
+}
+
+#[traced_test]
+#[test]
+fn pattern() {
+    check_all(
+        "type Massa { Much } fn bla() { case Much {
+            a -> a
+        }  }",
+        expect![[r#"
+        bla: fn() -> Massa"#]],
+   );
+
+   check_all(
+        "type Massa { Much(Int) } fn bla() { case Much(1) {
+            Much(a) -> a
+        }  }",
+        expect![[r#"
+        bla: fn() -> Int"#]],
+    )
+}
+
+#[test]
+fn function() {
+    check_all("fn func() {fn(a,b) {a + b}", expect![["func: fn() -> fn(Int, Int) -> Int"]]);
+    check_all("fn func() {fn(a,b) {a + b}(1, 1)", expect![["func: fn() -> Int"]])
 }
 
 #[test]

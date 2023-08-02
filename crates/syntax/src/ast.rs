@@ -188,7 +188,7 @@ enums! {
         BitString,
         Literal,
         Block,
-        NameRef,
+        Variable,
         Lambda,
         BinaryOp,
         UnaryOp,
@@ -206,8 +206,7 @@ enums! {
     },
     Pattern {
         PatternVariable,
-        TypeNameRef,
-        PatternConstructorApplication,
+        VariantRef,
         PatternTuple,
         AlternativePattern,
         Literal,
@@ -219,15 +218,21 @@ enums! {
     },
 }
 
+impl Variable {
+    pub fn text(&self) -> SmolStr {
+        self.name().unwrap().text()
+    }
+}
+
 impl From<FieldAccessExpr> for Expr {
     fn from(field: FieldAccessExpr) -> Self {
         Expr::FieldAccessExpr(field)
     }
 }
 
-impl From<NameRef> for Expr {
-    fn from(name: NameRef) -> Self {
-        Expr::NameRef(name)
+impl From<Variable> for Expr {
+    fn from(name: Variable) -> Self {
+        Expr::Variable(name)
     }
 }
 
@@ -249,7 +254,7 @@ impl FieldAccessExpr {
         let syn = label.syntax();
         let candidate = syn.parent()
             .and_then(FieldAccessExpr::cast)?;
-        if candidate.label().as_ref() == Some(&Expr::from(label.clone())) {
+        if candidate.label().as_ref() == Some(&label) {
             Some(candidate)
         } else {
             None
@@ -374,7 +379,7 @@ asts! {
     },
     FIELD_ACCESS = FieldAccessExpr {
         base: Expr,
-        label[1]: Expr,
+        label: NameRef,
     },
     TUPLE_INDEX = TupleIndex {
         index: Literal,
@@ -384,14 +389,20 @@ asts! {
         module_path: [Path],
         as_name: Name,
         unqualified: [UnqualifiedImport],
+    },  
+    VARIABLE = Variable {
+        name: NameRef,
     },
-
     SOURCE_FILE = SourceFile {
         statements: [TargetGroup],
     },
     MODULE_NAME = ModuleName {
-        pub fn token(&self) -> Option<SyntaxToken> {
-            self.0.children_with_tokens().find_map(NodeOrToken::into_token)
+        pub fn token(&self) -> SyntaxToken {
+            self.0.children_with_tokens().find_map(NodeOrToken::into_token).unwrap()
+        }
+
+        pub fn text(&self) -> SmolStr {
+            self.token().text().into()
         }
     },
     // Change to body with expression to be able to reuse parser / collecting logic and validate constant during lowering
@@ -559,15 +570,16 @@ asts! {
             self.token().map(|t| t.text().into())
         }
     },
-    PATTERN_CONSTRUCTOR_APPLICATION = PatternConstructorApplication {
-        type_constructor: TypeNameRef,
-        arg_list: PatternConstructorArgList,
+    VARIANT_REF = VariantRef {
+        module: ModuleName,
+        variant: NameRef,
+        field_list: VariantRefFieldList,
     },
-    PATTERN_CONSTRUCTOR_ARG_LIST = PatternConstructorArgList {
-        args: [PatternConstructorArg],
+    VARIANT_REF_FIELD_LIST = VariantRefFieldList {
+        fields: [VariantRefField],
     },
-    PATTERN_CONSTRUCTOR_ARG = PatternConstructorArg {
-        args: Pattern,
+    VARIANT_REF_FIELD = VariantRefField {
+        field: Pattern,
     },
     PATTERN_TUPLE = PatternTuple {
         field_patterns: [Pattern],
@@ -620,7 +632,9 @@ mod tests {
 
     #[test]
     fn assert() {
-        let e = crate::parse_module("fn wops() { Mogie(name: 1).name}");
+        let e = crate::parse_module("fn a() { 
+                    case 
+                    }");
         for error in e.errors() {
             println!("{}", error);
         }
@@ -936,22 +950,22 @@ mod tests {
         );
         p.syntax().should_eq("int.Bla(Some(a))");
         let pattern =
-            PatternConstructorApplication::cast(p.patterns().next().unwrap().syntax().clone())
+            VariantRef::cast(p.patterns().next().unwrap().syntax().clone())
                 .unwrap();
         pattern
-            .arg_list()
+            .field_list()
             .unwrap()
-            .args()
+            .fields()
             .into_iter()
             .next()
             .unwrap()
             .syntax()
             .should_eq("Some(a)");
         pattern
-            .type_constructor()
+            .module()
             .unwrap()
             .syntax()
-            .should_eq("int.Bla");
+            .should_eq("int");
     }
 
     #[test]
@@ -974,7 +988,6 @@ mod tests {
     #[test]
     fn field_access() {
         let f = parse::<FieldAccessExpr>("fn wops() { Mogie(name: 1).name}");
-
         f.label().unwrap().syntax().should_eq("name");
         f.base().unwrap().syntax().should_eq("Mogie(name: 1)");
         
@@ -988,5 +1001,13 @@ mod tests {
         let f = parse::<VariantConstructor>("fn fields() { Muddle(name: 5) }");
         f.args().unwrap().syntax().should_eq("(name: 5)");
         f.name().unwrap().syntax().should_eq("Muddle");
+    }
+
+    #[test]
+    fn todo_test() {
+        let p = parse::<Block>("pub fn todoo() -> Nil {
+            todo
+        }");
+
     }
 }

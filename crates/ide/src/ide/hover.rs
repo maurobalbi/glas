@@ -1,15 +1,15 @@
+use crate::DefDatabase;
 use smol_str::SmolStr;
 use syntax::ast::AstNode;
 use syntax::{ast, best_token_at_offset, TextRange};
-use crate::DefDatabase;
 
 use crate::def::hir_def::{ModuleDefId, VariantLoc};
 use crate::def::resolver::resolver_for_toplevel;
 use crate::def::source_analyzer::find_def;
 use crate::def::{self, resolver_for_expr};
+use crate::ty::display::TyDisplay;
 use crate::ty::TyDatabase;
 use crate::{FilePos, InFile};
-use crate::ty::display::TyDisplay;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HoverResult {
@@ -28,16 +28,14 @@ pub(crate) fn hover(db: &dyn TyDatabase, FilePos { file_id, pos }: FilePos) -> O
     }
 
     if ast::NameRef::can_cast(tok.parent()?.kind()) {
-        let expr = ast::Expr::cast(tok.parent()?)?;
+        let expr = ast::Expr::cast(tok.parent()?.parent()?)?;
+        tracing::info!("HERERE {:?}", expr);
 
         let expr_ptr = InFile {
             file_id: file_id,
             value: &tok.parent()?,
         };
 
-        // dangerous find_map because iterating hashmap has not always same order!
-        // ToDo: Make diagnostic when multiple values declared
-        // Find resolver based on where cursor is! not depending on luck!
         let resolver = match find_def(db.upcast(), expr_ptr) {
             Some(ModuleDefId::FunctionId(id)) => {
                 let source_map = db.body_source_map(id);
@@ -69,7 +67,7 @@ pub(crate) fn hover(db: &dyn TyDatabase, FilePos { file_id, pos }: FilePos) -> O
                         range: tok.text_range(),
                         markup: format!("```gleam\n{}\n```", ty.display(db)),
                     })
-                },
+                }
                 def::resolver::ResolveResult::VariantId(_) => todo!(),
             }
             // let full_node = name_node.ancestors().find(|n| {
@@ -92,7 +90,8 @@ pub(crate) fn hover(db: &dyn TyDatabase, FilePos { file_id, pos }: FilePos) -> O
 mod tests {
     use crate::base::SourceDatabase;
     use crate::tests::TestDB;
-    use expect_test::{Expect, expect};
+    use expect_test::{expect, Expect};
+    use tracing_test::traced_test;
 
     #[track_caller]
     fn check(fixture: &str, full: &str, expect: Expect) {
@@ -115,7 +114,8 @@ mod tests {
         assert_eq!(super::hover(&db, f[0]), None);
     }
 
-   #[test]
+    #[traced_test]
+    #[test]
     fn definition() {
         check(
             "fn main() { $0main() }",
