@@ -8,7 +8,7 @@
   },
   "categories": [
     "Programming Languages",
-    "Formatters",
+    "Formatters"
   ],
   "icon": "images/icon.png",
   "contributes": {
