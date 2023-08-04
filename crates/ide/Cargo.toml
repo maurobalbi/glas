@@ -19,7 +19,6 @@ anymap = "0.12.1"
 petgraph = "0.6.3"
 syntax = { path = "../syntax" }
 tracing = { version = "0.1.37", features = ["release_max_level_info"] }
-tracing-test = "0.2.4"
 
 [dependencies.tracing-subscriber]
 version = "0.3.15"
@@ -35,3 +34,4 @@ features = [
 [dev-dependencies]
 anyhow = "1.0.60"
 expect-test = "1.4.0"
+tracing-test = "0.1"

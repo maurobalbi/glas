@@ -193,7 +193,6 @@ mod tests {
     use crate::base::SourceDatabase;
     use crate::tests::TestDB;
     use expect_test::{expect, Expect};
-    use tracing_test::traced_test;
 
     #[track_caller]
     fn check_no(fixture: &str, label: &str) {
@@ -243,7 +242,6 @@ mod tests {
         check("i$0", "import", expect!["(Keyword) import"]);
     }
 
-    #[traced_test]
     #[test]
     fn scope() {
         check_all("fn main() { a$0 }", None, expect![""]);

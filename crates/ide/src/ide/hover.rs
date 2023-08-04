@@ -91,7 +91,6 @@ mod tests {
     use crate::base::SourceDatabase;
     use crate::tests::TestDB;
     use expect_test::{expect, Expect};
-    use tracing_test::traced_test;
 
     #[track_caller]
     fn check(fixture: &str, full: &str, expect: Expect) {
@@ -114,7 +113,6 @@ mod tests {
         assert_eq!(super::hover(&db, f[0]), None);
     }
 
-    #[traced_test]
     #[test]
     fn definition() {
         check(

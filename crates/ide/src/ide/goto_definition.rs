@@ -155,7 +155,6 @@ mod tests {
     use crate::base::SourceDatabase;
     use crate::tests::TestDB;
     use expect_test::{expect, Expect};
-    use tracing_test::traced_test;
 
     #[track_caller]
     fn check_no(fixture: &str) {
@@ -234,7 +233,6 @@ mod tests {
         );
     }
 
-    #[traced_test]
     #[test]
     fn field_access() {
         // check(
