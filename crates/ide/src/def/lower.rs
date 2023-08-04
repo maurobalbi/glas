@@ -9,7 +9,7 @@ use super::{
 use la_arena::{Arena, Idx, IdxRange, RawIdx};
 use smol_str::SmolStr;
 use syntax::{
-    ast::{self, AstNode},
+    ast::{self, AstNode, Name},
     Parse,
 };
 
@@ -160,11 +160,11 @@ impl<'a> LowerCtx<'a> {
         for unqualified in i.unqualified() {
             if let Some(unqualified_name) = unqualified
                 .name()
-                .map(|t| t.text())
+                .and_then(|t| t.text())
             {
                 let unqualified_as_name: Option<SmolStr> = unqualified
                     .as_name()
-                    .map(|t| t.text());
+                    .and_then(|t| t.text());
 
                 self.alloc_import(Import {
                     module: module_name.clone(),
@@ -186,14 +186,14 @@ impl<'a> LowerCtx<'a> {
                 if let Some(param_name) = param.pattern()?.text() {
                     params.push(Param {
                         name: param_name.into(),
-                        label: param.label().map(|n| n.text()),
+                        label: param.label().and_then(|n| n.text()),
                     });
                 }
             }
         };
 
         Some(self.alloc_function(Function {
-            name: fun.name()?.text(),
+            name: fun.name()?.text()?,
             params,
             visibility: Visibility::Public,
             ast_ptr: ast_ptr,
@@ -202,7 +202,7 @@ impl<'a> LowerCtx<'a> {
 
     fn lower_custom_type(&mut self, ct: &ast::Adt) -> Option<Idx<Adt>> {
         let ast_ptr = AstPtr::new(ct);
-        let name = ct.name()?.text();
+        let name = ct.name()?.text()?;
 
         let visibility = Visibility::Public;
 
@@ -230,7 +230,7 @@ impl<'a> LowerCtx<'a> {
 
     fn lower_constructor(&mut self, constructor: &ast::Variant) -> Option<Idx<Variant>> {
         let ast_ptr = AstPtr::new(constructor);
-        let name = constructor.name()?.text();
+        let name = constructor.name()?.text()?;
 
         let mut fields_vec = Vec::new();
         if let Some(fields) = constructor.field_list() {
@@ -239,7 +239,7 @@ impl<'a> LowerCtx<'a> {
                     self.ty_from_ast_opt(field.type_())
                 {
                     fields_vec.push(ConstructorField {
-                        label: field.label().map(|t| t.text()),
+                        label: field.label().map(|t| t.text())?,
                         type_ref,
                     })
                 }

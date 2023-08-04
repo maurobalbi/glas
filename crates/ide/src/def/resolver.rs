@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use indexmap::{map::Entry, IndexMap};
 use smol_str::SmolStr;
 
 use crate::{DefDatabase, FileId};
@@ -35,6 +36,22 @@ enum Scope {
     ExprScope(ExprScope),
 }
 
+#[derive(Default)]
+pub struct ScopeNames {
+    map: IndexMap<SmolStr, ResolveResult>,
+}
+
+impl ScopeNames {
+    fn add(&mut self, name: &SmolStr, def: ResolveResult) {
+        match self.map.entry(name.clone()) {
+            Entry::Occupied(_) => {}
+            Entry::Vacant(entry) => {
+                entry.insert(def);
+            }
+        }
+    }
+}
+
 pub enum ResolveResult {
     LocalBinding(PatternId),
     FunctionId(FunctionId),
@@ -42,6 +59,37 @@ pub enum ResolveResult {
 }
 
 impl Resolver {
+    pub fn names_in_scope(&self) -> IndexMap<SmolStr, ResolveResult> {
+        let mut map = ScopeNames::default();
+
+        for scope in self.scopes() {
+            match scope {
+                Scope::ExprScope(scope) => {
+                    for expr_scope in scope.expr_scopes.scope_chain(Some(scope.scope_id)) {
+                        let entries = scope.expr_scopes.entries(expr_scope);
+                        for entry in entries {
+                            map.add(entry.name(), ResolveResult::LocalBinding(entry.pat()))
+                        };
+                    };
+                },
+            }
+        };
+
+        for (name, moddef) in self.module_scope.values() {
+            match moddef {
+                super::hir_def::ModuleDefId::FunctionId(it) => {
+                    map.add(name, ResolveResult::FunctionId(it.clone()))
+                },
+                super::hir_def::ModuleDefId::AdtId(_) => {},
+                super::hir_def::ModuleDefId::VariantId(it) => {
+                    map.add(name, ResolveResult::VariantId(it.clone()))
+                },
+            }
+        }
+
+        map.map
+    }
+
     pub fn resolve_name(&self, name: &SmolStr) -> Option<ResolveResult> {
         for scope in self.scopes() {
             match scope {

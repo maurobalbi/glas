@@ -670,6 +670,7 @@ fn expr_bp(p: &mut Parser, min_bp: u8) {
                     }
                     _ => {
                         let m = p.start_node_before(lhs);
+                        p.error(ErrorKind::ExpectedIdentifier);
                         lhs = p.finish_node(m, FIELD_ACCESS);
                         break;
                     }

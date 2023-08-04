@@ -93,12 +93,12 @@ impl ModuleScope {
         self.values.get(&name)
     }
 
-    pub fn values(&self) -> impl Iterator<Item = &ModuleDefId> + ExactSizeIterator + '_ {
-        self.values.iter().map(|v| v.1)
+    pub fn values(&self) -> impl Iterator<Item = (&SmolStr, &ModuleDefId)> + ExactSizeIterator + '_ {
+        self.values.iter().map(|v| v)
     }
 
-    pub fn types(&self) -> impl Iterator<Item = &ModuleDefId> + ExactSizeIterator + '_ {
-        self.types.iter().map(|v| v.1)
+    pub fn types(&self) -> impl Iterator<Item = (&SmolStr, &ModuleDefId)> + ExactSizeIterator + '_ {
+        self.types.iter().map(|v| v)
     }
 
     pub fn declarations(

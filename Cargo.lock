@@ -1116,6 +1116,7 @@ version = "0.1.0"
 dependencies = [
  "criterion",
  "expect-test",
+ "itertools",
  "logos",
  "rowan",
  "smol_str",

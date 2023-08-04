@@ -66,8 +66,10 @@ pub(crate) fn to_completion_item(line_map: &LineMap, item: CompletionItem) -> ls
     let kind = match item.kind {
         CompletionItemKind::Keyword => lsp::CompletionItemKind::KEYWORD,
         CompletionItemKind::Param => lsp::CompletionItemKind::VARIABLE,
-        CompletionItemKind::LetBinding => lsp::CompletionItemKind::VARIABLE,
         CompletionItemKind::Field => lsp::CompletionItemKind::FIELD,
+        CompletionItemKind::Pattern =>  lsp::CompletionItemKind::FIELD,
+        CompletionItemKind::Function => lsp::CompletionItemKind::FUNCTION,
+        CompletionItemKind::Variant => lsp::CompletionItemKind::ENUM_MEMBER,
     };
     lsp::CompletionItem {
         label: item.label.into(),

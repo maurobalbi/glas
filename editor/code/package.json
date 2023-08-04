@@ -9,7 +9,6 @@
   "categories": [
     "Programming Languages",
     "Formatters",
-    "Snippets"
   ],
   "icon": "images/icon.png",
   "contributes": {
@@ -35,12 +34,6 @@
         "language": "gleam",
         "scopeName": "source.gleam",
         "path": "./syntaxes/gleam.tmLanguage.json"
-      }
-    ],
-    "snippets": [
-      {
-        "language": "gleam",
-        "path": "./snippets.json"
       }
     ],
     "configurationDefaults": {

@@ -193,7 +193,7 @@ impl BodyLowerCtx<'_> {
         let ptr = AstPtr::new(&expr);
         match expr {
             ast::Expr::Variable(e) => {
-                let name = e.text();
+                let name = e.text().unwrap_or_else(Name::missing);
                 self.alloc_expr(Expr::Variable(name), ptr)
             }
             ast::Expr::Block(defs) => {
@@ -221,7 +221,7 @@ impl BodyLowerCtx<'_> {
                 )
             }
             ast::Expr::VariantConstructor(constr) => {
-                let name = constr.name().map_or_else(Name::missing, |n| n.text());
+                let name = constr.name().and_then(|n| n.text()).unwrap_or_else(Name::missing);
                 let mut fields = Vec::new();
                 if let Some(args) = constr.args() {
                     for field in args.args() {
@@ -274,7 +274,7 @@ impl BodyLowerCtx<'_> {
                 self.alloc_expr(
                     Expr::FieldAccess {
                         base: container,
-                        label: field.label().map_or(Name::missing(), |t| t.text()),
+                        label: field.label().and_then(|t| t.text()).unwrap_or_else(Name::missing),
                     },
                     ptr,
                 )
@@ -367,7 +367,7 @@ impl BodyLowerCtx<'_> {
                 }
                 self.alloc_pattern(
                     Pattern::VariantRef {
-                        name: var.text(),
+                        name: var.text().unwrap_or_else(Name::missing),
                         module: pat.module().map(|t| t.text()),
                         fields,
                     },

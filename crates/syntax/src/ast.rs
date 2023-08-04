@@ -219,8 +219,8 @@ enums! {
 }
 
 impl Variable {
-    pub fn text(&self) -> SmolStr {
-        self.name().unwrap().text()
+    pub fn text(&self) -> Option<SmolStr> {
+        self.name().and_then(|n| n.text())
     }
 }
 
@@ -237,15 +237,15 @@ impl From<Variable> for Expr {
 }
 
 impl TypeNameOrName {
-    pub fn token(&self) -> SyntaxToken {
+    pub fn token(&self) -> Option<SyntaxToken> {
         match self {
             TypeNameOrName::Name(name) => name.token(),
             TypeNameOrName::TypeName(type_name) => type_name.token(),
         }
     }
 
-    pub fn text(&self) -> SmolStr {
-        self.token().text().into()
+    pub fn text(&self) -> Option<SmolStr> {
+        self.token().map(|t| t.text().into())
     }
 }
 
@@ -415,29 +415,30 @@ asts! {
         }
     },
     NAME = Name {
-        pub fn token(&self) -> SyntaxToken {
-            self.0.children_with_tokens().find_map(NodeOrToken::into_token).unwrap()
+        pub fn token(&self) -> Option<SyntaxToken> {
+            self.0.children_with_tokens().find_map(NodeOrToken::into_token)
         }
 
-        pub fn text(&self) -> SmolStr {
-            self.token().text().into()
+        pub fn text(&self) -> Option<SmolStr> {
+            self.token().map(|t| t.text().into())
         }
     },
     TYPE_NAME = TypeName {
-        pub fn token(&self) -> SyntaxToken {
-            self.0.children_with_tokens().find_map(NodeOrToken::into_token).unwrap()
+        pub fn token(&self) -> Option<SyntaxToken> {
+            self.0.children_with_tokens().find_map(NodeOrToken::into_token)
         }
 
-        pub fn text(&self) -> SmolStr {
-            self.token().text().into()
+        pub fn text(&self) -> Option<SmolStr>{
+            self.token().map(|t| t.text().into())
         }
     },
     LABEL = Label {
-        pub fn token(&self) -> SyntaxToken {
-            self.0.children_with_tokens().find_map(NodeOrToken::into_token).unwrap()
+        pub fn token(&self) -> Option<SyntaxToken> {
+            self.0.children_with_tokens().find_map(NodeOrToken::into_token)
         }
-        pub fn text(&self) -> SmolStr {
-            self.token().text().into()
+
+        pub fn text(&self) -> Option<SmolStr>{
+            self.token().map(|t| t.text().into())
         }
     },
     TARGET = Target {
@@ -542,12 +543,12 @@ asts! {
         name: Name,
     },
     NAME_REF = NameRef {
-        pub fn token(&self) -> SyntaxToken {
-            self.0.children_with_tokens().find_map(NodeOrToken::into_token).unwrap()
+        pub fn token(&self) -> Option<SyntaxToken> {
+            self.0.children_with_tokens().find_map(NodeOrToken::into_token)
         }
 
-        pub fn text(&self) -> SmolStr {
-            self.token().text().into()
+        pub fn text(&self) -> Option<SmolStr>{
+            self.token().map(|t| t.text().into())
         }
     },
     CASE = Case {
@@ -633,7 +634,7 @@ mod tests {
     #[test]
     fn assert() {
         let e = crate::parse_module("fn a() { 
-                    case 
+                    a |> b |> c
                     }");
         for error in e.errors() {
             println!("{}", error);

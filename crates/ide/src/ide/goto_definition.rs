@@ -107,7 +107,7 @@ pub(crate) fn goto_definition(
                         .unwrap();
                     (
                         full_node.text_range(),
-                        name.token().text_range(),
+                        name.token().unwrap().text_range(),
                         func.file_id,
                     )
                 }

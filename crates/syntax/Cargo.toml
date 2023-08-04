@@ -11,6 +11,7 @@ rust-version.workspace = true
 logos = "0.12.1"
 rowan = "0.15.10"
 smol_str = "0.1.24"
+itertools = "0.10.5"
 tracing = { version = "0.1.37", features = ["release_max_level_info"] }
 
 [dependencies.tracing-subscriber]
