@@ -349,7 +349,8 @@ fn statement(p: &mut Parser) {
         }
         T!["type"] | T!["opaque"] => custom_type(p, m),
         _ => {
-            p.bump_with_error(ErrorKind::ExpectedStatement);
+            p.error(ErrorKind::ExpectedStatement);
+            p.bump();
             p.finish_node(m, ERROR);
         }
     }
