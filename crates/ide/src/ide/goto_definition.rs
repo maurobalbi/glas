@@ -235,10 +235,10 @@ mod tests {
 
     #[test]
     fn field_access() {
-        // check(
-        //     "type Mogie { Mogie(name: Int) } fn wops() { let bobo = Mogie(name: 1) $0bobo.name}",
-        //     expect!["let <bobo> = Mogie(name: 1)"],
-        // );
+        check(
+            "type Mogie { Mogie(name: Int) } fn wops() { let bobo = Mogie(name: 1) $0bobo.name}",
+            expect!["let <bobo> = Mogie(name: 1)"],
+        );
         check(
             "type Mogie { Mogie(name: Int) } fn wops() { let bobo = Mogie(name: 1) bobo.$0name}",
             expect!["<type Mogie { Mogie(name: Int) }>"],

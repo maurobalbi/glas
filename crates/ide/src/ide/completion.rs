@@ -79,7 +79,7 @@ impl<'db> CompletionContext<'db> {
         };
         let top_node = tok
             .parent_ancestors()
-            .take_while(|it| it.text_range() == ctx.source_range)
+            .take_while(|it| it.text_range() == ctx.source_range && !(it.kind() == SyntaxKind::SOURCE_FILE))
             .last();
 
         if let Some(SyntaxKind::SOURCE_FILE) = top_node.and_then(|t| t.parent()).map(|it| it.kind()) {
@@ -115,7 +115,8 @@ pub(crate) fn completions(
     fpos @ FilePos { file_id, pos }: FilePos,
     trigger_char: Option<char>,
 ) -> Option<Vec<CompletionItem>> {
-    let root = db.parse(file_id).root();
+    let parse = db.parse(file_id);
+    let root = parse.root();
 
     tracing::info!("Completeing compl");
     let ctx = CompletionContext::new(db, &root, fpos)?;
@@ -193,6 +194,7 @@ mod tests {
     use crate::base::SourceDatabase;
     use crate::tests::TestDB;
     use expect_test::{expect, Expect};
+    use tracing_test::traced_test;
 
     #[track_caller]
     fn check_no(fixture: &str, label: &str) {
@@ -239,11 +241,11 @@ mod tests {
 
     #[test]
     fn keyword() {
-        check("i$0", "import", expect!["(Keyword) import"]);
+    check("i$0", "import", expect!["(Keyword) import ${1:module}"]);
     }
 
     #[test]
     fn scope() {
-        check_all("fn main() { a$0 }", None, expect![""]);
+        check_all("fn main() { a$0 }", None, expect!["(Function) main"]);
     }
 }
