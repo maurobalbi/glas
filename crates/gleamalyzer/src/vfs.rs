@@ -161,9 +161,8 @@ enum CodeUnitsDiff {
 
 impl LineMap {
     fn normalize(mut text: String) -> (String, Self) {
-        let text_len = text.len();
         // Must be valid for `TextSize`.
-        u32::try_from(text_len).expect("Text too long");
+        let text_len = u32::try_from(text.len()).expect("Text too long");
 
         text.retain(|c| c != '\r');
         let bytes = text.as_bytes();
@@ -179,13 +178,11 @@ impl LineMap {
             )
             .collect::<Vec<_>>();
 
-        let ends = &line_starts[1..];
         let mut char_diffs = HashMap::new();
-        for ((&start, &end), i) in line_starts
-            .iter()
-            .zip(ends.iter().chain(iter::once(&(text_len as u32))))
-            .zip(0u32..)
-        {
+
+        let start_pos_iter = line_starts.iter().copied();
+        let end_pos_iter = line_starts[1..].iter().copied().chain(Some(text_len));
+        for ((start, end), i) in start_pos_iter.zip(end_pos_iter).zip(0u32..) {
             let mut diffs = Vec::new();
             for (&b, pos) in bytes[start as usize..end as usize].iter().zip(0u32..) {
                 let diff = match b {
@@ -205,7 +202,7 @@ impl LineMap {
         let this = Self {
             line_starts,
             char_diffs,
-            len: text_len as u32,
+            len: text_len,
         };
         (text, this)
     }
@@ -247,16 +244,12 @@ impl LineMap {
         let mut len = if line + 1 >= self.line_starts.len() as u32 {
             self.len - self.line_starts[line as usize]
         } else {
-            self.line_starts[line as usize + 1] - self.line_starts[line as usize]
+            // Minus the trailing `\n` for non-last-lines.
+            self.line_starts[line as usize + 1] - self.line_starts[line as usize] - 1
         };
 
         if let Some(diffs) = self.char_diffs.get(&line) {
             len -= diffs.iter().map(|&(_, diff)| diff as u32).sum::<u32>();
-        }
-        // Lines except the last one has a trailing `\n`.
-        // Note that `line_starts` has one element more than actual total lines.
-        if line + 1 != self.line_starts.len() as u32 {
-            len -= 1;
         }
         len
     }
@@ -351,3 +344,4 @@ mod tests {
         assert_eq!(map.end_col_for_line(3), 3);
     }
 }
+
