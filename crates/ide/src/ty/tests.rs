@@ -94,9 +94,9 @@ fn pattern() {
         }  }",
         expect![[r#"
         bla: fn() -> Massa"#]],
-   );
+    );
 
-   check_all(
+    check_all(
         "type Massa { Much(Int) } fn bla() { case Much(1) {
             Much(a) -> a
         }  }",
@@ -107,8 +107,14 @@ fn pattern() {
 
 #[test]
 fn function() {
-    check_all("fn func() {fn(a,b) {a + b}", expect![["func: fn() -> fn(Int, Int) -> Int"]]);
-    check_all("fn func() {fn(a,b) {a + b}(1, 1)", expect![["func: fn() -> Int"]])
+    check_all(
+        "fn func() {fn(a,b) {a + b}",
+        expect![["func: fn() -> fn(Int, Int) -> Int"]],
+    );
+    check_all(
+        "fn func() {fn(a,b) {a + b}(1, 1)",
+        expect![["func: fn() -> Int"]],
+    )
 }
 
 #[test]
@@ -124,6 +130,27 @@ fn binary() {
 fn adt_resolve() {
     check_all(
         "fn bla(a, b, c, d) { a + 1 }",
+        expect![[r#"
+        bla: fn(Int, a, b, c) -> Int"#]],
+    )
+}
+
+#[test]
+fn pipe() {
+    check_all(
+        "fn a(a) { 1 + a } fn main() { 1 |> a } ",
+        expect![[r#"
+        bla: fn(Int, a, b, c) -> Int"#]],
+    )
+}
+
+#[test]
+fn use_() {
+    check_all(
+        "fn a(cb) { 1 + cb(5) } fn main() { 
+            use param <- a
+            param
+         } ",
         expect![[r#"
         bla: fn(Int, a, b, c) -> Int"#]],
     )

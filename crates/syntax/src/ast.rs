@@ -191,6 +191,7 @@ enums! {
         Variable,
         Lambda,
         BinaryOp,
+        Pipe,
         UnaryOp,
         ExprCall,
         VariantConstructor,
@@ -306,6 +307,10 @@ asts! {
         pub fn op_kind(&self) -> Option<BinaryOpKind> {
             self.op_details().map(|t| t.1)
         }
+    },
+    PIPE = Pipe {
+        lhs: Expr,
+        rhs[1]: Expr,
     },
     CONSTANT_LIST = ConstantList {
         elements: [ConstantExpr],
@@ -1009,6 +1014,5 @@ mod tests {
         let p = parse::<Block>("pub fn todoo() -> Nil {
             todo
         }");
-
     }
 }

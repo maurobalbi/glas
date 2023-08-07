@@ -215,6 +215,7 @@ impl TyDisplay for Ty {
         }
     }
 }
+
 pub fn next_letter(uid: u32) -> SmolStr {
     let alphabet_length = 26;
     let char_offset = 97;

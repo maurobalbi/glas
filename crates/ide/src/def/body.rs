@@ -236,6 +236,14 @@ impl BodyLowerCtx<'_> {
                 let right = self.lower_expr_opt(e.rhs());
                 self.alloc_expr(Expr::Binary { op, left, right }, ptr)
             }
+            ast::Expr::Pipe(e) => {
+                let left = self.lower_expr_opt(e.lhs());
+                let right = self.lower_expr_opt(e.rhs());
+                // add missing cases 
+                // left |> right -> right(left)
+                // left |> right(..args) -> right(left, ..args) | right(..args)(left)
+                self.alloc_expr(Expr::Call { func: right, args: vec![left] }, ptr)  
+            }
             ast::Expr::Literal(lit) => {
                 self.alloc_expr(lit.kind().map_or(Expr::Missing, Expr::Literal), ptr)
             }
