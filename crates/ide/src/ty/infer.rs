@@ -1,13 +1,14 @@
 use std::{collections::HashMap, mem, ops::Deref, sync::Arc};
 
 use la_arena::ArenaMap;
-use syntax::ast::{BinaryOpKind, LiteralKind};
+use smol_str::SmolStr;
+use syntax::ast::{BinaryOpKind, LiteralKind, StmtExpr};
 
 use crate::def::{
     body::Body,
     hir_def::{AdtId, FunctionId},
     module::{Expr, ExprId, Pattern, PatternId, Statement},
-    resolver::ResolveResult,
+    resolver::{resolver_for_toplevel, ResolveResult, Resolver},
     resolver_for_expr,
 };
 
@@ -81,12 +82,15 @@ pub(crate) fn infer_function_group_query(
 
     for (i, f) in group.iter().enumerate() {
         let body = db.body(*f);
+        let func = db.lookup_intern_function(*f);
+        let resolver = resolver_for_toplevel(db.upcast(), func.file_id);
         let mut ctx = InferCtx {
             db,
             table: &mut table,
             idx,
             group: &group,
             fn_id: *f,
+            resolver,
             body: body.deref(),
             body_ctx: BodyCtx::default(),
         };
@@ -113,6 +117,9 @@ struct InferCtx<'db> {
     body_ctx: BodyCtx,
     idx: u32,
     fn_id: FunctionId,
+    // The resolver is not kept up to date always, it's there to allow infer_pattern to work comfortably.
+    // If it's important to have a new resolver, use a new one
+    resolver: Resolver,
     group: &'db Vec<FunctionId>,
     body: &'db Body,
     table: &'db mut UnionFind<Ty>,
@@ -201,21 +208,83 @@ impl<'db> InferCtx<'db> {
         .intern(self)
     }
 
-    fn infer_stmt(&mut self, stmt: Statement) -> TyVar {
-        match stmt {
-            Statement::Let { pattern, body } => {
-                //infer pat
-                let infered = self.infer_expr(body);
-                let pat_ty = self.infer_pattern(pattern, infered);
-                self.unify_var(pat_ty, infered);
-                pat_ty
+    fn infer_stmts(&mut self, stmts: Vec<Statement>) -> TyVar {
+        let iter = stmts.into_iter();
+        self.infer_stmts_iter(iter)
+    }
+
+    fn infer_stmts_iter(&mut self, mut stmts: impl Iterator<Item = Statement>) -> TyVar {
+        let mut last = self.new_ty_var();
+        while let Some(stmt) = stmts.next() {
+            match stmt {
+                Statement::Let { pattern, body } => {
+                    //infer pat
+                    let infered = self.infer_expr(body);
+                    last = self.infer_pattern(pattern, infered);
+                    // let pat_var = self.ty_for_pattern(pattern);
+                    self.unify_var(last, infered);
+                }
+                Statement::Expr { expr } => last = self.infer_expr(expr),
+                Statement::Use { patterns, expr } => {
+                    let mut params = Vec::new();
+                    for pat in patterns {
+                        let new_var = self.new_ty_var();
+                        let pat_ty = self.infer_pattern(pat, new_var);
+                        self.unify_var(last, pat_ty);
+                        params.push(pat_ty);
+                    }
+                    let cb_tail = self.infer_stmts(stmts.collect());
+                    let cb_ty = Ty::Function {
+                        params,
+                        return_: cb_tail,
+                    };
+                    let cb_tyvar = self.new_ty_var();
+                    self.unify_var_ty(cb_tyvar, cb_ty);
+                    match &self.body[expr] {
+                        Expr::Call { func, args } => {
+                            let mut arg_tys = Vec::new();
+                            for arg in args {
+                                let param_ty = self.new_ty_var();
+                                arg_tys.push(param_ty);
+                                let arg_ty = self.infer_expr(*arg);
+                                self.unify_var(arg_ty, param_ty)
+                            }
+                            arg_tys.push(cb_tyvar);
+                            let ret_ty = self.new_ty_var();
+                            let fun_ty = self.infer_expr(*func);
+
+                            self.unify_var_ty(
+                                fun_ty,
+                                Ty::Function {
+                                    params: arg_tys,
+                                    return_: ret_ty,
+                                },
+                            );
+                            last = ret_ty
+                        }
+                        _ => {
+                            let mut arg_tys = Vec::new();
+
+                            arg_tys.push(cb_tyvar);
+                            let ret_ty = self.new_ty_var();
+                            let fun_ty = self.infer_expr(expr);
+
+                            self.unify_var_ty(
+                                fun_ty,
+                                Ty::Function {
+                                    params: arg_tys,
+                                    return_: ret_ty,
+                                },
+                            );
+                            last = ret_ty
+                        }
+                    }
+
+                    break;
+                }
             }
-            Statement::Expr { expr } => self.infer_expr(expr),
-            Statement::Use {
-                patterns: _,
-                expr: _,
-            } => todo![],
         }
+        last
     }
 
     fn infer_expr(&mut self, e: ExprId) -> TyVar {
@@ -225,8 +294,8 @@ impl<'db> InferCtx<'db> {
         ty
     }
 
-    fn infer_expr_inner(&mut self, e: ExprId) -> TyVar {
-        match &self.body[e] {
+    fn infer_expr_inner(&mut self, tgt_expr: ExprId) -> TyVar {
+        match &self.body[tgt_expr] {
             Expr::Missing => self.new_ty_var(),
             Expr::Literal(lit) => match lit {
                 LiteralKind::Int => Ty::Int,
@@ -235,11 +304,13 @@ impl<'db> InferCtx<'db> {
             }
             .intern(self),
             Expr::Block { stmts } => {
-                let mut tail = self.new_ty_var();
-                for stmt in stmts {
-                    tail = self.infer_stmt(stmt.clone());
-                }
-                tail
+                let old_resolver = mem::replace(
+                    &mut self.resolver,
+                    resolver_for_expr(self.db.upcast(), self.fn_id, tgt_expr),
+                );
+                let ty = self.infer_stmts(stmts.clone());
+                self.resolver = old_resolver;
+                ty
             }
             Expr::Binary { left, right, op } => {
                 let lhs_ty = self.infer_expr(*left);
@@ -285,13 +356,25 @@ impl<'db> InferCtx<'db> {
                     }
                 }
             }
+            Expr::Pipe { left, right } => {
+                let arg_ty = self.infer_expr(*left);
+
+                let ret_ty = self.new_ty_var();
+                let fun_ty = self.infer_expr(*right);
+
+                self.unify_var_ty(
+                    fun_ty,
+                    Ty::Function {
+                        params: vec![arg_ty],
+                        return_: ret_ty,
+                    },
+                );
+                ret_ty
+            }
             Expr::Call { func, args } => {
                 let mut arg_tys = Vec::new();
                 for arg in args {
-                    let param_ty = self.new_ty_var();
-                    arg_tys.push(param_ty);
-                    let arg_ty = self.infer_expr(*arg);
-                    self.unify_var(arg_ty, param_ty)
+                    arg_tys.push(self.infer_expr(*arg));
                 }
                 let ret_ty = self.new_ty_var();
                 let fun_ty = self.infer_expr(*func);
@@ -307,7 +390,8 @@ impl<'db> InferCtx<'db> {
             }
             Expr::Variable(name) => {
                 let db = self.db;
-                let resolver = resolver_for_expr(db.upcast(), self.fn_id, e);
+                //
+                let resolver = resolver_for_expr(db.upcast(), self.fn_id, tgt_expr);
                 match resolver.resolve_name(name) {
                     Some(ResolveResult::LocalBinding(pat)) => {
                         let pattern = self.body_ctx.pattern_to_ty.get(&pat);
@@ -350,7 +434,7 @@ impl<'db> InferCtx<'db> {
                 let field_var = self.new_ty_var();
                 let field_ty = match self.table.get_mut(ty.0) {
                     Ty::Adt { adt_id, params } => {
-                        self.body_ctx.field_resolution.insert(e, *adt_id);
+                        self.body_ctx.field_resolution.insert(tgt_expr, *adt_id);
                         match params.iter().next() {
                             Some(var) => *var,
                             None => self.new_ty_var(),
@@ -363,25 +447,11 @@ impl<'db> InferCtx<'db> {
             }
             Expr::VariantLiteral { name, fields } => {
                 let db = self.db;
-                let resolver = resolver_for_expr(db.upcast(), self.fn_id, e);
                 let mut params = Vec::new();
                 for field in fields {
                     params.push(self.infer_expr(*field));
                 }
-                match resolver.resolve_name(name) {
-                    Some(ResolveResult::VariantId(var_id)) => {
-                        let variant = db.lookup_intern_variant(var_id);
-                        Ty::Adt {
-                            adt_id: variant.parent,
-                            params,
-                        }
-                        .intern(self)
-                    }
-                    _ => {
-                        // ToDo: Add diagnostics
-                        self.new_ty_var()
-                    }
-                }
+                self.resolve_variant(name)
             }
             Expr::Lambda { body, params } => {
                 let mut param_tys = Vec::new();
@@ -411,31 +481,56 @@ impl<'db> InferCtx<'db> {
         self.unify_var_ty(TyVar(var), rhs);
     }
 
-    fn infer_pattern(&mut self, pattern: PatternId, expected_ty: TyVar) -> TyVar {
-        let expected_ty = self.table.get_mut(expected_ty.0).clone();
-        tracing::info!("{:?}", expected_ty);
+    fn infer_pattern(&mut self, pattern: PatternId, expected_ty_var: TyVar) -> TyVar {
+        let pat_var = self.ty_for_pattern(pattern);
+        let expected_ty = self.table.get_mut(expected_ty_var.0).clone();
         match &self.body[pattern] {
             Pattern::VariantRef {
                 name,
                 module,
                 fields,
-            } =>{ 
-                match expected_ty {
-                    Ty::Adt { adt_id, params } => {
-                        for (field_ty, param) in params.iter().zip(fields) {
-                            self.infer_pattern(*param, *field_ty);
-                        }
-                    },
-                    _ => {}
+            } => match expected_ty.clone() {
+                Ty::Adt { adt_id, params } => {
+                    for (field_ty, param) in params.iter().zip(fields) {
+                        self.infer_pattern(*param, *field_ty);
+                    }
+                    let ty = self.resolve_variant(name);
+                    self.unify_var(ty, pat_var);
                 }
-                self.ty_for_pattern(pattern)
+                _ => {
+                    let ty = self.resolve_variant(name);
+                    self.unify_var(ty, pat_var);
+                }
+            },
+            _ => {}
+        }
+        self.unify_var(expected_ty_var, pat_var);
+        pat_var
+    }
+
+    fn resolve_variant(&mut self, name: &SmolStr) -> TyVar {
+        match self.resolver.resolve_name(name) {
+            Some(ResolveResult::VariantId(var_id)) => {
+                let variant = self.db.lookup_intern_variant(var_id);
+                let variant_data =
+                    &self.db.module_items(variant.value.file_id)[variant.value.value];
+                let params = variant_data
+                    .fields
+                    .iter()
+                    .map(|_| self.new_ty_var())
+                    .collect();
+
+                Ty::Adt {
+                    adt_id: variant.parent,
+                    params,
+                }
+                .intern(self)
             }
-            Pattern::Variable { name } => {
-                let pat_ty = self.ty_for_pattern(pattern);
-                self.unify_var_ty(pat_ty, expected_ty);
-                pat_ty
+
+            _ => {
+                // ToDo: Add diagnostics
+                self.new_ty_var()
             }
-            _ => self.ty_for_pattern(pattern),
         }
     }
 

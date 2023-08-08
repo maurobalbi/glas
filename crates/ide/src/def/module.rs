@@ -126,6 +126,10 @@ pub enum Expr {
         func: ExprId,
         args: Vec<ExprId>,
     },
+    Pipe {
+        left: ExprId,
+        right: ExprId,
+    },
     Lambda {
         body: ExprId,
         params: IdxRange<Pattern>

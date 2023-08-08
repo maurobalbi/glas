@@ -180,7 +180,7 @@ impl TyDisplay for Ty {
             Ty::Int => write!(f, "Int"),
             Ty::Float => write!(f, "Float"),
             Ty::String => write!(f, "String"),
-            Ty::Function { params, return_ } => {
+            Ty::Function { params, return_ } => { 
                 write!(f, "fn(")?;
                 f.write_joined(params.as_ref().clone().into_iter(), ", ")?;
 

@@ -242,7 +242,7 @@ impl BodyLowerCtx<'_> {
                 // add missing cases 
                 // left |> right -> right(left)
                 // left |> right(..args) -> right(left, ..args) | right(..args)(left)
-                self.alloc_expr(Expr::Call { func: right, args: vec![left] }, ptr)  
+                self.alloc_expr(Expr::Pipe { left, right }, ptr) 
             }
             ast::Expr::Literal(lit) => {
                 self.alloc_expr(lit.kind().map_or(Expr::Missing, Expr::Literal), ptr)
@@ -320,6 +320,7 @@ impl BodyLowerCtx<'_> {
         match ast {
             StatementExpr::StmtLet(stmt) => {
                 if let (Some(expr), Some(pattern)) = (stmt.body(), stmt.pattern()) {
+                    tracing::info!("lowering let");
                     let expr_id = self.lower_expr(expr);
                     let pattern = self.lower_pattern(pattern);
                     statements.push(Statement::Let {

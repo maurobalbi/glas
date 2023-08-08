@@ -199,6 +199,10 @@ impl ExprScopes {
                 self.traverse_expr(body, *left, scope);
                 self.traverse_expr(body, *right, scope);
             }
+            Expr::Pipe { left, right} => {
+                self.traverse_expr(body, *left, scope);
+                self.traverse_expr(body, *right, scope);
+            }
             Expr::FieldAccess {
                 base: container,
                 label,

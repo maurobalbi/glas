@@ -29,13 +29,39 @@ fn check_all(src: &str, expect: Expect) {
     expect.assert_eq(&got);
 }
 
-#[traced_test]
 #[test]
 fn let_in() {
     check_all(
         "type Bla2 { Bla } fn bla(a, b) { Bla }",
-        expect![[r#"
-            bla: fn(a, b) -> Bla2"#]],
+        expect![r#"
+            bla: fn(a, b) -> Bla2"#],
+    )
+}
+
+#[test]
+fn fn_params() {
+    check_all(
+        "fn main(a,b) {a + b} fn bla(a, b) { b }",
+        expect![r#"
+            main: fn(Int, Int) -> Int
+            bla: fn(a, b) -> b"#],
+    )
+}
+
+#[test]
+fn let_infer_pattern() {
+    check_all(
+        "type Biboop {Biboop(Int)} fn biboob(a) {let Biboop(b) = a b}",
+        expect!["biboob: fn(Biboop) -> a"],
+    )
+}
+
+#[traced_test]
+#[test]
+fn let_infer() {
+    check_all(
+        "type Biboop {Biboop(Int)} fn biboob(a) { let b = a b }",
+        expect!["biboob: fn(a) -> a"],
     )
 }
 
@@ -138,21 +164,47 @@ fn adt_resolve() {
 #[test]
 fn pipe() {
     check_all(
-        "fn a(a) { 1 + a } fn main() { 1 |> a } ",
+        "fn main(a) { 1 |> a(2) } ",
         expect![[r#"
-        bla: fn(Int, a, b, c) -> Int"#]],
+        main: fn(fn(Int) -> fn(Int) -> a) -> a"#]],
+    )
+}
+
+#[test]
+fn pipe_sugar() {
+    check_all(
+        "fn main(a) { 1 |> a(2) } ",
+        expect![[r#"
+        main: fn(fn(Int) -> fn(Int) -> a) -> a"#]],
+    );
+    check_all(
+        "fn main() { 1 |> a(2) } ",
+        expect![[r#"
+        main: fn() -> a"#]],
     )
 }
 
 #[test]
 fn use_() {
     check_all(
-        "fn a(cb) { 1 + cb(5) } fn main() { 
-            use param <- a
+        "fn main(a) { 
+            use param <- a(1)
             param
          } ",
         expect![[r#"
-        bla: fn(Int, a, b, c) -> Int"#]],
-    )
+        main: fn(fn(Int, fn(a) -> a) -> b) -> b"#]],
+    );
+
 }
 
+#[test]
+fn use_pattern() {
+    check_all(
+        "type BlaT { Bla(Int) } fn main(a) { 
+            use Bla(b) <- a
+            b
+         } ",
+        expect![[r#"
+        main: fn(fn(fn(BlaT) -> a) -> b) -> b"#]],
+    )
+}
