@@ -158,12 +158,6 @@ pub fn ancestors_at_offset(
 
 /// Finds a node of specific Ast type at offset. Note that this is slightly
 /// imprecise: if the cursor is strictly between two nodes of the desired type,
-/// as in
-///
-/// ```no_run
-/// struct Foo {}|struct Bar;
-/// ```
-///
 /// then the shorter node will be silently preferred.
 pub fn find_node_at_offset<N: AstNode<Language = GleamLanguage>>(syntax: &SyntaxNode, offset: TextSize) -> Option<N> {
     ancestors_at_offset(syntax, offset).find_map(N::cast)

@@ -9,10 +9,10 @@ use syntax::{
 use crate::ty;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct Adt {
+pub struct AdtData {
     pub name: SmolStr,
 
-    pub constructors: IdxRange<Variant>,
+    pub variants: IdxRange<VariantData>,
 
     pub params: Vec<TypeParam>,
     pub visibility: Visibility,
@@ -21,7 +21,7 @@ pub struct Adt {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct Variant {
+pub struct VariantData {
     pub name: SmolStr,
 
     pub fields: Vec<ConstructorField>,
@@ -39,7 +39,7 @@ pub struct ConstructorField {
 pub struct TypeParam(SmolStr);
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct Function {
+pub struct FunctionData {
     pub name: SmolStr,
     pub params: Vec<Param>,
 
@@ -48,7 +48,7 @@ pub struct Function {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct Import {
+pub struct ImportData {
     pub module: SmolStr, // e.g. import >>one/wobble<<
 
     pub unqualified_as_name: Option<SmolStr>, // e.g. {* as >>AsName<<}
@@ -57,7 +57,7 @@ pub struct Import {
     pub ast_ptr: AstPtr<ast::Import>,
 }
 
-impl Import {
+impl ImportData {
     pub fn local_name(&self) -> SmolStr {
         self.unqualified_as_name
             .as_ref()
@@ -80,7 +80,7 @@ pub enum Visibility {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Clause {
-    pub patterns: IdxRange<Pattern>,
+    pub patterns: Vec<PatternId>,
     // pub guard: Option<ExprId>,
     pub expr: ExprId,
 }
@@ -135,7 +135,7 @@ pub enum Expr {
         params: IdxRange<Pattern>
     },
     Case {
-        subjects: IdxRange<Expr>,
+        subjects: Vec<ExprId>,
         clauses: Vec<Clause>,
     },
     Variable(SmolStr),
@@ -149,7 +149,6 @@ pub enum Pattern {
     Hole,
     Variable { name: SmolStr },
     Tuple { fields: Vec<PatternId> },
-    Record { constructor: PatternId, args: Vec<PatternId> },
     Literal {kind: LiteralKind },
     VariantRef {name: SmolStr, module: Option<SmolStr>, fields: Vec<PatternId>},
     AlternativePattern { patterns: Vec<PatternId> },

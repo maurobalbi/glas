@@ -54,6 +54,8 @@ pub(crate) fn hover(db: &dyn TyDatabase, FilePos { file_id, pos }: FilePos) -> O
             match res {
                 def::resolver::ResolveResult::LocalBinding(pattern) => {
                     let infer = db.infer_function(resolver.body_owner()?);
+                    let body_src_map = db.body_source_map(resolver.body_owner()?);
+                    tracing::info!("{:#?}", body_src_map);
                     let ty = infer.ty_for_pattern(pattern);
                     Some(HoverResult {
                         range: tok.text_range(),
@@ -91,6 +93,7 @@ mod tests {
     use crate::base::SourceDatabase;
     use crate::tests::TestDB;
     use expect_test::{expect, Expect};
+    use tracing_test::traced_test;
 
     #[track_caller]
     fn check(fixture: &str, full: &str, expect: Expect) {
@@ -126,14 +129,38 @@ mod tests {
         );
     }
 
+    // #[test]
+    // fn generic() {
+    //     check(
+    //         "fn main(a6, b) { $0b }",
+    //         "b",
+    //         expect![[r#"
+    //             ```gleam
+    //             b
+    //             ```
+    //         "#]],
+    //     );
+    // }
+
+    #[traced_test]
     #[test]
-    fn generic() {
+    fn pattern_variant() {
         check(
-            "fn main(a, b) { $0b }",
-            "b",
+            "fn main(a, b) { let Dog(a) = Dog(1) $0a }",
+            "a",
             expect![[r#"
                 ```gleam
-                b
+                a
+                ```
+            "#]],
+        );
+        
+        check(
+            "type Animal { Dog(Int) } fn main(a, b) { let Dog(a) = Dog(1) $0a }",
+            "a",
+            expect![[r#"
+                ```gleam
+                a
                 ```
             "#]],
         );

@@ -11,7 +11,7 @@ use crate::{DefDatabase, FileId, InFile};
 use super::{
     body::Body,
     hir_def::{AdtLoc, FunctionLoc, ModuleDefId, VariantLoc},
-    module::{Clause, Expr, ExprId, Import, Pattern, PatternId, Statement, Visibility},
+    module::{Clause, Expr, ExprId, ImportData, Pattern, PatternId, Statement, Visibility},
     resolver::ResolveResult,
     resolver_for_expr, FunctionId,
 };
@@ -55,7 +55,7 @@ pub fn module_scope_query(db: &dyn DefDatabase, file_id: FileId) -> Arc<ModuleSc
             .declarations
             .insert(name.clone(), (def, adt.visibility.clone()));
 
-        for variant_id in adt.constructors.clone() {
+        for variant_id in adt.variants.clone() {
             let variant = &module_data[variant_id];
             let name = &variant.name;
             let variant_loc = db.intern_variant(VariantLoc {
@@ -107,8 +107,8 @@ impl ModuleScope {
         self.declarations.iter().map(|v| v.1)
     }
 
-    fn resolve_import(&self, db: &dyn DefDatabase, import: &Import) -> Option<ModuleDefId> {
-        let Import {
+    fn resolve_import(&self, db: &dyn DefDatabase, import: &ImportData) -> Option<ModuleDefId> {
+        let ImportData {
             unqualified_name: unqualifed_name,
             module,
             ..
@@ -211,15 +211,15 @@ impl ExprScopes {
             }
             Expr::Case { subjects, clauses } => {
                 subjects
-                    .clone()
-                    .for_each(|e| self.traverse_expr(body, e, scope));
+                    .into_iter()
+                    .for_each(|e| self.traverse_expr(body, *e, scope));
                 clauses.into_iter().for_each(|Clause { patterns, expr }| {
                     let clause_scope = self.scopes.alloc(ScopeData {
                         parent: Some(scope),
                         entries: Vec::new(),
                     });
                     patterns
-                        .clone()
+                        .into_iter()
                         .for_each(|pat| self.add_bindings(body, clause_scope, &pat));
                     self.traverse_expr(body, *expr, clause_scope);
                 });
@@ -276,7 +276,6 @@ impl ExprScopes {
                     pat: *pattern_id,
                 });
             }
-            Pattern::Record {constructor,  args: _ } => todo!(),
             Pattern::Missing => {}
             Pattern::Tuple { fields } => {
                 for pattern in fields {
@@ -289,7 +288,11 @@ impl ExprScopes {
                 }
             }
             Pattern::Hole => {}
-            Pattern::VariantRef { name, module, fields } => {},
+            Pattern::VariantRef { name, module, fields } => {
+                for field in fields {
+                    self.add_bindings(body, scope, field);
+                }
+            },
             Pattern::Literal { kind } => {},
         }
     }

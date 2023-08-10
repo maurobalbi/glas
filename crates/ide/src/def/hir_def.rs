@@ -3,14 +3,34 @@ use la_arena::Idx;
 use crate::{impl_from, impl_intern, InFile};
 
 use super::{
-    module::{Adt, Function, Variant},
-    DefDatabase,
+    module::{AdtData, FunctionData, VariantData},
+    DefDatabase, hir::{Function, Adt},
 };
 use crate::impl_intern_key;
 
+macro_rules! from_id {
+    ($(($id:path, $ty:path)),*) => {$(
+        impl From<$id> for $ty {
+            fn from(id: $id) -> $ty {
+                $ty { id }
+            }
+        }
+        impl From<$ty> for $id {
+            fn from(ty: $ty) -> $id {
+                ty.id
+            }
+        }
+    )*}
+}
+
+from_id!(
+    (FunctionId, Function),
+    (AdtId, Adt)
+);
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct FunctionId(pub salsa::InternId);
-pub type FunctionLoc = InFile<Idx<Function>>;
+pub type FunctionLoc = InFile<Idx<FunctionData>>;
 impl_intern!(
     FunctionId,
     FunctionLoc,
@@ -18,18 +38,20 @@ impl_intern!(
     lookup_intern_function
 );
 
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct AdtId(pub salsa::InternId);
-pub type AdtLoc = InFile<Idx<Adt>>;
+pub type AdtLoc = InFile<Idx<AdtData>>;
 impl_intern!(AdtId, AdtLoc, intern_adt, lookup_intern_adt);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct VariantId(pub salsa::InternId);
+pub type LocalVariantId = Idx<VariantData>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct VariantLoc {
     pub parent: AdtId,
-    pub value: InFile<Idx<Variant>>,
+    pub value: InFile<Idx<VariantData>>,
 }
 impl_intern!(VariantId, VariantLoc, intern_variant, lookup_intern_variant);
 

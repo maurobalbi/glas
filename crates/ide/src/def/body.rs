@@ -248,30 +248,28 @@ impl BodyLowerCtx<'_> {
                 self.alloc_expr(lit.kind().map_or(Expr::Missing, Expr::Literal), ptr)
             }
             ast::Expr::Case(case) => {
-                let start = self.next_expr_idx();
+                let mut subjects = Vec::new();
                 for subj in case.subjects() {
-                    self.lower_expr(subj);
+                    subjects.push(self.lower_expr(subj));
                 }
-                let end = self.next_expr_idx();
 
                 let clauses = case
                     .clauses()
                     .map(|clause| {
-                        let start = self.next_pattern_idx();
+                        let mut clause_patterns = Vec::new();
                         for pattern in clause.patterns() {
-                            self.lower_pattern(pattern);
+                            clause_patterns.push(self.lower_pattern(pattern));
                         }
-                        let end = self.next_pattern_idx();
                         Clause {
                             expr: self.lower_expr_opt(clause.body()),
-                            patterns: IdxRange::new(start..end),
+                            patterns: clause_patterns,
                         }
                     })
                     .collect();
 
                 self.alloc_expr(
                     Expr::Case {
-                        subjects: IdxRange::new(start..end),
+                        subjects,
                         clauses,
                     },
                     ptr,

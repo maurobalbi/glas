@@ -1,8 +1,9 @@
 use la_arena::Idx;
+use smol_str::SmolStr;
 
 use crate::{impl_from, DefDatabase, SourceRootId};
 
-use super::{scope::ExprScopes, FunctionId};
+use super::{scope::ExprScopes, FunctionId, hir_def::{AdtId, LocalVariantId}, module::ConstructorField};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Package {
@@ -40,6 +41,43 @@ pub struct ModuleId {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ModuleDef {
     Function(Function),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Adt {
+    pub(crate) id: AdtId
+}
+
+impl Adt {
+    pub fn variants(self, db: &dyn DefDatabase) -> Vec<Variant>{
+        let loc = db.lookup_intern_adt(self.id);
+        let items = &db.module_items(loc.file_id);
+        let adt = &items[loc.value];
+        adt.variants.clone().map(|v| Variant {parent: self.id, id: v}).collect()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Variant {
+    pub(crate) parent: AdtId,
+    pub(crate) id: LocalVariantId,
+}
+
+impl Variant {
+    pub fn name(self, db: &dyn DefDatabase) -> SmolStr {
+        let loc = db.lookup_intern_adt(self.parent);
+        let items = &db.module_items(loc.file_id);
+        let variant = &items[self.id];
+        variant.name.clone()
+    }
+
+    pub fn fields(self, db: &dyn DefDatabase) -> Vec<ConstructorField> {
+        let loc = db.lookup_intern_adt(self.parent);
+        let items = &db.module_items(loc.file_id);
+        let variant = &items[self.id]; 
+        variant.fields.clone()
+    }
+
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

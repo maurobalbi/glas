@@ -604,6 +604,8 @@ impl Name {
 #[cfg(test)]
 mod tests {
 
+    use expect_test::expect;
+
     use super::*;
     use crate::tests::parse;
 
@@ -639,7 +641,7 @@ mod tests {
     #[test]
     fn assert() {
         let e = crate::parse_module("fn a() { 
-                    a |> b |> c
+                        let Dog(a) = Dog(1) 
                     }");
         for error in e.errors() {
             println!("{}", error);
@@ -922,6 +924,7 @@ mod tests {
                     }}",
         );
         c.syntax().should_eq("Bird | Snake, a -> 2");
+        c.patterns().next().unwrap().syntax().should_eq("Bird | Snake");
         c.body().unwrap().syntax().should_eq("2");
         let mut pats = c.patterns().into_iter();
         pats.next().unwrap().syntax().should_eq("Bird | Snake");

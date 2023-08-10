@@ -1,5 +1,5 @@
 pub mod body;
-mod hir;
+pub mod hir;
 pub mod hir_def;
 mod lower;
 pub mod module;

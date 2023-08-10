@@ -3,7 +3,7 @@ use std::ops::Index;
 use crate::{base::Target, ty, Diagnostic, DiagnosticKind};
 
 use super::{
-    module::{Adt, ConstructorField, Function, Import, Param, Variant, Visibility},
+    module::{AdtData, ConstructorField, FunctionData, ImportData, Param, VariantData, Visibility},
     AstPtr, DefDatabase,
 };
 use la_arena::{Arena, Idx, IdxRange, RawIdx};
@@ -15,56 +15,56 @@ use syntax::{
 
 #[derive(Default, Debug, Eq, PartialEq)]
 pub struct ModuleItemData {
-    functions: Arena<Function>,
-    imports: Arena<Import>,
-    adts: Arena<Adt>,
+    functions: Arena<FunctionData>,
+    imports: Arena<ImportData>,
+    adts: Arena<AdtData>,
 
-    variants: Arena<Variant>,
+    variants: Arena<VariantData>,
     pub diagnostics: Vec<Diagnostic>,
 }
 
 impl ModuleItemData {
-    pub fn imports(&self) -> impl Iterator<Item = (Idx<Import>, &Import)> + ExactSizeIterator + '_ {
+    pub fn imports(&self) -> impl Iterator<Item = (Idx<ImportData>, &ImportData)> + ExactSizeIterator + '_ {
         self.imports.iter()
     }
 
-    pub fn adts(&self) -> impl Iterator<Item = (Idx<Adt>, &Adt)> + ExactSizeIterator + '_ {
+    pub fn adts(&self) -> impl Iterator<Item = (Idx<AdtData>, &AdtData)> + ExactSizeIterator + '_ {
         self.adts.iter()
     }
 
     pub fn variants(
         &self,
-    ) -> impl Iterator<Item = (Idx<Variant>, &Variant)> + ExactSizeIterator + '_ {
+    ) -> impl Iterator<Item = (Idx<VariantData>, &VariantData)> + ExactSizeIterator + '_ {
         self.variants.iter()
     }
 
     pub fn functions(
         &self,
-    ) -> impl Iterator<Item = (Idx<Function>, &Function)> + ExactSizeIterator + '_ {
+    ) -> impl Iterator<Item = (Idx<FunctionData>, &FunctionData)> + ExactSizeIterator + '_ {
         self.functions.iter()
     }
 }
 
-impl Index<Idx<Adt>> for ModuleItemData {
-    type Output = Adt;
+impl Index<Idx<AdtData>> for ModuleItemData {
+    type Output = AdtData;
 
-    fn index(&self, index: Idx<Adt>) -> &Self::Output {
+    fn index(&self, index: Idx<AdtData>) -> &Self::Output {
         &self.adts[index]
     }
 }
 
-impl Index<Idx<Variant>> for ModuleItemData {
-    type Output = Variant;
+impl Index<Idx<VariantData>> for ModuleItemData {
+    type Output = VariantData;
 
-    fn index(&self, index: Idx<Variant>) -> &Self::Output {
+    fn index(&self, index: Idx<VariantData>) -> &Self::Output {
         &self.variants[index]
     }
 }
 
-impl Index<Idx<Function>> for ModuleItemData {
-    type Output = Function;
+impl Index<Idx<FunctionData>> for ModuleItemData {
+    type Output = FunctionData;
 
-    fn index(&self, index: Idx<Function>) -> &Self::Output {
+    fn index(&self, index: Idx<FunctionData>) -> &Self::Output {
         &self.functions[index]
     }
 }
@@ -84,22 +84,22 @@ pub(super) fn lower_module(db: &dyn DefDatabase, parse: Parse) -> ModuleItemData
 }
 
 impl<'a> LowerCtx<'a> {
-    fn alloc_function(&mut self, function: Function) -> Idx<Function> {
+    fn alloc_function(&mut self, function: FunctionData) -> Idx<FunctionData> {
         let id = self.module_items.functions.alloc(function);
         id
     }
 
-    fn alloc_custom_type(&mut self, custom_type: Adt) -> Idx<Adt> {
+    fn alloc_custom_type(&mut self, custom_type: AdtData) -> Idx<AdtData> {
         let id = self.module_items.adts.alloc(custom_type);
         id
     }
 
-    fn alloc_variant(&mut self, constructor: Variant) -> Idx<Variant> {
+    fn alloc_variant(&mut self, constructor: VariantData) -> Idx<VariantData> {
         let id = self.module_items.variants.alloc(constructor);
         id
     }
 
-    fn alloc_import(&mut self, import: Import) -> Idx<Import> {
+    fn alloc_import(&mut self, import: ImportData) -> Idx<ImportData> {
         self.module_items.imports.alloc(import)
     }
 
@@ -166,7 +166,7 @@ impl<'a> LowerCtx<'a> {
                     .as_name()
                     .and_then(|t| t.text());
 
-                self.alloc_import(Import {
+                self.alloc_import(ImportData {
                     module: module_name.clone(),
                     unqualified_as_name,
                     unqualified_name,
@@ -176,7 +176,7 @@ impl<'a> LowerCtx<'a> {
         }
     }
 
-    fn lower_function(&mut self, fun: &ast::Function) -> Option<Idx<Function>> {
+    fn lower_function(&mut self, fun: &ast::Function) -> Option<Idx<FunctionData>> {
         let ast_ptr = AstPtr::new(fun);
 
         let mut params = Vec::new();
@@ -192,7 +192,7 @@ impl<'a> LowerCtx<'a> {
             }
         };
 
-        Some(self.alloc_function(Function {
+        Some(self.alloc_function(FunctionData {
             name: fun.name()?.text()?,
             params,
             visibility: Visibility::Public,
@@ -200,16 +200,16 @@ impl<'a> LowerCtx<'a> {
         }))
     }
 
-    fn lower_custom_type(&mut self, ct: &ast::Adt) -> Option<Idx<Adt>> {
+    fn lower_custom_type(&mut self, ct: &ast::Adt) -> Option<Idx<AdtData>> {
         let ast_ptr = AstPtr::new(ct);
         let name = ct.name()?.text()?;
 
         let visibility = Visibility::Public;
 
         let constructors = self.lower_constructors(ct.constructors());
-        Some(self.alloc_custom_type(Adt {
+        Some(self.alloc_custom_type(AdtData {
             name,
-            constructors,
+            variants: constructors,
             params: Vec::new(),
             visibility,
             ast_ptr,
@@ -219,7 +219,7 @@ impl<'a> LowerCtx<'a> {
     fn lower_constructors(
         &mut self,
         constructors: ast::AstChildren<ast::Variant>,
-    ) -> IdxRange<Variant> {
+    ) -> IdxRange<VariantData> {
         let start = self.next_constructor_idx();
         for constructor in constructors {
             self.lower_constructor(&constructor);
@@ -228,7 +228,7 @@ impl<'a> LowerCtx<'a> {
         IdxRange::new(start..end)
     }
 
-    fn lower_constructor(&mut self, constructor: &ast::Variant) -> Option<Idx<Variant>> {
+    fn lower_constructor(&mut self, constructor: &ast::Variant) -> Option<Idx<VariantData>> {
         let ast_ptr = AstPtr::new(constructor);
         let name = constructor.name()?.text()?;
 
@@ -246,7 +246,7 @@ impl<'a> LowerCtx<'a> {
             }
         }
 
-        Some(self.alloc_variant(Variant {
+        Some(self.alloc_variant(VariantData {
             name,
             fields: fields_vec,
             ast_ptr,
@@ -270,7 +270,7 @@ impl<'a> LowerCtx<'a> {
         }
     }
 
-    fn next_constructor_idx(&self) -> Idx<Variant> {
+    fn next_constructor_idx(&self) -> Idx<VariantData> {
         Idx::from_raw(RawIdx::from(self.module_items.variants.len() as u32))
     }
 }

@@ -208,3 +208,13 @@ fn use_pattern() {
         main: fn(fn(fn(BlaT) -> a) -> b) -> b"#]],
     )
 }
+
+#[traced_test]
+#[test]
+fn case_fn() {
+    check_all(
+        "fn main(b) { case b(1) { 1 -> 1 } }",
+        expect![[r#"
+        main: fn(fn(Int) -> Int) -> Int"#]],
+    )
+}
