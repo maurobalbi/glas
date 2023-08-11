@@ -52,7 +52,7 @@ fn fn_params() {
 fn let_infer_pattern() {
     check_all(
         "type Biboop {Biboop(Int)} fn biboob(a) {let Biboop(b) = a b}",
-        expect!["biboob: fn(Biboop) -> a"],
+        expect!["biboob: fn(Biboop) -> Int"],
     )
 }
 
@@ -205,7 +205,7 @@ fn use_pattern() {
             b
          } ",
         expect![[r#"
-        main: fn(fn(fn(BlaT) -> a) -> b) -> b"#]],
+        main: fn(fn(fn(BlaT) -> Int) -> a) -> a"#]],
     )
 }
 
@@ -217,4 +217,14 @@ fn case_fn() {
         expect![[r#"
         main: fn(fn(Int) -> Int) -> Int"#]],
     )
+}
+
+#[test]
+fn case_infer() {
+    check_all("fn do_reverse_acc(remaining) {
+        case remaining {
+          1 -> 1.1
+          2 -> 1.2
+        }
+      }", expect!["do_reverse_acc: fn(Int) -> Float"])
 }

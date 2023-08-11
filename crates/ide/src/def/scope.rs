@@ -209,18 +209,14 @@ impl ExprScopes {
             } => {
                 self.traverse_expr(body, *container, scope);
             }
-            Expr::Case { subjects, clauses } => {
-                subjects
-                    .into_iter()
-                    .for_each(|e| self.traverse_expr(body, *e, scope));
-                clauses.into_iter().for_each(|Clause { patterns, expr }| {
+            Expr::Case { subject, clauses } => {
+                self.traverse_expr(body, *subject, scope);
+                clauses.into_iter().for_each(|Clause { pattern, expr }| {
                     let clause_scope = self.scopes.alloc(ScopeData {
                         parent: Some(scope),
                         entries: Vec::new(),
                     });
-                    patterns
-                        .into_iter()
-                        .for_each(|pat| self.add_bindings(body, clause_scope, &pat));
+                    self.add_bindings(body, clause_scope, &pattern);
                     self.traverse_expr(body, *expr, clause_scope);
                 });
             }

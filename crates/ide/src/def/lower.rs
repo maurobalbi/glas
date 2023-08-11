@@ -24,7 +24,9 @@ pub struct ModuleItemData {
 }
 
 impl ModuleItemData {
-    pub fn imports(&self) -> impl Iterator<Item = (Idx<ImportData>, &ImportData)> + ExactSizeIterator + '_ {
+    pub fn imports(
+        &self,
+    ) -> impl Iterator<Item = (Idx<ImportData>, &ImportData)> + ExactSizeIterator + '_ {
         self.imports.iter()
     }
 
@@ -158,13 +160,9 @@ impl<'a> LowerCtx<'a> {
             .collect();
 
         for unqualified in i.unqualified() {
-            if let Some(unqualified_name) = unqualified
-                .name()
-                .and_then(|t| t.text())
-            {
-                let unqualified_as_name: Option<SmolStr> = unqualified
-                    .as_name()
-                    .and_then(|t| t.text());
+            if let Some(unqualified_name) = unqualified.name().and_then(|t| t.text()) {
+                let unqualified_as_name: Option<SmolStr> =
+                    unqualified.as_name().and_then(|t| t.text());
 
                 self.alloc_import(ImportData {
                     module: module_name.clone(),
@@ -235,11 +233,9 @@ impl<'a> LowerCtx<'a> {
         let mut fields_vec = Vec::new();
         if let Some(fields) = constructor.field_list() {
             for field in fields.fields() {
-                if let Some(type_ref) =
-                    self.ty_from_ast_opt(field.type_())
-                {
+                if let Some(type_ref) = self.ty_from_ast_opt(field.type_()) {
                     fields_vec.push(ConstructorField {
-                        label: field.label().map(|t| t.text())?,
+                        label: field.label().and_then(|t| t.text()),
                         type_ref,
                     })
                 }
@@ -255,17 +251,29 @@ impl<'a> LowerCtx<'a> {
 
     fn ty_from_ast_opt(&self, type_ast: Option<ast::TypeExpr>) -> Option<ty::Ty> {
         match type_ast {
-            Some(_) => None,
+            Some(t) => Some(self.ty_from_ast(t)),
             None => None,
         }
     }
 
     fn ty_from_ast(&self, ast_expr: ast::TypeExpr) -> ty::Ty {
+        tracing::info!("{:?}", ast_expr);
         match ast_expr {
             ast::TypeExpr::FnType(_fn_type) => todo!(),
-            ast::TypeExpr::VarType(_) => todo!(),
             ast::TypeExpr::TupleType(_) => todo!(),
-            ast::TypeExpr::TypeNameRef(_) => todo!(),
+            ast::TypeExpr::TypeNameRef(t) => {
+                if let Some(ty) = t.constructor_name().and_then(|t| t.text()) {
+                    match ty.as_str() {
+                        "Int" => return ty::Ty::Int,
+                        "Float" => return ty::Ty::Float,
+                        "String" => return ty::Ty::String,
+                        a => {
+                            return ty::Ty::Unknown
+                        }
+                    }
+                }
+                ty::Ty::Unknown
+            }
             ast::TypeExpr::TypeApplication(_) => todo!(),
         }
     }

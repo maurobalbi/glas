@@ -200,7 +200,6 @@ enums! {
     },
     TypeExpr {
         FnType,
-        VarType,
         TupleType,
         TypeNameRef,
         TypeApplication,
@@ -543,9 +542,6 @@ asts! {
     },
     PARAM_TYPE_LIST = ParamTypeList {
         params: [TypeExpr],
-    },
-    VAR_TYPE = VarType {
-        name: Name,
     },
     NAME_REF = NameRef {
         pub fn token(&self) -> Option<SyntaxToken> {

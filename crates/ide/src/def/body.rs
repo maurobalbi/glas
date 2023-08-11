@@ -248,28 +248,25 @@ impl BodyLowerCtx<'_> {
                 self.alloc_expr(lit.kind().map_or(Expr::Missing, Expr::Literal), ptr)
             }
             ast::Expr::Case(case) => {
-                let mut subjects = Vec::new();
-                for subj in case.subjects() {
-                    subjects.push(self.lower_expr(subj));
-                }
+                let subject = self.lower_expr_opt(case.subjects().next());
 
                 let clauses = case
                     .clauses()
                     .map(|clause| {
-                        let mut clause_patterns = Vec::new();
-                        for pattern in clause.patterns() {
-                            clause_patterns.push(self.lower_pattern(pattern));
-                        }
+
+                        let pattern = self.lower_pattern_opt(clause.patterns().next());
+                        
+                        // ToDo: Make tuple type of pattern
                         Clause {
                             expr: self.lower_expr_opt(clause.body()),
-                            patterns: clause_patterns,
+                            pattern,
                         }
                     })
                     .collect();
 
                 self.alloc_expr(
                     Expr::Case {
-                        subjects,
+                        subject,
                         clauses,
                     },
                     ptr,
@@ -399,7 +396,7 @@ impl BodyLowerCtx<'_> {
         }
     }
 
-    fn lower_pat_opt(&mut self, pat: Option<ast::Pattern>) -> PatternId {
+    fn lower_pattern_opt(&mut self, pat: Option<ast::Pattern>) -> PatternId {
         match pat {
             Some(pat) => self.lower_pattern(pat),
             None => self.missing_pat(),

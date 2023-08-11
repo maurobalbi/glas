@@ -80,7 +80,8 @@ pub enum Visibility {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Clause {
-    pub patterns: Vec<PatternId>,
+    // patterns are lowered into #(pat, pat) tuples to make type inference easier
+    pub pattern: PatternId,
     // pub guard: Option<ExprId>,
     pub expr: ExprId,
 }
@@ -135,7 +136,8 @@ pub enum Expr {
         params: IdxRange<Pattern>
     },
     Case {
-        subjects: Vec<ExprId>,
+        // subjects are lowered into tuple to make type inference easier
+        subject: ExprId,
         clauses: Vec<Clause>,
     },
     Variable(SmolStr),

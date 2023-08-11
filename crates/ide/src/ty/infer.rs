@@ -25,7 +25,7 @@ enum Ty {
     Int,
     Float,
     String,
-    Adt { adt_id: AdtId, params: Vec<TyVar> },
+    Adt { adt_id: AdtId, generic_params: Vec<TyVar> },
     Function { params: Vec<TyVar>, return_: TyVar },
     Tuple { fields: Vec<TyVar> },
 }
@@ -46,7 +46,7 @@ pub struct InferenceResult {
 
 impl InferenceResult {
     pub fn ty_for_pattern(&self, pattern: PatternId) -> super::Ty {
-        tracing::info!("{:?}", pattern);
+        tracing::info!("{:#?} {:?}",self, pattern);
         self.pattern_ty_map[pattern].clone()
     }
 
@@ -188,7 +188,7 @@ impl<'db> InferCtx<'db> {
                     pars.push(par_var);
                 }
                 Ty::Adt {
-                    params: pars,
+                    generic_params: pars,
                     adt_id,
                 }
             }
@@ -419,7 +419,7 @@ impl<'db> InferCtx<'db> {
                     _ => self.new_ty_var(),
                 }
             }
-            Expr::Case { subjects, clauses } => {
+            Expr::Case { subject, clauses } => {
                 // let subj_tys = subjects.iter().map(|s| self.infer_expr(*s)).collect::<Vec<_>>();
 
                 // let last = self.new_ty_var();
@@ -431,17 +431,14 @@ impl<'db> InferCtx<'db> {
                 //     })
                 // }
                 // last
-                let Some(subj) = subjects.into_iter().next() else {return self.new_ty_var()};
-                let ty = self.infer_expr(*subj);
-                let Some(clause) = clauses.into_iter().next() else {return self.new_ty_var() };
-                let Some(pat )= &clause.patterns.iter().next() else {
-                        return self.new_ty_var();
-                    };
-                tracing::info!("inferring case {:?}",clause );
-                self.infer_pattern(**pat, ty);
-                let expr_ty = self.infer_expr(clause.expr);
-                self.unify_var(expr_ty, ty);
-                ty 
+                let ret = self.new_ty_var();
+                let ty = self.infer_expr(*subject);
+                for clause in clauses.iter() {
+                    self.infer_pattern(clause.pattern, ty);
+                    let expr_ty = self.infer_expr(clause.expr);
+                    self.unify_var(expr_ty, ret);
+                }
+                ret
             }
             Expr::FieldAccess {
                 base: container,
@@ -450,7 +447,7 @@ impl<'db> InferCtx<'db> {
                 let ty = self.infer_expr(*container);
                 let field_var = self.new_ty_var();
                 let field_ty = match self.table.get_mut(ty.0) {
-                    Ty::Adt { adt_id, params } => {
+                    Ty::Adt { adt_id, generic_params: params } => {
                         self.body_ctx.field_resolution.insert(tgt_expr, *adt_id);
                         match params.iter().next() {
                             Some(var) => *var,
@@ -463,12 +460,13 @@ impl<'db> InferCtx<'db> {
                 field_ty
             }
             Expr::VariantLiteral { name, fields } => {
-                let db = self.db;
                 let mut params = Vec::new();
+                // also unify fields
                 for field in fields {
                     params.push(self.infer_expr(*field));
                 }
-                self.resolve_variant(name)
+                let (ty, params) = self.resolve_variant(name);
+                ty
             }
             Expr::Lambda { body, params } => {
                 let mut param_tys = Vec::new();
@@ -499,7 +497,7 @@ impl<'db> InferCtx<'db> {
     }
 
     fn infer_pattern(&mut self, pattern: PatternId, expected_ty_var: TyVar) -> TyVar {
-        tracing::info!("Inferring pattern {:?}", &self.body[pattern]);
+        tracing::info!("Inferring pattern {:?} {:?}", &self.body[pattern], self.table.get_mut(expected_ty_var.0));
         let pat_var = self.ty_for_pattern(pattern);
         match &self.body[pattern] {
             Pattern::VariantRef {
@@ -507,50 +505,66 @@ impl<'db> InferCtx<'db> {
                 module,
                 fields,
             } => {
-                let pat_ty = self.resolve_variant(name);
+                let (pat_ty, mut field_tys) = self.resolve_variant(name);
 
-                // Unify fields with patterns
-                for pattern in fields {
-                    let ty = self.new_ty_var();
-                    self.infer_pattern(*pattern, ty);
+                // Tried with reserve / fill_with, but that didnt seem to work
+                while field_tys.len() < fields.len(){
+                    field_tys.push(self.new_ty_var());
+                }
+                tracing::info!("inferring fields {:?} {:?}", field_tys.capacity(), fields);
+                for (field, field_ty)in fields.iter().zip(field_tys.iter()) {
+        
+                    
+                    // Unify fields with patterns
+                    // self.unify_var_ty(ty, Ty::Int);
+                    self.infer_pattern(*field, *field_ty);
                 }
                 self.unify_var(pat_ty, pat_var);
             }
-            // Pattern::AlternativePattern { patterns } => {
-            //     for pat in patterns.iter() {
-            //         self.infer_pattern(*pat, expected_ty_var);
-            //     }
-            // }
+            Pattern::AlternativePattern { patterns } => {
+                for pat in patterns.iter() {
+                    self.infer_pattern(*pat, expected_ty_var);
+                }
+            }
+            Pattern::Literal { kind } => {
+                match kind {
+                    LiteralKind::Int => self.unify_var_ty(pat_var, Ty::Int),
+                    LiteralKind::Float => self.unify_var_ty(pat_var, Ty::Float),
+                    LiteralKind::String => self.unify_var_ty(pat_var, Ty::String),
+                }
+            }
             _ => {}
         }
         self.unify_var(expected_ty_var, pat_var);
         pat_var
     }
 
-    fn resolve_variant(&mut self, name: &SmolStr) -> TyVar {
+    fn resolve_variant(&mut self, name: &SmolStr) -> (TyVar, Vec<TyVar>) {
         match self.resolver.resolve_name(name) {
 
             // return field types aswell for unification
             Some(ResolveResult::VariantId(var_id)) => {
+                let mut ty_env = HashMap::new();
                 let variant = self.db.lookup_intern_variant(var_id);
                 let variant_data =
                     &self.db.module_items(variant.value.file_id)[variant.value.value];
                 let params = variant_data
                     .fields
                     .iter()
-                    .map(|_| self.new_ty_var())
+                    .map(|l| self.make_type(l.type_ref.clone(), &mut ty_env))
                     .collect();
 
-                Ty::Adt {
+                let ty = Ty::Adt {
                     adt_id: variant.parent,
-                    params,
+                    generic_params: Vec::new(),
                 }
-                .intern(self)
+                .intern(self);
+                (ty, params)
             }
 
             _ => {
                 // ToDo: Add diagnostics
-                self.new_ty_var()
+                (self.new_ty_var(), Vec::new())
             }
         }
     }
@@ -670,7 +684,7 @@ impl<'a> Collector<'a> {
                 }
             }
             Ty::Tuple { fields: _ } => todo!(),
-            Ty::Adt { adt_id, params: _ } => super::Ty::Adt {
+            Ty::Adt { adt_id, generic_params: _ } => super::Ty::Adt {
                 adt_id: *adt_id,
                 params: Arc::new(Vec::new()),
             },

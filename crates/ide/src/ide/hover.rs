@@ -160,7 +160,7 @@ mod tests {
             "a",
             expect![[r#"
                 ```gleam
-                a
+                Int
                 ```
             "#]],
         );
