@@ -209,7 +209,6 @@ fn use_pattern() {
     )
 }
 
-#[traced_test]
 #[test]
 fn case_fn() {
     check_all(
@@ -227,4 +226,13 @@ fn case_infer() {
           2 -> 1.2
         }
       }", expect!["do_reverse_acc: fn(Int) -> Float"])
+}
+
+#[test]
+fn pattern_spread() {
+    check_all("fn spread() {
+        case [1,2] {
+            [1, ..name] -> name
+        }
+      }", expect!["spread: fn() -> List(Int)"])
 }

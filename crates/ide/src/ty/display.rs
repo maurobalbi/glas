@@ -187,30 +187,44 @@ impl TyDisplay for Ty {
                 write!(f, ") -> ")?;
                 return_.ty_fmt(f)
             }
-            Ty::Generic { idx } => {
-                let lookup = f.env.get(idx);
-                match lookup.cloned() {
-                    Some(name) => write!(f, "{}", name),
-                    None => {
-                        let new_letter = next_letter(f.uid);
-                        f.env.insert(*idx, new_letter.clone());
-                        f.uid += 1;
-                        write!(f, "{}", new_letter)
-                    }
-                }
+            Ty::List { of } => {
+                write!(f, "List(")?;
+                of.ty_fmt(f)?;
+                write!(f, ")")   
+            }
+            Ty::Generic { name } => {
+                // let lookup = f.env.get(idx);
+                // match lookup.cloned() {
+                //     Some(name) => write!(f, "{}", name),
+                //     None => {
+                //         let new_letter = next_letter(f.uid);
+                //         f.env.insert(*idx, new_letter.clone());
+                //         f.uid += 1;
+                //         write!(f, "{}", new_letter)
+                //     }
+                // }
+                write!(f, "{}", name)
             }
             Ty::Tuple { fields: _ } => todo!(),
-            Ty::Adt { adt_id, params } => {
-                let adt = db.lookup_intern_adt(*adt_id);
-                let adt = &db.module_items(adt.file_id)[adt.value];
+            Ty::Adt { name, params } => {
+                // let adt = db.lookup_intern_adt(*adt_id);
+                // let adt = &db.module_items(adt.file_id)[adt.value];
+                // if params.len() > 0 {
+                //     write!(f, "{}", adt.name)?;
+                //     write!(f, "(")?;
+                //     f.write_joined(params.as_ref().clone().into_iter(), ", ")?;
+                //     write!(f, ")")
+                // } else {
+                //     write!(f, "{}", adt.name)
+                // }
                 if params.len() > 0 {
-                    write!(f, "{}", adt.name)?;
+                    write!(f, "{}", name)?;
                     write!(f, "(")?;
                     f.write_joined(params.as_ref().clone().into_iter(), ", ")?;
                     write!(f, ")")
                 } else {
-                    write!(f, "{}", adt.name)
-                }
+                    write!(f, "{}", name)
+                }    
             }
         }
     }

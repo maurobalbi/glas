@@ -3,10 +3,10 @@ use std::sync::Arc;
 use indexmap::{map::Entry, IndexMap};
 use smol_str::SmolStr;
 
-use crate::{DefDatabase, FileId};
+use crate::{DefDatabase, FileId, ty::Ty};
 
 use super::{
-    hir_def::VariantId,
+    hir_def::{VariantId, ModuleDefId, AdtId},
     module::{ExprId, PatternId},
     scope::{ModuleScope, ScopeId},
     ExprScopes, FunctionId,
@@ -88,6 +88,13 @@ impl Resolver {
         }
 
         map.map
+    }
+
+    pub fn resolve_type(&self, name: &SmolStr) -> Option<AdtId> {
+        match self.module_scope.resovlve_type(name.clone()) {
+            Some(ModuleDefId::AdtId(t)) => Some(t.clone()),
+            _ => None
+        }
     }
 
     pub fn resolve_name(&self, name: &SmolStr) -> Option<ResolveResult> {

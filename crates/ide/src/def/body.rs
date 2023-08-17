@@ -196,6 +196,10 @@ impl BodyLowerCtx<'_> {
                 let name = e.text().unwrap_or_else(Name::missing);
                 self.alloc_expr(Expr::Variable(name), ptr)
             }
+            ast::Expr::ExprSpread(e) => {
+                let expr = self.lower_expr_opt(e.expr());
+                self.alloc_expr(Expr::Spread { expr }, ptr)
+            }
             ast::Expr::Block(defs) => {
                 let mut stmts = Vec::new();
 
@@ -221,7 +225,10 @@ impl BodyLowerCtx<'_> {
                 )
             }
             ast::Expr::VariantConstructor(constr) => {
-                let name = constr.name().and_then(|n| n.text()).unwrap_or_else(Name::missing);
+                let name = constr
+                    .name()
+                    .and_then(|n| n.text())
+                    .unwrap_or_else(Name::missing);
                 let mut fields = Vec::new();
                 if let Some(args) = constr.args() {
                     for field in args.args() {
@@ -239,10 +246,10 @@ impl BodyLowerCtx<'_> {
             ast::Expr::Pipe(e) => {
                 let left = self.lower_expr_opt(e.lhs());
                 let right = self.lower_expr_opt(e.rhs());
-                // add missing cases 
+                // add missing cases
                 // left |> right -> right(left)
                 // left |> right(..args) -> right(left, ..args) | right(..args)(left)
-                self.alloc_expr(Expr::Pipe { left, right }, ptr) 
+                self.alloc_expr(Expr::Pipe { left, right }, ptr)
             }
             ast::Expr::Literal(lit) => {
                 self.alloc_expr(lit.kind().map_or(Expr::Missing, Expr::Literal), ptr)
@@ -253,9 +260,8 @@ impl BodyLowerCtx<'_> {
                 let clauses = case
                     .clauses()
                     .map(|clause| {
-
                         let pattern = self.lower_pattern_opt(clause.patterns().next());
-                        
+
                         // ToDo: Make tuple type of pattern
                         Clause {
                             expr: self.lower_expr_opt(clause.body()),
@@ -264,20 +270,17 @@ impl BodyLowerCtx<'_> {
                     })
                     .collect();
 
-                self.alloc_expr(
-                    Expr::Case {
-                        subject,
-                        clauses,
-                    },
-                    ptr,
-                )
+                self.alloc_expr(Expr::Case { subject, clauses }, ptr)
             }
             ast::Expr::FieldAccessExpr(field) => {
                 let container = self.lower_expr_opt(field.base());
                 self.alloc_expr(
                     Expr::FieldAccess {
                         base: container,
-                        label: field.label().and_then(|t| t.text()).unwrap_or_else(Name::missing),
+                        label: field
+                            .label()
+                            .and_then(|t| t.text())
+                            .unwrap_or_else(Name::missing),
                     },
                     ptr,
                 )
@@ -292,12 +295,23 @@ impl BodyLowerCtx<'_> {
                     }
                     let end = self.next_pattern_idx();
                     let body = self.lower_expr_opt(lambda.body().map(|b| ast::Expr::Block(b)));
-                    return self.alloc_expr(Expr::Lambda {
-                        body, 
-                        params: IdxRange::new(start..end),
-                    }, ptr);
+                    return self.alloc_expr(
+                        Expr::Lambda {
+                            body,
+                            params: IdxRange::new(start..end),
+                        },
+                        ptr,
+                    );
                 }
-                return self.alloc_expr(Expr::Missing, ptr)
+                return self.alloc_expr(Expr::Missing, ptr);
+            }
+            ast::Expr::List(l) => {
+                let elements = l
+                    .elements()
+                    .into_iter()
+                    .map(|e| self.lower_expr(e))
+                    .collect();
+                return self.alloc_expr(Expr::List { elements }, ptr);
             }
             _ => self.alloc_expr(Expr::Missing, ptr),
         }
@@ -391,6 +405,18 @@ impl BodyLowerCtx<'_> {
                     pats.push(self.lower_pattern(pat));
                 }
                 self.alloc_pattern(Pattern::AlternativePattern { patterns: pats }, ptr)
+            }
+            ast::Pattern::PatternSpread(spread) => {
+                let pattern = self.lower_pattern_opt(spread.pattern());
+                self.alloc_pattern(Pattern::Spread { pattern }, ptr)
+            }
+            ast::Pattern::PatternList(list) => {
+                let elements = list
+                    .elements()
+                    .into_iter()
+                    .map(|p| self.lower_pattern(p))
+                    .collect();
+                self.alloc_pattern(Pattern::List { elements }, ptr)
             }
             ast::Pattern::Hole(_) => self.alloc_pattern(Pattern::Hole, ptr),
         }

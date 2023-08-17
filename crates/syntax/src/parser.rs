@@ -916,8 +916,15 @@ fn pattern_list(p: &mut Parser<'_>) -> MarkClosed {
 
     p.expect(T!["["]);
     while !p.at(T!["]"]) && !p.eof() {
-        if p.at_any(PATTERN_FIRST) {
+        if p.at_any(TokenSet::new(&[T![".."]]).union(PATTERN_FIRST)) {
+            let spread = if p.at(T![".."]) {
+                p.expect(T![".."]);
+                Some(p.start_node())
+            } else { 
+                None
+            };
             pattern(p);
+            spread.map(|s| p.finish_node(s, PATTERN_SPREAD));
             if !p.at(T!["]"]) {
                 p.expect(T![","]);
             }
@@ -994,9 +1001,16 @@ fn list(p: &mut Parser) -> MarkClosed {
     p.expect(T!["["]);
     while !p.at(T!["]"]) && !p.eof() {
         if p.at_any(EXPR_FIRST) {
+            let spread = if p.at(T![".."]) {
+                p.expect(T![".."]);
+                Some(p.start_node())
+            } else { 
+                None
+            };
             expr(p);
+            spread.map(|s| p.finish_node(s, EXPR_SPREAD));   
             if !p.at(T!["]"]) {
-                p.expect(T![","])
+                p.expect(T![","]);
             }
         } else {
             break;

@@ -132,7 +132,7 @@ mod tests {
     // #[test]
     // fn generic() {
     //     check(
-    //         "fn main(a6, b) { $0b }",
+    //         "fn main(a, b) { $0b }",
     //         "b",
     //         expect![[r#"
     //             ```gleam

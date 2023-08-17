@@ -8,6 +8,7 @@ mod tests;
 use std::{collections::HashMap, sync::Arc};
 
 pub use infer::InferenceResult;
+use smol_str::SmolStr;
 
 use crate::{
     def::hir_def::{AdtId, FunctionId},
@@ -27,19 +28,20 @@ pub trait TyDatabase: DefDatabase + Upcast<dyn DefDatabase> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Ty {
     Unknown,
-    Generic {
-        idx: u32,
-    },
+    Generic {name: SmolStr},
     Bool,
     Int,
     Float,
     String,
+    List {
+        of: Arc<Ty>
+    },
     Function {
         params: Arc<Vec<Ty>>,
         return_: Arc<Ty>,
     },
     Adt {
-        adt_id: AdtId,
+        name: SmolStr, 
         params: Arc<Vec<Ty>>,
     },
     Tuple {

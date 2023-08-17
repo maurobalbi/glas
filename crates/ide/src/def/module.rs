@@ -127,13 +127,19 @@ pub enum Expr {
         func: ExprId,
         args: Vec<ExprId>,
     },
+    List {
+        elements: Vec<ExprId>,
+    },
     Pipe {
         left: ExprId,
         right: ExprId,
     },
     Lambda {
         body: ExprId,
-        params: IdxRange<Pattern>
+        params: IdxRange<Pattern>,
+    },
+    Spread {
+        expr: ExprId,
     },
     Case {
         // subjects are lowered into tuple to make type inference easier
@@ -149,11 +155,29 @@ pub type PatternId = Idx<Pattern>;
 pub enum Pattern {
     Missing,
     Hole,
-    Variable { name: SmolStr },
-    Tuple { fields: Vec<PatternId> },
-    Literal {kind: LiteralKind },
-    VariantRef {name: SmolStr, module: Option<SmolStr>, fields: Vec<PatternId>},
-    AlternativePattern { patterns: Vec<PatternId> },
+    Variable {
+        name: SmolStr,
+    },
+    Tuple {
+        fields: Vec<PatternId>,
+    },
+    Literal {
+        kind: LiteralKind,
+    },
+    Spread {
+        pattern: PatternId,
+    },
+    List {
+        elements: Vec<PatternId>,
+    },
+    VariantRef {
+        name: SmolStr,
+        module: Option<SmolStr>,
+        fields: Vec<PatternId>,
+    },
+    AlternativePattern {
+        patterns: Vec<PatternId>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

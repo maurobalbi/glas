@@ -1,4 +1,11 @@
-use std::{collections::HashMap, mem, ops::Deref, sync::Arc};
+use std::{
+    cmp::{max, min},
+    collections::HashMap,
+    hash::Hash,
+    mem,
+    ops::Deref,
+    sync::Arc,
+};
 
 use la_arena::ArenaMap;
 use smol_str::SmolStr;
@@ -13,21 +20,37 @@ use crate::def::{
     resolver_for_expr,
 };
 
-use super::{union_find::UnionFind, TyDatabase};
+use super::{display::next_letter, union_find::UnionFind, TyDatabase};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct TyVar(u32);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum Ty {
-    Unknown { idx: u32 },
+    Unknown {
+        idx: u32,
+    },
+    Generic {
+        name: SmolStr,
+    },
     Bool,
     Int,
     Float,
     String,
-    Adt { adt_id: AdtId, generic_params: Vec<TyVar> },
-    Function { params: Vec<TyVar>, return_: TyVar },
-    Tuple { fields: Vec<TyVar> },
+    List {
+        of: TyVar,
+    },
+    Adt {
+        adt_id: AdtId,
+        generic_params: Vec<TyVar>,
+    },
+    Function {
+        params: Vec<TyVar>,
+        return_: TyVar,
+    },
+    Tuple {
+        fields: Vec<TyVar>,
+    },
 }
 
 impl Ty {
@@ -46,7 +69,7 @@ pub struct InferenceResult {
 
 impl InferenceResult {
     pub fn ty_for_pattern(&self, pattern: PatternId) -> super::Ty {
-        tracing::info!("{:#?} {:?}",self, pattern);
+        tracing::info!("{:#?} {:?}", self, pattern);
         self.pattern_ty_map[pattern].clone()
     }
 
@@ -104,7 +127,7 @@ pub(crate) fn infer_function_group_query(
         fn_to_ctx.insert(*f, inferred_ctx);
     }
 
-    finish_infer(table, fn_to_ctx, fn_to_ty_var)
+    finish_infer(db, table, fn_to_ctx, fn_to_ty_var)
 }
 
 #[derive(Default)]
@@ -145,15 +168,15 @@ impl<'db> InferCtx<'db> {
         ty_var
     }
 
-    fn make_type(&mut self, ty: super::Ty, env: &mut HashMap<u32, TyVar>) -> TyVar {
+    fn make_type(&mut self, ty: super::Ty, env: &mut HashMap<SmolStr, TyVar>) -> TyVar {
         let ty = match ty {
             super::Ty::Unknown => return self.new_ty_var(),
-            super::Ty::Generic { idx } => {
-                return match env.get(&idx) {
+            super::Ty::Generic { name } => {
+                return match env.get(&name) {
                     Some(var) => *var,
                     None => {
                         let var = self.new_ty_var();
-                        env.insert(idx, var);
+                        env.insert(name, var);
                         var
                     }
                 }
@@ -162,6 +185,10 @@ impl<'db> InferCtx<'db> {
             super::Ty::Int => Ty::Int,
             super::Ty::Float => Ty::Float,
             super::Ty::String => Ty::String,
+            super::Ty::List { of } => {
+                let ty = self.make_type(of.deref().clone(), env);
+                Ty::List { of: ty }
+            }
             super::Ty::Function { params, return_ } => {
                 let mut pars = Vec::new();
                 for param in params.deref().into_iter() {
@@ -179,17 +206,24 @@ impl<'db> InferCtx<'db> {
                 }
             }
             super::Ty::Tuple { fields: _ } => todo!(),
-            super::Ty::Adt { adt_id, params } => {
+            super::Ty::Adt { name, params } => {
                 let mut pars = Vec::new();
+
                 for param in params.deref().into_iter() {
                     let par_var = self.new_ty_var();
                     let par_ty = self.make_type(param.clone(), env);
                     self.unify_var(par_var, par_ty);
                     pars.push(par_var);
                 }
-                Ty::Adt {
-                    generic_params: pars,
-                    adt_id,
+                match self.resolver.resolve_type(&name) {
+                    Some(adt_id) => Ty::Adt {
+                        generic_params: pars,
+                        adt_id,
+                    },
+                    None => {
+                        self.idx += 1;
+                        Ty::Unknown { idx: self.idx }
+                    }
                 }
             }
         };
@@ -359,6 +393,12 @@ impl<'db> InferCtx<'db> {
                     }
                 }
             }
+            Expr::Spread { expr } => {
+                let sp_ty = self.infer_expr(*expr);
+                let of = self.new_ty_var();
+                self.unify_var_ty(sp_ty, Ty::List { of });
+                of
+            }
             Expr::Pipe { left, right } => {
                 let arg_ty = self.infer_expr(*left);
 
@@ -447,7 +487,10 @@ impl<'db> InferCtx<'db> {
                 let ty = self.infer_expr(*container);
                 let field_var = self.new_ty_var();
                 let field_ty = match self.table.get_mut(ty.0) {
-                    Ty::Adt { adt_id, generic_params: params } => {
+                    Ty::Adt {
+                        adt_id,
+                        generic_params: params,
+                    } => {
                         self.body_ctx.field_resolution.insert(tgt_expr, *adt_id);
                         match params.iter().next() {
                             Some(var) => *var,
@@ -467,6 +510,14 @@ impl<'db> InferCtx<'db> {
                 }
                 let (ty, params) = self.resolve_variant(name);
                 ty
+            }
+            Expr::List { elements } => {
+                let of_ty = self.new_ty_var();
+                for elem in elements {
+                    let elem_ty = self.infer_expr(*elem);
+                    self.unify_var(elem_ty, of_ty);
+                }
+                Ty::List { of: of_ty }.intern(self)
             }
             Expr::Lambda { body, params } => {
                 let mut param_tys = Vec::new();
@@ -497,7 +548,11 @@ impl<'db> InferCtx<'db> {
     }
 
     fn infer_pattern(&mut self, pattern: PatternId, expected_ty_var: TyVar) -> TyVar {
-        tracing::info!("Inferring pattern {:?} {:?}", &self.body[pattern], self.table.get_mut(expected_ty_var.0));
+        tracing::info!(
+            "Inferring pattern {:?} {:?}",
+            &self.body[pattern],
+            self.table.get_mut(expected_ty_var.0)
+        );
         let pat_var = self.ty_for_pattern(pattern);
         match &self.body[pattern] {
             Pattern::VariantRef {
@@ -508,13 +563,11 @@ impl<'db> InferCtx<'db> {
                 let (pat_ty, mut field_tys) = self.resolve_variant(name);
 
                 // Tried with reserve / fill_with, but that didnt seem to work
-                while field_tys.len() < fields.len(){
+                while field_tys.len() < fields.len() {
                     field_tys.push(self.new_ty_var());
                 }
                 tracing::info!("inferring fields {:?} {:?}", field_tys.capacity(), fields);
-                for (field, field_ty)in fields.iter().zip(field_tys.iter()) {
-        
-                    
+                for (field, field_ty) in fields.iter().zip(field_tys.iter()) {
                     // Unify fields with patterns
                     // self.unify_var_ty(ty, Ty::Int);
                     self.infer_pattern(*field, *field_ty);
@@ -526,12 +579,23 @@ impl<'db> InferCtx<'db> {
                     self.infer_pattern(*pat, expected_ty_var);
                 }
             }
-            Pattern::Literal { kind } => {
-                match kind {
-                    LiteralKind::Int => self.unify_var_ty(pat_var, Ty::Int),
-                    LiteralKind::Float => self.unify_var_ty(pat_var, Ty::Float),
-                    LiteralKind::String => self.unify_var_ty(pat_var, Ty::String),
+            Pattern::Literal { kind } => match kind {
+                LiteralKind::Int => self.unify_var_ty(pat_var, Ty::Int),
+                LiteralKind::Float => self.unify_var_ty(pat_var, Ty::Float),
+                LiteralKind::String => self.unify_var_ty(pat_var, Ty::String),
+            },
+            Pattern::Spread { pattern } => {
+                let pat = self.ty_for_pattern(*pattern);
+                let of = self.new_ty_var();
+                self.unify_var_ty(pat, Ty::List { of });
+                self.unify_var(pat_var, of);
+            }
+            Pattern::List { elements } => {
+                let of = self.new_ty_var();
+                for elem in elements.into_iter() {
+                    self.infer_pattern(*elem, of);
                 }
+                self.unify_var_ty(pat_var, Ty::List { of });
             }
             _ => {}
         }
@@ -541,7 +605,6 @@ impl<'db> InferCtx<'db> {
 
     fn resolve_variant(&mut self, name: &SmolStr) -> (TyVar, Vec<TyVar>) {
         match self.resolver.resolve_name(name) {
-
             // return field types aswell for unification
             Some(ResolveResult::VariantId(var_id)) => {
                 let mut ty_env = HashMap::new();
@@ -571,7 +634,9 @@ impl<'db> InferCtx<'db> {
 
     fn unify(&mut self, lhs: Ty, rhs: Ty) -> Ty {
         match (lhs, rhs) {
-            (Ty::Unknown { idx }, Ty::Unknown { idx: _ }) => Ty::Unknown { idx },
+            (Ty::Unknown { idx }, Ty::Unknown { idx: idx2 }) => Ty::Unknown {
+                idx: min(idx, idx2),
+            },
             (Ty::Unknown { .. }, other) | (other, Ty::Unknown { .. }) => other,
             (
                 Ty::Function {
@@ -603,11 +668,12 @@ impl<'db> InferCtx<'db> {
 }
 
 fn finish_infer(
+    db: &dyn TyDatabase,
     mut table: UnionFind<Ty>,
     body_ctx: HashMap<FunctionId, BodyCtx>,
     fn_ty: HashMap<FunctionId, TyVar>,
 ) -> HashMap<FunctionId, InferenceResult> {
-    let mut i = Collector::new(&mut table);
+    let mut i = Collector::new(db, &mut table);
 
     let mut inference_map = HashMap::new();
 
@@ -641,13 +707,19 @@ fn finish_infer(
 struct Collector<'a> {
     cache: Vec<Option<super::Ty>>,
     table: &'a mut UnionFind<Ty>,
+    db: &'a dyn TyDatabase,
+    env: HashMap<u32, SmolStr>,
+    uid: u32,
 }
 
 impl<'a> Collector<'a> {
-    fn new(table: &'a mut UnionFind<Ty>) -> Self {
+    fn new(db: &'a dyn TyDatabase, table: &'a mut UnionFind<Ty>) -> Self {
         Self {
             cache: vec![None; table.len()],
             table,
+            db,
+            env: HashMap::new(),
+            uid: 0,
         }
     }
 
@@ -667,11 +739,27 @@ impl<'a> Collector<'a> {
     fn collect_uncached(&mut self, i: u32) -> super::Ty {
         let ty = mem::replace(self.table.get_mut(i), Ty::Unknown { idx: 0 });
         match &ty {
-            Ty::Unknown { idx } => super::Ty::Generic { idx: idx.clone() },
+            Ty::Unknown { idx } => {
+                let lookup = self.env.get(idx);
+                let name = match lookup.cloned() {
+                    Some(name) => name,
+                    None => {
+                        let new_letter = next_letter(self.uid);
+                        self.uid += 1;
+                        self.env.insert(*idx, new_letter.clone());
+                        new_letter
+                    }
+                };
+                super::Ty::Generic { name }
+            }
             Ty::Bool => super::Ty::Bool,
             Ty::Int => super::Ty::Int,
             Ty::Float => super::Ty::Float,
             Ty::String => super::Ty::String,
+            Ty::List { of } => {
+                let of = self.collect(*of);
+                super::Ty::List { of: Arc::new(of) }
+            }
             Ty::Function { params, return_ } => {
                 let mut super_params = Vec::new();
                 for param in params {
@@ -684,10 +772,19 @@ impl<'a> Collector<'a> {
                 }
             }
             Ty::Tuple { fields: _ } => todo!(),
-            Ty::Adt { adt_id, generic_params: _ } => super::Ty::Adt {
-                adt_id: *adt_id,
-                params: Arc::new(Vec::new()),
-            },
+            Ty::Adt {
+                adt_id,
+                generic_params: _,
+            } => {
+                let adt = self.db.lookup_intern_adt(*adt_id);
+                let module = self.db.module_items(adt.file_id);
+                let adt_data = &module[adt.value];
+                super::Ty::Adt {
+                    name: adt_data.name.clone(),
+                    params: Arc::new(Vec::new()),
+                }
+            }
+            Ty::Generic { name } => super::Ty::Generic { name: name.clone() },
         }
     }
 }

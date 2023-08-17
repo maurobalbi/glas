@@ -193,10 +193,12 @@ enums! {
         BinaryOp,
         Pipe,
         UnaryOp,
+        List,
         ExprCall,
         VariantConstructor,
         FieldAccessExpr,
         TupleIndex,
+        ExprSpread,
     },
     TypeExpr {
         FnType,
@@ -210,7 +212,9 @@ enums! {
         PatternTuple,
         AlternativePattern,
         Literal,
+        PatternList,
         Hole,
+        PatternSpread,
     },
     TypeNameOrName {
         Name,
@@ -396,6 +400,9 @@ asts! {
     },  
     VARIABLE = Variable {
         name: NameRef,
+    },
+    EXPR_SPREAD = ExprSpread {
+        expr: Expr,
     },
     SOURCE_FILE = SourceFile {
         statements: [TargetGroup],
@@ -585,6 +592,9 @@ asts! {
     },
     PATTERN_TUPLE = PatternTuple {
         field_patterns: [Pattern],
+    },
+    PATTERN_SPREAD = PatternSpread {
+        pattern: Pattern,
     },
     PATTERN_LIST = PatternList {
         elements: [Pattern],

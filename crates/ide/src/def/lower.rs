@@ -1,4 +1,4 @@
-use std::ops::Index;
+use std::{ops::Index, sync::Arc};
 
 use crate::{base::Target, ty, Diagnostic, DiagnosticKind};
 
@@ -267,14 +267,33 @@ impl<'a> LowerCtx<'a> {
                         "Int" => return ty::Ty::Int,
                         "Float" => return ty::Ty::Float,
                         "String" => return ty::Ty::String,
-                        a => {
-                            return ty::Ty::Unknown
-                        }
+                        a => return ty::Ty::Unknown,
                     }
                 }
                 ty::Ty::Unknown
             }
-            ast::TypeExpr::TypeApplication(_) => todo!(),
+            ast::TypeExpr::TypeApplication(ty) => {
+                let name = ty
+                    .type_constructor()
+                    .and_then(|t| t.constructor_name())
+                    .and_then(|c| c.text());
+                let Some(name) = name else {
+                    return ty::Ty::Unknown
+                };
+                let mut arguments = Vec::new();
+                if let Some(args) = ty.arg_list() {
+                    for arg in args.args() {
+                        let arg = self.ty_from_ast_opt(arg.arg());
+                        if arg.is_some() {
+                            arguments.push(arg.unwrap());
+                        }
+                    }
+                }
+                ty::Ty::Adt {
+                    name,
+                    params: Arc::new(arguments),
+                }
+            }
         }
     }
 

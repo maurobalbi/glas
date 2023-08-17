@@ -93,6 +93,10 @@ impl ModuleScope {
         self.values.get(&name)
     }
 
+    pub fn resovlve_type(&self, name: SmolStr) -> Option<&ModuleDefId> {
+        self.types.get(&name)
+    }
+
     pub fn values(&self) -> impl Iterator<Item = (&SmolStr, &ModuleDefId)> + ExactSizeIterator + '_ {
         self.values.iter().map(|v| v)
     }
@@ -195,6 +199,9 @@ impl ExprScopes {
                 }
                 self.traverse_expr(body, *func, scope);
             }
+            Expr::Spread { expr } => {
+                self.traverse_expr(body, *expr, scope);
+            }
             Expr::Binary { left, right, op: _ } => {
                 self.traverse_expr(body, *left, scope);
                 self.traverse_expr(body, *right, scope);
@@ -226,6 +233,11 @@ impl ExprScopes {
                     self.add_bindings(body, body_scope, &param);
                 };
                 self.traverse_expr(body, *lam_body, body_scope);
+            }
+            Expr::List { elements } => {
+                for elem in elements.into_iter() {
+                    self.traverse_expr(body, *elem, scope);
+                }
             }
             _ => {}
         }
@@ -278,9 +290,17 @@ impl ExprScopes {
                     self.add_bindings(body, scope, pattern);
                 }
             }
+            Pattern::Spread { pattern } => {
+                self.add_bindings(body, scope, pattern);
+            }
             Pattern::AlternativePattern { patterns } => {
                 for pattern in patterns {
                     self.add_bindings(body, scope, pattern);
+                }
+            }
+            Pattern::List { elements } => {
+                for element in elements {
+                    self.add_bindings(body, scope, element);
                 }
             }
             Pattern::Hole => {}
