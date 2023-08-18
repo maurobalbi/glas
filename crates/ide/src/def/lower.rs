@@ -233,7 +233,7 @@ impl<'a> LowerCtx<'a> {
         let mut fields_vec = Vec::new();
         if let Some(fields) = constructor.field_list() {
             for field in fields.fields() {
-                if let Some(type_ref) = self.ty_from_ast_opt(field.type_()) {
+                if let Some(type_ref) = ty::ty_from_ast_opt(field.type_()) {
                     fields_vec.push(ConstructorField {
                         label: field.label().and_then(|t| t.text()),
                         type_ref,
@@ -249,53 +249,6 @@ impl<'a> LowerCtx<'a> {
         }))
     }
 
-    fn ty_from_ast_opt(&self, type_ast: Option<ast::TypeExpr>) -> Option<ty::Ty> {
-        match type_ast {
-            Some(t) => Some(self.ty_from_ast(t)),
-            None => None,
-        }
-    }
-
-    fn ty_from_ast(&self, ast_expr: ast::TypeExpr) -> ty::Ty {
-        tracing::info!("{:?}", ast_expr);
-        match ast_expr {
-            ast::TypeExpr::FnType(_fn_type) => todo!(),
-            ast::TypeExpr::TupleType(_) => todo!(),
-            ast::TypeExpr::TypeNameRef(t) => {
-                if let Some(ty) = t.constructor_name().and_then(|t| t.text()) {
-                    match ty.as_str() {
-                        "Int" => return ty::Ty::Int,
-                        "Float" => return ty::Ty::Float,
-                        "String" => return ty::Ty::String,
-                        a => return ty::Ty::Unknown,
-                    }
-                }
-                ty::Ty::Unknown
-            }
-            ast::TypeExpr::TypeApplication(ty) => {
-                let name = ty
-                    .type_constructor()
-                    .and_then(|t| t.constructor_name())
-                    .and_then(|c| c.text());
-                let Some(name) = name else {
-                    return ty::Ty::Unknown
-                };
-                let mut arguments = Vec::new();
-                if let Some(args) = ty.arg_list() {
-                    for arg in args.args() {
-                        let arg = self.ty_from_ast_opt(arg.arg());
-                        if arg.is_some() {
-                            arguments.push(arg.unwrap());
-                        }
-                    }
-                }
-                ty::Ty::Adt {
-                    name,
-                    params: Arc::new(arguments),
-                }
-            }
-        }
-    }
 
     fn next_constructor_idx(&self) -> Idx<VariantData> {
         Idx::from_raw(RawIdx::from(self.module_items.variants.len() as u32))

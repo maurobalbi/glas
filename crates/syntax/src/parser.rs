@@ -31,6 +31,8 @@ const PATTERN_FIRST: TokenSet = TokenSet::new(&[
     INTEGER,
     FLOAT,
     STRING,
+    T!["True"],
+    T!["False"],
     T!["<<"],
     T!["["],
     T!["#"],
@@ -54,6 +56,8 @@ const EXPR_FIRST: TokenSet = TokenSet::new(&[
     T!["["],
     T!["{"],
     T!["case"],
+    T!["True"],
+    T!["False"],
     T!["fn"],
 ]);
 
@@ -710,7 +714,7 @@ fn expr_bp(p: &mut Parser, min_bp: u8) {
 // The cases that match EXPR_FIRST have to consume a token, otherwise the parser might get stuck
 fn expr_unit(p: &mut Parser) -> Option<MarkClosed> {
     let res = match p.nth(0) {
-        INTEGER | FLOAT | STRING => {
+        INTEGER | FLOAT | STRING | T!["True"] | T!["False"] => {
             let m = p.start_node();
             p.bump();
             p.finish_node(m, LITERAL)
@@ -892,7 +896,7 @@ fn pattern(p: &mut Parser) {
             p.bump();
             p.finish_node(m, HOLE)
         }
-        INTEGER | FLOAT | STRING => {
+        INTEGER | FLOAT | STRING | T!["False"] | T!["True"] => {
             let m = p.start_node();
             p.bump();
             p.finish_node(m, LITERAL)
@@ -1000,7 +1004,7 @@ fn list(p: &mut Parser) -> MarkClosed {
 
     p.expect(T!["["]);
     while !p.at(T!["]"]) && !p.eof() {
-        if p.at_any(EXPR_FIRST) {
+        if p.at_any(TokenSet::new(&[T![".."]]).union(EXPR_FIRST)) {
             let spread = if p.at(T![".."]) {
                 p.expect(T![".."]);
                 Some(p.start_node())
@@ -1194,7 +1198,7 @@ fn module_const(p: &mut Parser, m: MarkOpened) {
 
 fn const_expr(p: &mut Parser) {
     match p.nth(0) {
-        INTEGER | FLOAT | STRING => {
+        INTEGER | FLOAT | STRING | T!["True"] | T!["False"] => {
             let n = p.start_node();
             p.bump();
             p.finish_node(n, LITERAL);
@@ -1291,7 +1295,7 @@ fn type_expr(p: &mut Parser) {
             let m = p.start_node();
             p.expect(IDENT);
             if !p.at(T!["."]) {
-                p.finish_node(m, TYPE_NAME);
+                p.finish_node(m, TYPE_NAME_REF);
                 return;
             }
             let m = p.finish_node(m, MODULE_NAME);

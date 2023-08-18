@@ -26,6 +26,7 @@ pub enum BinaryOpKind {
     FloatLT,
     FloatGTE,
     FloatLTE,
+    Eq
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -39,6 +40,7 @@ pub enum LiteralKind {
     Int,
     Float,
     String,
+    Bool,
 }
 
 trait NodeWrapper {
@@ -299,6 +301,7 @@ asts! {
                     T!["<."] => BinaryOpKind::FloatLT,
                     T![">=."] => BinaryOpKind::FloatGTE,
                     T!["<=."] => BinaryOpKind::FloatGTE,
+                    T!["=="] => BinaryOpKind::Eq,
                     _ => return None,
                 };
                 Some((tok, op))
@@ -328,6 +331,7 @@ asts! {
                 INTEGER => LiteralKind::Int,
                 FLOAT => LiteralKind::Float,
                 STRING => LiteralKind::String,
+                T!["False"] | T!["True"] => LiteralKind::Bool,
                 _ => return None,
             })
         }

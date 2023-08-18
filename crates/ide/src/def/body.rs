@@ -7,7 +7,7 @@ use syntax::{
     AstPtr,
 };
 
-use crate::{DefDatabase, Diagnostic, FileId, InFile};
+use crate::{DefDatabase, Diagnostic, FileId, InFile, ty};
 
 use super::{
     module::{Clause, Expr, ExprId, Pattern, PatternId, Statement},
@@ -26,7 +26,7 @@ pub struct Body {
     pub patterns: Arena<Pattern>,
     pub exprs: Arena<Expr>,
 
-    pub params: Vec<PatternId>,
+    pub params: Vec<(PatternId, Option<ty::Ty>)>,
 
     pub body_expr: ExprId,
 }
@@ -139,7 +139,8 @@ pub(super) fn lower(db: &dyn DefDatabase, function_id: FunctionId) -> (Body, Bod
         for param in param_list.params() {
             if let Some(pattern) = param.pattern() {
                 let pat_id = ctx.lower_pattern(ast::Pattern::PatternVariable(pattern));
-                ctx.body.params.push(pat_id);
+                let ty = ty::ty_from_ast_opt(param.ty());
+                ctx.body.params.push((pat_id, ty));
             }
         }
     }
@@ -229,6 +230,7 @@ impl BodyLowerCtx<'_> {
                     .name()
                     .and_then(|n| n.text())
                     .unwrap_or_else(Name::missing);
+
                 let mut fields = Vec::new();
                 if let Some(args) = constr.args() {
                     for field in args.args() {

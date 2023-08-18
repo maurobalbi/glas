@@ -151,7 +151,7 @@ impl ExprScopes {
         };
         let root = this.root_scope();
         for param in &body.params {
-            this.add_bindings(body.as_ref(), root, param);
+            this.add_bindings(body.as_ref(), root, &param.0);
         }
         this.traverse_expr(body.as_ref(), body.body_expr, root);
         Arc::new(this)

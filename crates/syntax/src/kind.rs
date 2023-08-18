@@ -223,6 +223,12 @@ def! {
     #[token("assert")]
     ASSERT_KW = ["assert"],
 
+    #[token("True")]
+    TRUE_KW = ["True"],
+
+    #[token("False")]
+    FALSE_KW = ["False"],
+
     #[token("case")]
     CASE_KW = ["case"],
 

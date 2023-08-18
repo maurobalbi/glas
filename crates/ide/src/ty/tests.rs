@@ -49,6 +49,15 @@ fn fn_params() {
 }
 
 #[test]
+fn fn_params_annotation() {
+    check_all(
+        "fn bla(a: blabla, b: bubu) { b }",
+        expect![r#"
+            main: fn(Int, Int) -> Int
+            bla: fn(a, b) -> b"#],
+    )
+}
+#[test]
 fn let_infer_pattern() {
     check_all(
         "type Biboop {Biboop(Int)} fn biboob(a) {let Biboop(b) = a b}",
@@ -235,4 +244,11 @@ fn pattern_spread() {
             [1, ..name] -> name
         }
       }", expect!["spread: fn() -> List(Int)"])
+}
+
+#[test]
+fn boolean() {
+    check_all("fn spread() {
+        True
+      }", expect!["spread: fn() -> Bool"])
 }

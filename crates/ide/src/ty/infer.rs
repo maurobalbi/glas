@@ -30,7 +30,7 @@ enum Ty {
     Unknown {
         idx: u32,
     },
-    Generic {
+Generic {
         name: SmolStr,
     },
     Bool,
@@ -115,7 +115,7 @@ pub(crate) fn infer_function_group_query(
             idx,
             group: &group,
             fn_id: *f,
-            resolver,
+                        resolver,
             body: body.deref(),
             body_ctx: BodyCtx::default(),
         };
@@ -144,7 +144,7 @@ struct InferCtx<'db> {
     fn_id: FunctionId,
     // The resolver is not kept up to date always, it's there to allow infer_pattern to work comfortably.
     // If it's important to have a new resolver, use a new one
-    resolver: Resolver,
+        resolver: Resolver,
     group: &'db Vec<FunctionId>,
     body: &'db Body,
     table: &'db mut UnionFind<Ty>,
@@ -176,7 +176,7 @@ impl<'db> InferCtx<'db> {
                     Some(var) => *var,
                     None => {
                         let var = self.new_ty_var();
-                        env.insert(name, var);
+                                                env.insert(name, var);
                         var
                     }
                 }
@@ -232,8 +232,13 @@ impl<'db> InferCtx<'db> {
 
     fn infer_function(&mut self, body: &Body) -> TyVar {
         let mut param_tys = Vec::new();
-        for param in &body.params {
+        for (param, ty) in &body.params {
             let pat_ty = self.ty_for_pattern(*param);
+            if let Some(ty) = ty {
+                let mut env = HashMap::new();
+                let param_ty = self.make_type(ty.clone(), &mut env);
+                self.unify_var(pat_ty, param_ty);
+            }
             param_tys.push(pat_ty);
         }
         let body_ty = self.infer_expr(body.body_expr);
@@ -338,6 +343,7 @@ impl<'db> InferCtx<'db> {
                 LiteralKind::Int => Ty::Int,
                 LiteralKind::Float => Ty::Float,
                 LiteralKind::String => Ty::String,
+                LiteralKind::Bool => Ty::Bool,
             }
             .intern(self),
             Expr::Block { stmts } => {
@@ -390,6 +396,12 @@ impl<'db> InferCtx<'db> {
                         let bin_var = self.new_ty_var();
                         self.unify_var_ty(bin_var, Ty::Bool);
                         bin_var
+                    }
+                    BinaryOpKind::Eq => {
+                        let bool = self.new_ty_var();
+                        self.unify_var_ty(bool, Ty::Bool);
+                        self.unify_var(lhs_ty, rhs_ty);
+                        bool 
                     }
                 }
             }
@@ -583,6 +595,7 @@ impl<'db> InferCtx<'db> {
                 LiteralKind::Int => self.unify_var_ty(pat_var, Ty::Int),
                 LiteralKind::Float => self.unify_var_ty(pat_var, Ty::Float),
                 LiteralKind::String => self.unify_var_ty(pat_var, Ty::String),
+                LiteralKind::Bool => self.unify_var_ty(pat_var, Ty::Bool),
             },
             Pattern::Spread { pattern } => {
                 let pat = self.ty_for_pattern(*pattern);
@@ -638,6 +651,10 @@ impl<'db> InferCtx<'db> {
                 idx: min(idx, idx2),
             },
             (Ty::Unknown { .. }, other) | (other, Ty::Unknown { .. }) => other,
+            (Ty::List { of: of1 }, Ty::List { of: of2 }) => {
+                self.unify_var(of1, of2);
+                Ty::List { of: of1 }
+            },
             (
                 Ty::Function {
                     params: params1,
@@ -671,14 +688,14 @@ fn finish_infer(
     db: &dyn TyDatabase,
     mut table: UnionFind<Ty>,
     body_ctx: HashMap<FunctionId, BodyCtx>,
-    fn_ty: HashMap<FunctionId, TyVar>,
+        fn_ty: HashMap<FunctionId, TyVar>,
 ) -> HashMap<FunctionId, InferenceResult> {
     let mut i = Collector::new(db, &mut table);
 
     let mut inference_map = HashMap::new();
 
     for (fn_id, ctx) in body_ctx.into_iter() {
-        let mut pattern_ty_map = ArenaMap::new();
+                let mut pattern_ty_map = ArenaMap::new();
         let mut expr_ty_map = ArenaMap::new();
 
         for (pattern, ty) in ctx.pattern_to_ty {
@@ -709,7 +726,7 @@ struct Collector<'a> {
     table: &'a mut UnionFind<Ty>,
     db: &'a dyn TyDatabase,
     env: HashMap<u32, SmolStr>,
-    uid: u32,
+        uid: u32,
 }
 
 impl<'a> Collector<'a> {
@@ -718,7 +735,7 @@ impl<'a> Collector<'a> {
             cache: vec![None; table.len()],
             table,
             db,
-            env: HashMap::new(),
+                        env: HashMap::new(),
             uid: 0,
         }
     }
@@ -784,7 +801,7 @@ impl<'a> Collector<'a> {
                     params: Arc::new(Vec::new()),
                 }
             }
-            Ty::Generic { name } => super::Ty::Generic { name: name.clone() },
+Ty::Generic { name } => super::Ty::Generic { name: name.clone() },
         }
     }
 }
