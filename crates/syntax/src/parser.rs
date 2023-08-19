@@ -1295,7 +1295,9 @@ fn type_expr(p: &mut Parser) {
             let m = p.start_node();
             p.expect(IDENT);
             if !p.at(T!["."]) {
-                p.finish_node(m, TYPE_NAME_REF);
+                let ty_name = p.finish_node(m, TYPE_NAME);
+                let type_name = p.start_node_before(ty_name);
+                p.finish_node(type_name, TYPE_NAME_REF);
                 return;
             }
             let m = p.finish_node(m, MODULE_NAME);

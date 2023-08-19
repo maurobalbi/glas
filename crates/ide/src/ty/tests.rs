@@ -53,8 +53,7 @@ fn fn_params_annotation() {
     check_all(
         "fn bla(a: blabla, b: bubu) { b }",
         expect![r#"
-            main: fn(Int, Int) -> Int
-            bla: fn(a, b) -> b"#],
+        bla: fn(blabla, bubu) -> bubu"#],
     )
 }
 #[test]
@@ -102,9 +101,9 @@ fn generic_let() {
 #[test]
 fn lablelled_args() {
     check_all(
-        "fn wobble(b, f a: Int) { a } fn main() { abc(1) }",
+        "fn wobble(b: generic, f a: Int) { a } fn main() { abc(1) }",
         expect![[r#"
-            wobble: fn(a, b) -> b
+            wobble: fn(generic, Int) -> Int
             main: fn() -> a"#]],
     )
 }
