@@ -32,6 +32,7 @@ fn check_all(src: &str, expect: Expect) {
 #[track_caller]
 fn check_fix(src: &str, expect: Expect) {
     let (db, f) = TestDB::from_fixture(src).unwrap();
+    tracing::info!("{:#?}", f);
     let scope = db.module_scope(f[0].file_id);
     let mut output = Vec::new();
     for fun in scope.declarations() {
@@ -288,11 +289,12 @@ fn boolean() {
     )
 }
 
+#[traced_test]
 #[test]
 fn field_access() {
     check_fix(
         r#"
-#-test.gleam
+#- /test.gleam
 fn main() {
     1
 }
@@ -301,7 +303,7 @@ type Bla {
     Bla
 }
 
-#-test2.gleam
+#- /test2.gleam
 import test
 
 fn test() { "abc" }
@@ -311,8 +313,7 @@ fn bla() {
 }
 "#,
         expect![
-            r#"main: fn() -> Int
-test: fn() -> String
+            r#"test: fn() -> String
 bla: fn() -> Bla"#
         ],
     )

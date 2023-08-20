@@ -81,11 +81,6 @@ impl Adt {
             })
             .collect()
     }
-
-    //type
-    // pub fn type_() ->  {
-
-    // }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

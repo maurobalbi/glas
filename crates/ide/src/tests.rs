@@ -62,6 +62,7 @@ impl TestDB {
             );
             change.change_file(file, text.to_owned().into());
         }
+        tracing::info!("{:#?} {:#?}", module_map, file_set);
         change.set_roots_and_map(
             vec![SourceRoot::new_local(file_set, "/".into())],
             module_map,

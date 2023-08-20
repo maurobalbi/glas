@@ -94,7 +94,7 @@ mod tests {
     use crate::base::SourceDatabase;
     use crate::tests::TestDB;
     use expect_test::{expect, Expect};
-
+    
     #[track_caller]
     fn check_no(fixture: &str) {
         let (db, f) = TestDB::from_fixture(fixture).unwrap();
@@ -105,6 +105,7 @@ mod tests {
     #[track_caller]
     fn check(fixture: &str, expect: Expect) {
         let (db, f) = TestDB::from_fixture(fixture).unwrap();
+        tracing::info!("{:#?}", f);
         assert_eq!(f.markers().len(), 1, "Missing markers");
         let mut got = match goto_definition(&db, f[0]).expect("No definition") {
             GotoDefinitionResult::Path(path) => format!("file://{}", path.display()),
@@ -188,31 +189,28 @@ mod tests {
     fn module_res() {
         check_no(
             r#"
-#-test.gleam
+#- /test.gleam
 fn main() {
     1
 }
 
-#-test2.gleam
-import test
-
+#- /test2.gleam
 fn bla() {
     $0main()
 }
-"#,
-        );
+"#);
     }
 
     #[test]
     fn module_field_access_res() {
         check(
             r#"
-#-asdf/test.gleam
+#- /asdf/test.gleam
 fn main() {
     1
 }
 
-#-test2.gleam
+#- /test2.gleam
 import asdf/test
 
 fn bla() {
