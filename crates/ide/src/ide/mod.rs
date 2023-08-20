@@ -1,8 +1,8 @@
+mod completion;
 mod diagnostics;
 mod goto_definition;
 mod highlight_related;
 mod hover;
-mod completion;
 mod syntax_tree;
 
 use crate::base::SourceDatabaseStorage;
@@ -16,10 +16,10 @@ use salsa::{Database, Durability, ParallelDatabase};
 use std::fmt;
 use syntax::TextRange;
 
+pub use completion::{CompletionItem, CompletionItemKind};
 pub use goto_definition::GotoDefinitionResult;
 pub use highlight_related::HlRelated;
 pub use hover::HoverResult;
-pub use completion::{CompletionItem, CompletionItemKind};
 
 pub const DEFAULT_LRU_CAP: usize = 128;
 
@@ -177,11 +177,8 @@ impl Analysis {
     pub fn goto_definition(&self, pos: FilePos) -> Cancellable<Option<GotoDefinitionResult>> {
         self.with_db(|db| goto_definition::goto_definition(db, pos))
     }
-    
-    pub fn syntax_tree(
-        &self,
-        file_id: FileId,
-    ) -> Cancellable<String> {
+
+    pub fn syntax_tree(&self, file_id: FileId) -> Cancellable<String> {
         self.with_db(|db| syntax_tree::syntax_tree(db, file_id))
     }
 }

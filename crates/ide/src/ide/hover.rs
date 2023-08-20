@@ -23,9 +23,10 @@ pub(crate) fn hover(db: &dyn TyDatabase, FilePos { file_id, pos }: FilePos) -> O
     let tok = best_token_at_offset(&parse.syntax(), pos)?;
 
     match semantics::classify_node(sema, &tok.parent()?)? {
-        semantics::Definition::Adt(it) => {
-            Some(HoverResult { range: tok.text_range(), markup: format!("```gleam\ntype {}\n```", it.name(db.upcast())) })
-        },
+        semantics::Definition::Adt(it) => Some(HoverResult {
+            range: tok.text_range(),
+            markup: format!("```gleam\ntype {}\n```", it.name(db.upcast())),
+        }),
         semantics::Definition::Function(it) => {
             let ty = it.ty(db);
             Some(HoverResult {
@@ -33,11 +34,10 @@ pub(crate) fn hover(db: &dyn TyDatabase, FilePos { file_id, pos }: FilePos) -> O
                 markup: format!("```gleam\n{}\n```", ty.display(db)),
             })
         }
-        semantics::Definition::Variant(it) => {
-            Some(HoverResult { 
-                range: tok.text_range(), 
-                markup: format!("```gleam\n{}\n```", it.name(db.upcast()))
-        })},
+        semantics::Definition::Variant(it) => Some(HoverResult {
+            range: tok.text_range(),
+            markup: format!("```gleam\n{}\n```", it.name(db.upcast())),
+        }),
         semantics::Definition::Field(_) => todo!(),
         semantics::Definition::Local(it) => {
             let ty = it.ty(db);

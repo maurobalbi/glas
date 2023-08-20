@@ -1,6 +1,6 @@
 use std::cell::Cell;
 
-use crate::ast::{AstNode, NameRef, SourceFile};
+use crate::ast::{AstNode, SourceFile};
 use crate::lexer::{GleamLexer, LexToken};
 use crate::token_set::TokenSet;
 use crate::SyntaxKind::{self, *};
@@ -22,7 +22,8 @@ const PARAM_LIST_RECOVERY: TokenSet = TokenSet::new(&[T!["->"], T!["{"]]).union(
 const GENERIC_PARAM_LIST_RECOVERY: TokenSet =
     TokenSet::new(&[T!["{"], T!["="]]).union(STMT_RECOVERY);
 const IMPORT_RECOVERY: TokenSet = TokenSet::new(&[T!["as"]]).union(STMT_RECOVERY);
-const PATTERN_RECOVERY: TokenSet = TokenSet::new(&[T!["->"], T!["="], T!["}"], T!["{"]]).union(STMT_RECOVERY);
+const PATTERN_RECOVERY: TokenSet =
+    TokenSet::new(&[T!["->"], T!["="], T!["}"], T!["{"]]).union(STMT_RECOVERY);
 
 const PATTERN_FIRST: TokenSet = TokenSet::new(&[
     IDENT,
@@ -859,7 +860,7 @@ fn alternative_pattern(p: &mut Parser) {
 fn pattern(p: &mut Parser) {
     let mut parse_application = false;
 
-    let res = match p.nth(0) {
+    let _res = match p.nth(0) {
         // variable definition or qualified constructor type
         IDENT => {
             let m = p.start_node();
@@ -924,7 +925,7 @@ fn pattern_list(p: &mut Parser<'_>) -> MarkClosed {
             let spread = if p.at(T![".."]) {
                 p.expect(T![".."]);
                 Some(p.start_node())
-            } else { 
+            } else {
                 None
             };
             pattern(p);
@@ -1008,11 +1009,11 @@ fn list(p: &mut Parser) -> MarkClosed {
             let spread = if p.at(T![".."]) {
                 p.expect(T![".."]);
                 Some(p.start_node())
-            } else { 
+            } else {
                 None
             };
             expr(p);
-            spread.map(|s| p.finish_node(s, EXPR_SPREAD));   
+            spread.map(|s| p.finish_node(s, EXPR_SPREAD));
             if !p.at(T!["]"]) {
                 p.expect(T![","]);
             }

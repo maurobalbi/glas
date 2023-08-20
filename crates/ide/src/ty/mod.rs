@@ -49,7 +49,7 @@ pub enum Ty {
     },
     Tuple {
         fields: Arc<Vec<Ty>>,
-    }
+    },
 }
 
 pub fn ty_from_ast_opt(type_ast: Option<ast::TypeExpr>) -> Option<Ty> {

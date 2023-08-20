@@ -159,11 +159,17 @@ pub fn ancestors_at_offset(
 /// Finds a node of specific Ast type at offset. Note that this is slightly
 /// imprecise: if the cursor is strictly between two nodes of the desired type,
 /// then the shorter node will be silently preferred.
-pub fn find_node_at_offset<N: AstNode<Language = GleamLanguage>>(syntax: &SyntaxNode, offset: TextSize) -> Option<N> {
+pub fn find_node_at_offset<N: AstNode<Language = GleamLanguage>>(
+    syntax: &SyntaxNode,
+    offset: TextSize,
+) -> Option<N> {
     ancestors_at_offset(syntax, offset).find_map(N::cast)
 }
 
-pub fn find_node_at_range<N: AstNode<Language = GleamLanguage>>(syntax: &SyntaxNode, range: TextRange) -> Option<N> {
+pub fn find_node_at_range<N: AstNode<Language = GleamLanguage>>(
+    syntax: &SyntaxNode,
+    range: TextRange,
+) -> Option<N> {
     syntax.covering_element(range).ancestors().find_map(N::cast)
 }
 /// Pick the most meaningful token at given cursor offset.

@@ -1,15 +1,16 @@
 use smol_str::SmolStr;
 use syntax::{
     ast::{self, AstNode, SourceFile},
-    best_token_at_offset, find_node_at_offset, GleamLanguage, SyntaxKind,TextRange,
-    TextSize, T, SyntaxNode
+    best_token_at_offset, find_node_at_offset, GleamLanguage, SyntaxKind, SyntaxNode, TextRange,
+    TextSize, T,
 };
 
 use crate::{
     def::{
+        find_def,
         hir_def::{FunctionId, ModuleDefId},
         resolver::{resolver_for_toplevel, Resolver},
-        resolver_for_expr, find_def,
+        resolver_for_expr,
     },
     ty::TyDatabase,
     DefDatabase, FilePos, InFile,
@@ -74,18 +75,24 @@ impl<'db> CompletionContext<'db> {
         ctx.source_range = match tok.kind() {
             T!["."] => TextRange::empty(position.pos),
             SyntaxKind::IDENT | SyntaxKind::U_IDENT => tok.text_range(),
-            _ => TextRange::empty(position.pos)
+            _ => TextRange::empty(position.pos),
         };
         let top_node = tok
             .parent_ancestors()
-            .take_while(|it| it.text_range() == ctx.source_range && !(it.kind() == SyntaxKind::SOURCE_FILE))
+            .take_while(|it| {
+                it.text_range() == ctx.source_range && !(it.kind() == SyntaxKind::SOURCE_FILE)
+            })
             .last();
 
-        if let Some(SyntaxKind::SOURCE_FILE) = top_node.and_then(|t| t.parent()).map(|it| it.kind()) {
+        if let Some(SyntaxKind::SOURCE_FILE) = top_node.and_then(|t| t.parent()).map(|it| it.kind())
+        {
             ctx.is_top_level = true;
         }
 
-        if let Some(expr_node) = tok.parent_ancestors().find(|it| ast::Expr::can_cast(it.kind())) {
+        if let Some(expr_node) = tok
+            .parent_ancestors()
+            .find(|it| ast::Expr::can_cast(it.kind()))
+        {
             let expr_ptr = InFile {
                 file_id: position.file_id,
                 value: expr_node,
@@ -140,7 +147,7 @@ fn complete_expr(acc: &mut Vec<CompletionItem>, ctx: &CompletionContext<'_>) -> 
     };
 
     for (name, def) in resolver.names_in_scope() {
-        let kind =  match def {
+        let kind = match def {
             crate::def::resolver::ResolveResult::Local(_) => CompletionItemKind::Param,
             crate::def::resolver::ResolveResult::Function(_) => CompletionItemKind::Function,
             crate::def::resolver::ResolveResult::Variant(_) => CompletionItemKind::Variant,
@@ -240,7 +247,7 @@ mod tests {
 
     #[test]
     fn keyword() {
-    check("i$0", "import", expect!["(Keyword) import ${1:module}"]);
+        check("i$0", "import", expect!["(Keyword) import ${1:module}"]);
     }
 
     #[test]

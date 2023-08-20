@@ -3,13 +3,21 @@ use std::{cell::RefCell, collections::HashMap};
 use smol_str::SmolStr;
 use syntax::{
     ast::{self, AstNode},
-    match_ast, AstPtr, SyntaxNode, 
+    match_ast, AstPtr, SyntaxNode,
 };
 
-use crate::{ty::{TyDatabase, FieldResolution}, DefDatabase, FileId, InFile, impl_from};
+use crate::{
+    impl_from,
+    ty::{FieldResolution, TyDatabase},
+    DefDatabase, FileId, InFile,
+};
 
 use super::{
-    hir_def::ModuleDefId, resolver::{resolver_for_toplevel, ResolveResult}, source_analyzer::SourceAnalyzer, hir::{Adt, Function, Variant, Local}, module::Field,
+    hir::{Adt, Function, Local, Variant},
+    hir_def::ModuleDefId,
+    module::Field,
+    resolver::{resolver_for_toplevel, ResolveResult},
+    source_analyzer::SourceAnalyzer,
 };
 
 pub enum Definition {
@@ -17,7 +25,7 @@ pub enum Definition {
     Function(Function),
     Variant(Variant),
     Field(Field),
-    Local(Local)
+    Local(Local),
 }
 
 impl_from!(
@@ -29,12 +37,10 @@ impl From<FieldResolution> for Definition {
     fn from(value: FieldResolution) -> Self {
         match value {
             FieldResolution::Field(it) => it.into(),
-            FieldResolution::ModuleDef(def) => {
-                match def {
-                    super::hir::ModuleDef::Function(it) => it.into(),
-                    super::hir::ModuleDef::Variant(it) => it.into(),
-                    super::hir::ModuleDef::Adt(it) => it.into()
-                }
+            FieldResolution::ModuleDef(def) => match def {
+                super::hir::ModuleDef::Function(it) => it.into(),
+                super::hir::ModuleDef::Variant(it) => it.into(),
+                super::hir::ModuleDef::Adt(it) => it.into(),
             },
         }
     }
@@ -69,7 +75,7 @@ fn classify_name_ref(sema: Semantics, name_ref: &ast::NameRef) -> Option<Definit
         }
     }
 
-    return sema.resolve_name(name_ref.clone()).map(Into::into)
+    return sema.resolve_name(name_ref.clone()).map(Into::into);
 }
 
 pub struct Semantics<'db> {
@@ -84,19 +90,22 @@ impl<'db> Semantics<'db> {
             cache: Default::default(),
         }
     }
-        
+
     pub fn parse(&self, file_id: FileId) -> ast::SourceFile {
         let root = self.db.parse(file_id).root();
         self.cache(root.syntax().clone(), file_id.into());
         root
     }
 
-    pub fn resolve_field(&self, field: ast::FieldAccessExpr) -> Option<FieldResolution>{
-        self.analyze(field.syntax())?.resolve_field(self.db.upcast(), &field)
+    pub fn resolve_field(&self, field: ast::FieldAccessExpr) -> Option<FieldResolution> {
+        self.analyze(field.syntax())?
+            .resolve_field(self.db.upcast(), &field)
     }
 
     pub fn resolve_name(&self, name: ast::NameRef) -> Option<ResolveResult> {
-        self.analyze(name.syntax())?.resolver.resolve_name(&SmolStr::from(name.text()?))
+        self.analyze(name.syntax())?
+            .resolver
+            .resolve_name(&SmolStr::from(name.text()?))
     }
 
     fn analyze(&self, node: &SyntaxNode) -> Option<SourceAnalyzer> {
@@ -144,8 +153,6 @@ impl<'db> Semantics<'db> {
         let cache = self.cache.borrow();
         cache.get(root_node).copied()
     }
-
-
 }
 
 fn find_root(node: &SyntaxNode) -> SyntaxNode {

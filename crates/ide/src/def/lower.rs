@@ -249,7 +249,6 @@ impl<'a> LowerCtx<'a> {
         }))
     }
 
-
     fn next_constructor_idx(&self) -> Idx<VariantData> {
         Idx::from_raw(RawIdx::from(self.module_items.variants.len() as u32))
     }

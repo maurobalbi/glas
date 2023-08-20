@@ -180,7 +180,7 @@ impl TyDisplay for Ty {
             Ty::Int => write!(f, "Int"),
             Ty::Float => write!(f, "Float"),
             Ty::String => write!(f, "String"),
-            Ty::Function { params, return_ } => { 
+            Ty::Function { params, return_ } => {
                 write!(f, "fn(")?;
                 f.write_joined(params.as_ref().clone().into_iter(), ", ")?;
 
@@ -190,7 +190,7 @@ impl TyDisplay for Ty {
             Ty::List { of } => {
                 write!(f, "List(")?;
                 of.ty_fmt(f)?;
-                write!(f, ")")   
+                write!(f, ")")
             }
             Ty::Generic { name } => {
                 // let lookup = f.env.get(idx);
@@ -224,7 +224,7 @@ impl TyDisplay for Ty {
                     write!(f, ")")
                 } else {
                     write!(f, "{}", name)
-                }    
+                }
             }
         }
     }

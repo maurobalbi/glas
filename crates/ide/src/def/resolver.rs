@@ -6,7 +6,7 @@ use smol_str::SmolStr;
 use crate::{ty::Ty, DefDatabase, FileId};
 
 use super::{
-    hir::{Local, Function, Variant},
+    hir::{Function, Local, Variant},
     hir_def::{AdtId, ModuleDefId, VariantId},
     module::{ExprId, PatternId},
     scope::{ModuleScope, ScopeId},

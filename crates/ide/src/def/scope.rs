@@ -58,8 +58,11 @@ pub fn module_scope_query(db: &dyn DefDatabase, file_id: FileId) -> Arc<ModuleSc
         for variant_id in adt.variants.clone() {
             let variant = &module_data[variant_id];
             let name = &variant.name;
-  
-            let def = ModuleDefId::VariantId(VariantId {parent: adt_loc, local_id: variant_id});
+
+            let def = ModuleDefId::VariantId(VariantId {
+                parent: adt_loc,
+                local_id: variant_id,
+            });
             scope.values.insert(name.clone(), def.clone());
 
             //use visibility of adt
@@ -91,7 +94,9 @@ impl ModuleScope {
         self.types.get(&name)
     }
 
-    pub fn values(&self) -> impl Iterator<Item = (&SmolStr, &ModuleDefId)> + ExactSizeIterator + '_ {
+    pub fn values(
+        &self,
+    ) -> impl Iterator<Item = (&SmolStr, &ModuleDefId)> + ExactSizeIterator + '_ {
         self.values.iter().map(|v| v)
     }
 
@@ -200,7 +205,7 @@ impl ExprScopes {
                 self.traverse_expr(body, *left, scope);
                 self.traverse_expr(body, *right, scope);
             }
-            Expr::Pipe { left, right} => {
+            Expr::Pipe { left, right } => {
                 self.traverse_expr(body, *left, scope);
                 self.traverse_expr(body, *right, scope);
             }
@@ -223,11 +228,17 @@ impl ExprScopes {
                     self.traverse_expr(body, *expr, clause_scope);
                 });
             }
-            Expr::Lambda { body: lam_body, params } => {
-                let body_scope = self.scopes.alloc(ScopeData { parent: Some(scope), entries: Vec::new() });
+            Expr::Lambda {
+                body: lam_body,
+                params,
+            } => {
+                let body_scope = self.scopes.alloc(ScopeData {
+                    parent: Some(scope),
+                    entries: Vec::new(),
+                });
                 for param in params.clone() {
                     self.add_bindings(body, body_scope, &param);
-                };
+                }
                 self.traverse_expr(body, *lam_body, body_scope);
             }
             Expr::List { elements } => {
@@ -300,12 +311,16 @@ impl ExprScopes {
                 }
             }
             Pattern::Hole => {}
-            Pattern::VariantRef { name, module, fields } => {
+            Pattern::VariantRef {
+                name,
+                module,
+                fields,
+            } => {
                 for field in fields {
                     self.add_bindings(body, scope, field);
                 }
-            },
-            Pattern::Literal { kind } => {},
+            }
+            Pattern::Literal { kind } => {}
         }
     }
 }

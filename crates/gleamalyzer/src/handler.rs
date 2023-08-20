@@ -1,8 +1,9 @@
-use crate::{convert, StateSnapshot, lsp_ext::SyntaxTreeParams};
+use crate::{convert, lsp_ext::SyntaxTreeParams, StateSnapshot};
 use anyhow::Result;
 use ide::{FileRange, GotoDefinitionResult};
 use lsp_types::{
-    Diagnostic, GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverParams, Url, CompletionParams, CompletionResponse,
+    CompletionParams, CompletionResponse, Diagnostic, GotoDefinitionParams, GotoDefinitionResponse,
+    Hover, HoverParams, Url,
 };
 
 const MAX_DIAGNOSTICS_CNT: usize = 128;
@@ -63,10 +64,7 @@ pub(crate) fn goto_definition(
     Ok(Some(GotoDefinitionResponse::Array(targets)))
 }
 
-pub(crate) fn syntax_tree(
-    snap: StateSnapshot,
-    params: SyntaxTreeParams,
-) -> Result<String> {
+pub(crate) fn syntax_tree(snap: StateSnapshot, params: SyntaxTreeParams) -> Result<String> {
     let (file, _) = convert::from_file(&snap.vfs(), &params.text_document)?;
     let syntax_tree = snap.analysis.syntax_tree(file)?;
     Ok(syntax_tree)

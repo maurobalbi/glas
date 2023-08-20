@@ -1,12 +1,13 @@
 use crate::capabilities::{negotiate_capabilities, NegotiatedCapabilities};
 use crate::config::{Config, CONFIG_KEY};
-use crate::{convert, handler, UrlExt, Vfs, MAX_FILE_LEN, lsp_ext};
+use crate::{convert, handler, lsp_ext, UrlExt, Vfs, MAX_FILE_LEN};
 use anyhow::{bail, Context, Result};
 use async_lsp::router::Router;
 use async_lsp::{ClientSocket, ErrorCode, LanguageClient, ResponseError};
 use gleam_interop;
 use ide::{
-    Analysis, AnalysisHost, Cancelled, FileSet, ModuleMap, PackageInfo, SourceRoot, VfsPath, module_name,
+    module_name, Analysis, AnalysisHost, Cancelled, FileSet, ModuleMap, PackageInfo, SourceRoot,
+    VfsPath,
 };
 use lsp_types::notification::Notification;
 use lsp_types::request::{self as req, Request};
@@ -22,7 +23,6 @@ use lsp_types::{
     WorkDoneProgressReport,
 };
 
-use smol_str::SmolStr;
 use std::backtrace::Backtrace;
 use std::borrow::BorrowMut;
 use std::cell::Cell;

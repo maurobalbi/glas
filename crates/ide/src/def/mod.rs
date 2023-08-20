@@ -5,9 +5,9 @@ mod lower;
 pub mod module;
 pub mod resolver;
 mod scope;
-pub mod source_analyzer;
 pub mod semantics;
 pub mod source;
+pub mod source_analyzer;
 
 use std::sync::Arc;
 
@@ -16,7 +16,6 @@ use crate::FileId;
 use salsa;
 
 use syntax::{AstPtr, Parse};
-
 
 pub use semantics::{classify_node, find_def, Semantics};
 pub use syntax::ast::{AstNode, BinaryOpKind as BinaryOp, Expr, UnaryOpKind as UnaryOp};

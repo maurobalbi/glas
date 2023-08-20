@@ -5,7 +5,6 @@ use rowan::NodeOrToken;
 use smol_str::SmolStr;
 
 pub use rowan::ast::{AstChildren, AstNode};
-use tracing::field::Field;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum BinaryOpKind {
@@ -26,7 +25,7 @@ pub enum BinaryOpKind {
     FloatLT,
     FloatGTE,
     FloatLTE,
-    Eq
+    Eq,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -258,8 +257,7 @@ impl TypeNameOrName {
 impl FieldAccessExpr {
     pub fn for_label_name_ref(label: &NameRef) -> Option<FieldAccessExpr> {
         let syn = label.syntax();
-        let candidate = syn.parent()
-            .and_then(FieldAccessExpr::cast)?;
+        let candidate = syn.parent().and_then(FieldAccessExpr::cast)?;
         if candidate.label().as_ref() == Some(&label) {
             Some(candidate)
         } else {
@@ -401,7 +399,7 @@ asts! {
         module_path: [Path],
         as_name: Name,
         unqualified: [UnqualifiedImport],
-    },  
+    },
     VARIABLE = Variable {
         name: NameRef,
     },
@@ -614,8 +612,6 @@ impl Name {
 #[cfg(test)]
 mod tests {
 
-    use expect_test::expect;
-
     use super::*;
     use crate::tests::parse;
 
@@ -650,9 +646,11 @@ mod tests {
 
     #[test]
     fn assert() {
-        let e = crate::parse_module("fn a() { 
+        let e = crate::parse_module(
+            "fn a() { 
                         let Dog(a) = Dog(1) 
-                    }");
+                    }",
+        );
         for error in e.errors() {
             println!("{}", error);
         }
@@ -934,7 +932,11 @@ mod tests {
                     }}",
         );
         c.syntax().should_eq("Bird | Snake, a -> 2");
-        c.patterns().next().unwrap().syntax().should_eq("Bird | Snake");
+        c.patterns()
+            .next()
+            .unwrap()
+            .syntax()
+            .should_eq("Bird | Snake");
         c.body().unwrap().syntax().should_eq("2");
         let mut pats = c.patterns().into_iter();
         pats.next().unwrap().syntax().should_eq("Bird | Snake");
@@ -968,9 +970,7 @@ mod tests {
                     }}",
         );
         p.syntax().should_eq("int.Bla(Some(a))");
-        let pattern =
-            VariantRef::cast(p.patterns().next().unwrap().syntax().clone())
-                .unwrap();
+        let pattern = VariantRef::cast(p.patterns().next().unwrap().syntax().clone()).unwrap();
         pattern
             .field_list()
             .unwrap()
@@ -980,11 +980,7 @@ mod tests {
             .unwrap()
             .syntax()
             .should_eq("Some(a)");
-        pattern
-            .module()
-            .unwrap()
-            .syntax()
-            .should_eq("int");
+        pattern.module().unwrap().syntax().should_eq("int");
     }
 
     #[test]
@@ -1009,12 +1005,12 @@ mod tests {
         let f = parse::<FieldAccessExpr>("fn wops() { Mogie(name: 1).name}");
         f.label().unwrap().syntax().should_eq("name");
         f.base().unwrap().syntax().should_eq("Mogie(name: 1)");
-        
+
         let f = parse::<FieldAccessExpr>("fn wops() { base.label}");
         f.label().unwrap().syntax().should_eq("label");
         f.base().unwrap().syntax().should_eq("base")
     }
-    
+
     #[test]
     fn variant_constructor() {
         let f = parse::<VariantConstructor>("fn fields() { Muddle(name: 5) }");
@@ -1024,8 +1020,10 @@ mod tests {
 
     #[test]
     fn todo_test() {
-        let p = parse::<Block>("pub fn todoo() -> Nil {
+        let _p = parse::<Block>(
+            "pub fn todoo() -> Nil {
             todo
-        }");
+        }",
+        );
     }
 }

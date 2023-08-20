@@ -15,7 +15,7 @@ use crate::def::{
     body::Body,
     hir::{self, ModuleDef},
     hir_def::{self, AdtId, FunctionId, ModuleDefId},
-    module::{Field, Expr, ExprId, Pattern, PatternId, Statement},
+    module::{Expr, ExprId, Field, Pattern, PatternId, Statement},
     resolver::{resolver_for_toplevel, ResolveResult, Resolver},
     resolver_for_expr,
 };
@@ -527,7 +527,9 @@ impl<'db> InferCtx<'db> {
                     _ => {
                         tracing::info!("INFERRING FIELD_RESOLUTION NON ADT");
                         let map = self.db.module_map();
-                        let file = map.iter().find(|(_, name)| name.ends_with(base_string.as_str()));
+                        let file = map
+                            .iter()
+                            .find(|(_, name)| name.ends_with(base_string.as_str()));
                         tracing::info!("fileid for modulename {:?} {}", file, base_string);
                         if let Some(res) = file
                             .map(|f| resolver_for_toplevel(self.db.upcast(), f.0))

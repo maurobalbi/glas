@@ -8,7 +8,7 @@ use lsp_types::Url;
 use slab::Slab;
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::{fmt, mem, iter};
+use std::{fmt, mem};
 use text_size::{TextRange, TextSize};
 
 /// Vfs stores file contents with line mapping, and a mapping between
@@ -344,4 +344,3 @@ mod tests {
         assert_eq!(map.end_col_for_line(3), 3);
     }
 }
-

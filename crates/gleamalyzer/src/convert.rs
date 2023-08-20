@@ -1,7 +1,10 @@
 use crate::{LineMap, Result, Vfs};
 use async_lsp::{ErrorCode, ResponseError};
-use ide::{Diagnostic, DiagnosticKind, FileId, FilePos, FileRange, HoverResult, Severity, CompletionItem, CompletionItemKind};
-use lsp::{DiagnosticTag, Hover, MarkupContent, MarkupKind,  Documentation};
+use ide::{
+    CompletionItem, CompletionItemKind, Diagnostic, DiagnosticKind, FileId, FilePos, FileRange,
+    HoverResult, Severity,
+};
+use lsp::{DiagnosticTag, Documentation, Hover, MarkupContent, MarkupKind};
 use lsp_types::{
     self as lsp, DiagnosticRelatedInformation, DiagnosticSeverity, Location, NumberOrString,
     Position, PrepareRenameResponse, Range, TextDocumentIdentifier, TextDocumentPositionParams,
@@ -67,7 +70,7 @@ pub(crate) fn to_completion_item(line_map: &LineMap, item: CompletionItem) -> ls
         CompletionItemKind::Keyword => lsp::CompletionItemKind::KEYWORD,
         CompletionItemKind::Param => lsp::CompletionItemKind::VARIABLE,
         CompletionItemKind::Field => lsp::CompletionItemKind::FIELD,
-        CompletionItemKind::Pattern =>  lsp::CompletionItemKind::FIELD,
+        CompletionItemKind::Pattern => lsp::CompletionItemKind::FIELD,
         CompletionItemKind::Function => lsp::CompletionItemKind::FUNCTION,
         CompletionItemKind::Variant => lsp::CompletionItemKind::ENUM_MEMBER,
     };

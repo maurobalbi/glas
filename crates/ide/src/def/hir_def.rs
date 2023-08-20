@@ -3,8 +3,9 @@ use la_arena::Idx;
 use crate::{impl_from, impl_intern, InFile};
 
 use super::{
+    hir::{Adt, Function, Variant},
     module::{AdtData, FunctionData, VariantData},
-    DefDatabase, hir::{Function, Adt, Variant},
+    DefDatabase,
 };
 use crate::impl_intern_key;
 
@@ -23,14 +24,14 @@ macro_rules! from_id {
     )*}
 }
 
-from_id!(
-    (FunctionId, Function),
-    (AdtId, Adt)
-);
+from_id!((FunctionId, Function), (AdtId, Adt));
 
 impl From<VariantId> for Variant {
     fn from(value: VariantId) -> Self {
-        Variant { parent: value.parent, id: value.local_id }
+        Variant {
+            parent: value.parent,
+            id: value.local_id,
+        }
     }
 }
 
@@ -44,12 +45,10 @@ impl_intern!(
     lookup_intern_function
 );
 
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct AdtId(pub salsa::InternId);
 pub type AdtLoc = InFile<Idx<AdtData>>;
 impl_intern!(AdtId, AdtLoc, intern_adt, lookup_intern_adt);
-
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct VariantId {

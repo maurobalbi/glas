@@ -2,10 +2,10 @@ mod capabilities;
 mod config;
 mod convert;
 mod handler;
+mod lsp_ext;
 mod meter;
 pub mod server;
 mod vfs;
-mod lsp_ext;
 
 use anyhow::Result;
 use async_lsp::client_monitor::ClientProcessMonitorLayer;

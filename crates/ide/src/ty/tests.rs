@@ -55,8 +55,10 @@ fn check_fix(src: &str, expect: Expect) {
 fn let_in() {
     check_all(
         "type Bla2 { Bla } fn bla(a, b) { Bla }",
-        expect![r#"
-            bla: fn(a, b) -> Bla2"#],
+        expect![
+            r#"
+            bla: fn(a, b) -> Bla2"#
+        ],
     )
 }
 
@@ -64,9 +66,11 @@ fn let_in() {
 fn fn_params() {
     check_all(
         "fn main(a,b) {a + b} fn bla(a, b) { b }",
-        expect![r#"
+        expect![
+            r#"
             main: fn(Int, Int) -> Int
-            bla: fn(a, b) -> b"#],
+            bla: fn(a, b) -> b"#
+        ],
     )
 }
 
@@ -74,8 +78,10 @@ fn fn_params() {
 fn fn_params_annotation() {
     check_all(
         "fn bla(a: blabla, b: bubu) { b }",
-        expect![r#"
-        bla: fn(blabla, bubu) -> bubu"#],
+        expect![
+            r#"
+        bla: fn(blabla, bubu) -> bubu"#
+        ],
     )
 }
 #[test]
@@ -224,7 +230,6 @@ fn use_() {
         expect![[r#"
         main: fn(fn(Int, fn(a) -> a) -> b) -> b"#]],
     );
-
 }
 
 #[test]
@@ -250,34 +255,43 @@ fn case_fn() {
 
 #[test]
 fn case_infer() {
-    check_all("fn do_reverse_acc(remaining) {
+    check_all(
+        "fn do_reverse_acc(remaining) {
         case remaining {
           1 -> 1.1
           2 -> 1.2
         }
-      }", expect!["do_reverse_acc: fn(Int) -> Float"])
+      }",
+        expect!["do_reverse_acc: fn(Int) -> Float"],
+    )
 }
 
 #[test]
 fn pattern_spread() {
-    check_all("fn spread() {
+    check_all(
+        "fn spread() {
         case [1,2] {
             [1, ..name] -> name
         }
-      }", expect!["spread: fn() -> List(Int)"])
+      }",
+        expect!["spread: fn() -> List(Int)"],
+    )
 }
 
 #[test]
 fn boolean() {
-    check_all("fn spread() {
+    check_all(
+        "fn spread() {
         True
-      }", expect!["spread: fn() -> Bool"])
+      }",
+        expect!["spread: fn() -> Bool"],
+    )
 }
-
 
 #[test]
 fn field_access() {
-    check_fix(r#"
+    check_fix(
+        r#"
 #-test.gleam
 fn main() {
     1
@@ -295,7 +309,11 @@ fn test() { "abc" }
 fn bla() {
     test.$0Bla
 }
-"#, expect![r#"main: fn() -> Int
+"#,
+        expect![
+            r#"main: fn() -> Int
 test: fn() -> String
-bla: fn() -> Bla"#])
+bla: fn() -> Bla"#
+        ],
+    )
 }
