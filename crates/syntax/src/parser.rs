@@ -664,7 +664,7 @@ fn expr_bp(p: &mut Parser, min_bp: u8) {
             T!["."] => {
                 p.expect(T!["."]);
                 match p.nth(0) {
-                    IDENT => {
+                    IDENT | U_IDENT => {
                         let m = p.start_node_before(lhs);
                         name_ref(p);
                         lhs = p.finish_node(m, FIELD_ACCESS);

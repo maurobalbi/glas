@@ -5,7 +5,7 @@ use syntax::ast::{self};
 use crate::{
     impl_from,
     ty::{self, TyDatabase},
-    DefDatabase, SourceRootId,
+    DefDatabase, FileId, SourceRootId,
 };
 
 use super::{
@@ -38,13 +38,15 @@ pub struct PackageDependency {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Module {
-    pub(crate) id: ModuleId,
+    pub(crate) id: FileId,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct ModuleId {
-    package: SourceRootId,
-    id: Idx<ExprScopes>,
+impl Module {
+    pub fn name(self, db: &dyn DefDatabase) -> SmolStr {
+        db.module_map()
+            .module_name_for_file(self.id)
+            .expect("This is a compiler bug!")
+    }
 }
 
 /// The defs which can be visible in the module.

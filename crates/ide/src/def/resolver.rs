@@ -6,7 +6,7 @@ use smol_str::SmolStr;
 use crate::{DefDatabase, FileId};
 
 use super::{
-    hir::{Function, Local, Variant},
+    hir::{Function, Local, Module, Variant},
     hir_def::{AdtId, ModuleDefId},
     module::ExprId,
     scope::{ModuleScope, ScopeId},
@@ -57,6 +57,7 @@ pub enum ResolveResult {
     Local(Local),
     Function(Function),
     Variant(Variant),
+    Module(Module),
 }
 
 impl Resolver {

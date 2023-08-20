@@ -4,13 +4,16 @@ use la_arena::ArenaMap;
 use smol_str::SmolStr;
 use syntax::ast::{BinaryOpKind, LiteralKind};
 
-use crate::def::{
-    body::Body,
-    hir::{self, ModuleDef},
-    hir_def::{AdtId, FunctionId},
-    module::{Expr, ExprId, Field, Pattern, PatternId, Statement},
-    resolver::{resolver_for_toplevel, ResolveResult, Resolver},
-    resolver_for_expr,
+use crate::{
+    def::{
+        body::Body,
+        hir::{self, ModuleDef},
+        hir_def::{AdtId, FunctionId},
+        module::{Expr, ExprId, Field, Pattern, PatternId, Statement},
+        resolver::{resolver_for_toplevel, ResolveResult, Resolver},
+        resolver_for_expr,
+    },
+    FileId,
 };
 
 use super::{display::next_letter, union_find::UnionFind, TyDatabase};
@@ -57,6 +60,7 @@ pub struct InferenceResult {
     pattern_ty_map: ArenaMap<PatternId, super::Ty>,
     expr_ty_map: ArenaMap<ExprId, super::Ty>,
     field_resolution: HashMap<ExprId, FieldResolution>,
+    module_resolution: HashMap<ExprId, FileId>,
     pub fn_ty: super::Ty,
 }
 
@@ -72,6 +76,10 @@ impl InferenceResult {
 
     pub fn resolve_field(&self, expr: ExprId) -> Option<FieldResolution> {
         self.field_resolution.get(&expr).cloned()
+    }
+
+    pub fn resolve_module(&self, expr: ExprId) -> Option<FileId> {
+        self.module_resolution.get(&expr).cloned()
     }
 }
 
@@ -135,6 +143,7 @@ struct BodyCtx {
     expr_to_ty: ArenaMap<ExprId, TyVar>,
 
     field_resolution: HashMap<ExprId, FieldResolution>,
+    module_resolution: HashMap<ExprId, FileId>,
 }
 struct InferCtx<'db> {
     db: &'db dyn TyDatabase,
@@ -540,6 +549,9 @@ impl<'db> InferCtx<'db> {
                                         tgt_expr,
                                         FieldResolution::ModuleDef(ModuleDef::Function(it)),
                                     );
+                                    self.body_ctx
+                                        .module_resolution
+                                        .insert(*container, file.unwrap().0.clone());
                                     return self.make_type(fn_ty.clone(), &mut env);
                                 }
                                 // ToDo: Add type to adt in hir and fix this.
@@ -552,8 +564,16 @@ impl<'db> InferCtx<'db> {
                                             adt_id: it.parent,
                                         },
                                     );
+                                    self.body_ctx
+                                        .module_resolution
+                                        .insert(*container, file.unwrap().0.clone());
+                                    self.body_ctx.field_resolution.insert(
+                                        tgt_expr,
+                                        FieldResolution::ModuleDef(ModuleDef::Variant(it)),
+                                    );
                                     return var;
                                 }
+                                ResolveResult::Module(_) => todo!(),
                             }
                         }
                         self.new_ty_var()
@@ -755,7 +775,7 @@ fn finish_infer(
             fn_id,
             InferenceResult {
                 fn_ty: i.collect(*fn_ty.get(&fn_id).expect("Compiler error")),
-
+                module_resolution: ctx.module_resolution,
                 field_resolution: ctx.field_resolution,
                 pattern_ty_map,
                 expr_ty_map,

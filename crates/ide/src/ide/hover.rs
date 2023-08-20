@@ -44,6 +44,10 @@ pub(crate) fn hover(db: &dyn TyDatabase, FilePos { file_id, pos }: FilePos) -> O
                 markup: format!("```gleam\n{}\n```", ty.display(db)),
             })
         }
+        semantics::Definition::Module(it) => Some(HoverResult {
+            range: tok.text_range(),
+            markup: format!("```gleam\nimport {}\n```", it.name(db.upcast())),
+        }),
     }
 }
 

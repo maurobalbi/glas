@@ -13,7 +13,7 @@ use crate::{
 };
 
 use super::{
-    hir::{Adt, Function, Local, Variant},
+    hir::{Adt, Function, Local, Module, Variant},
     hir_def::ModuleDefId,
     module::Field,
     resolver::{resolver_for_toplevel, ResolveResult},
@@ -26,10 +26,11 @@ pub enum Definition {
     Variant(Variant),
     Field(Field),
     Local(Local),
+    Module(Module),
 }
 
 impl_from!(
-    Adt, Local, Function, Field, Variant
+    Adt, Local, Function, Field, Variant, Module
     for Definition
 );
 
@@ -52,6 +53,7 @@ impl From<ResolveResult> for Definition {
             ResolveResult::Local(it) => it.into(),
             ResolveResult::Function(it) => it.into(),
             ResolveResult::Variant(it) => it.into(),
+            ResolveResult::Module(it) => it.into(),
         }
     }
 }
@@ -98,11 +100,20 @@ impl<'db> Semantics<'db> {
     }
 
     pub fn resolve_field(&self, field: ast::FieldAccessExpr) -> Option<FieldResolution> {
-        self.analyze(field.syntax())?
-            .resolve_field(self.db.upcast(), &field)
+        self.analyze(field.syntax())?.resolve_field(&field)
     }
 
     pub fn resolve_name(&self, name: ast::NameRef) -> Option<ResolveResult> {
+        let analyzer = self.analyze(name.syntax())?;
+        if let Some(module) = name
+            .syntax()
+            .parent()
+            .and_then(ast::Expr::cast)
+            .and_then(|expr| analyzer.resolve_module(&expr))
+        {
+            return Some(ResolveResult::Module(module.into()));
+        }
+
         self.analyze(name.syntax())?
             .resolver
             .resolve_name(&SmolStr::from(name.text()?))

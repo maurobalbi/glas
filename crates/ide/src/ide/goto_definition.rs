@@ -7,7 +7,7 @@ use crate::ty::TyDatabase;
 use crate::{DefDatabase, FilePos, VfsPath};
 
 use syntax::ast::AstNode;
-use syntax::best_token_at_offset;
+use syntax::{best_token_at_offset, TextRange};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum GotoDefinitionResult {
@@ -58,6 +58,14 @@ pub(crate) fn goto_definition(
             let full_range = src.value.syntax().text_range();
             Some(GotoDefinitionResult::Targets(vec![NavigationTarget {
                 file_id: src.file_id,
+                focus_range: full_range,
+                full_range,
+            }]))
+        }
+        semantics::Definition::Module(module) => {
+            let full_range = TextRange::new(0.into(), 0.into());
+            Some(GotoDefinitionResult::Targets(vec![NavigationTarget {
+                file_id: module.id,
                 focus_range: full_range,
                 full_range,
             }]))

@@ -5,7 +5,12 @@ use syntax::{
 };
 
 use crate::{
-    def::{find_def, hir_def::ModuleDefId, resolver::resolver_for_toplevel, resolver_for_expr},
+    def::{
+        find_def,
+        hir_def::ModuleDefId,
+        resolver::{resolver_for_toplevel, ResolveResult},
+        resolver_for_expr,
+    },
     DefDatabase, FilePos, InFile,
 };
 
@@ -37,6 +42,7 @@ pub enum CompletionItemKind {
     Function,
     Variant,
     Param,
+    Module,
     Pattern,
     Field,
 }
@@ -139,9 +145,10 @@ fn complete_expr(acc: &mut Vec<CompletionItem>, ctx: &CompletionContext<'_>) -> 
 
     for (name, def) in resolver.names_in_scope() {
         let kind = match def {
-            crate::def::resolver::ResolveResult::Local(_) => CompletionItemKind::Param,
-            crate::def::resolver::ResolveResult::Function(_) => CompletionItemKind::Function,
-            crate::def::resolver::ResolveResult::Variant(_) => CompletionItemKind::Variant,
+            ResolveResult::Module(_) => CompletionItemKind::Module,
+            ResolveResult::Local(_) => CompletionItemKind::Param,
+            ResolveResult::Function(_) => CompletionItemKind::Function,
+            ResolveResult::Variant(_) => CompletionItemKind::Variant,
         };
         acc.push(CompletionItem {
             label: name.clone(),
