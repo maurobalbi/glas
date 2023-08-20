@@ -24,13 +24,13 @@ pub struct AdtData {
 pub struct VariantData {
     pub name: SmolStr,
 
-    pub fields: Vec<ConstructorField>,
+    pub fields: Vec<Field>,
 
     pub ast_ptr: AstPtr<ast::Variant>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct ConstructorField {
+pub struct Field {
     pub label: Option<SmolStr>,
     pub type_ref: ty::Ty,
 }
@@ -116,8 +116,10 @@ pub enum Expr {
         op: Option<BinaryOpKind>,
     },
     FieldAccess {
+        base_string: SmolStr,
         base: ExprId,
-        label: SmolStr,
+        label: ExprId,
+        label_name: SmolStr,
     },
     VariantLiteral {
         name: SmolStr,

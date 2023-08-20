@@ -9,8 +9,7 @@ use crate::{
     def::{
         hir_def::{FunctionId, ModuleDefId},
         resolver::{resolver_for_toplevel, Resolver},
-        resolver_for_expr,
-        source_analyzer::find_def,
+        resolver_for_expr, find_def,
     },
     ty::TyDatabase,
     DefDatabase, FilePos, InFile,
@@ -142,9 +141,9 @@ fn complete_expr(acc: &mut Vec<CompletionItem>, ctx: &CompletionContext<'_>) -> 
 
     for (name, def) in resolver.names_in_scope() {
         let kind =  match def {
-            crate::def::resolver::ResolveResult::LocalBinding(_) => CompletionItemKind::Param,
-            crate::def::resolver::ResolveResult::FunctionId(_) => CompletionItemKind::Function,
-            crate::def::resolver::ResolveResult::VariantId(_) => CompletionItemKind::Variant,
+            crate::def::resolver::ResolveResult::Local(_) => CompletionItemKind::Param,
+            crate::def::resolver::ResolveResult::Function(_) => CompletionItemKind::Function,
+            crate::def::resolver::ResolveResult::Variant(_) => CompletionItemKind::Variant,
         };
         acc.push(CompletionItem {
             label: name.clone(),

@@ -13,9 +13,9 @@ use syntax::ast::{Adt, BinaryOpKind, LiteralKind, StmtExpr};
 
 use crate::def::{
     body::Body,
-    hir,
-    hir_def::{self, AdtId, FunctionId},
-    module::{Expr, ExprId, Pattern, PatternId, Statement},
+    hir::{self, ModuleDef},
+    hir_def::{self, AdtId, FunctionId, ModuleDefId},
+    module::{Field, Expr, ExprId, Pattern, PatternId, Statement},
     resolver::{resolver_for_toplevel, ResolveResult, Resolver},
     resolver_for_expr,
 };
@@ -63,7 +63,7 @@ impl Ty {
 pub struct InferenceResult {
     pattern_ty_map: ArenaMap<PatternId, super::Ty>,
     expr_ty_map: ArenaMap<ExprId, super::Ty>,
-    field_resolution: HashMap<ExprId, AdtId>,
+    field_resolution: HashMap<ExprId, FieldResolution>,
     pub fn_ty: super::Ty,
 }
 
@@ -77,7 +77,7 @@ impl InferenceResult {
         self.expr_ty_map[expr].clone()
     }
 
-    pub fn resolve_field(&self, expr: ExprId) -> Option<AdtId> {
+    pub fn resolve_field(&self, expr: ExprId) -> Option<FieldResolution> {
         self.field_resolution.get(&expr).cloned()
     }
 }
@@ -130,12 +130,18 @@ pub(crate) fn infer_function_group_query(
     finish_infer(db, table, fn_to_ctx, fn_to_ty_var)
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum FieldResolution {
+    Field(Field),
+    ModuleDef(ModuleDef),
+}
+
 #[derive(Default)]
 struct BodyCtx {
     pattern_to_ty: ArenaMap<PatternId, TyVar>,
     expr_to_ty: ArenaMap<ExprId, TyVar>,
 
-    field_resolution: HashMap<ExprId, AdtId>,
+    field_resolution: HashMap<ExprId, FieldResolution>,
 }
 struct InferCtx<'db> {
     db: &'db dyn TyDatabase,
@@ -181,7 +187,7 @@ impl<'db> InferCtx<'db> {
                         env.insert(name, var);
                         var
                     }
-                }
+                };
             }
             super::Ty::Bool => Ty::Bool,
             super::Ty::Int => Ty::Int,
@@ -451,22 +457,22 @@ impl<'db> InferCtx<'db> {
                 //
                 let resolver = resolver_for_expr(db.upcast(), self.fn_id, tgt_expr);
                 match resolver.resolve_name(name) {
-                    Some(ResolveResult::LocalBinding(pat)) => {
-                        let pattern = self.body_ctx.pattern_to_ty.get(pat);
+                    Some(ResolveResult::Local(local)) => {
+                        let pattern = self.body_ctx.pattern_to_ty.get(local.pat_id);
                         match pattern {
                             Some(ty_var) => *ty_var,
                             None => self.new_ty_var(),
                         }
                     }
-                    Some(ResolveResult::FunctionId(fn_id)) => {
+                    Some(ResolveResult::Function(func)) => {
                         // check if resolved funcion is in group being inferred to avoid cycles
-                        let group_ty = self.group.iter().enumerate().find(|f| *f.1 == fn_id);
+                        let group_ty = self.group.iter().enumerate().find(|f| *f.1 == func.id);
                         match group_ty {
                             Some(grp) => TyVar(grp.0 as u32),
                             None => {
-                                let inferred_ty = self.db.infer_function(fn_id);
+                                let inferred_ty = func.ty(db);
                                 let mut env = HashMap::new();
-                                self.make_type(inferred_ty.fn_ty.clone(), &mut env)
+                                self.make_type(inferred_ty.clone(), &mut env)
                             }
                         }
                     }
@@ -496,23 +502,67 @@ impl<'db> InferCtx<'db> {
                 ret
             }
             Expr::FieldAccess {
+                base_string,
                 base: container,
                 label,
+                label_name,
             } => {
                 let ty = self.infer_expr(*container);
+
                 let field_var = self.new_ty_var();
                 let field_ty = match self.table.get_mut(ty.0) {
                     Ty::Adt {
                         adt_id,
                         generic_params: params,
                     } => {
-                        self.body_ctx.field_resolution.insert(tgt_expr, *adt_id);
+                        self.body_ctx.field_resolution.insert(
+                            tgt_expr,
+                            FieldResolution::ModuleDef(ModuleDef::Adt(hir::Adt::from(*adt_id))),
+                        );
                         match params.iter().next() {
                             Some(var) => *var,
                             None => self.new_ty_var(),
                         }
                     }
-                    _ => self.new_ty_var(),
+                    _ => {
+                        tracing::info!("INFERRING FIELD_RESOLUTION NON ADT");
+                        let map = self.db.module_map();
+                        let file = map.iter().find(|(_, name)| name.ends_with(base_string.as_str()));
+                        tracing::info!("fileid for modulename {:?} {}", file, base_string);
+                        if let Some(res) = file
+                            .map(|f| resolver_for_toplevel(self.db.upcast(), f.0))
+                            .and_then(|r| r.resolve_name(label_name))
+                        {
+                            match res {
+                                ResolveResult::Local(_) => {
+                                    unreachable!("This is a compiler bug")
+                                }
+                                ResolveResult::Function(it) => {
+                                    let fn_ty = it.ty(self.db);
+                                    let mut env = HashMap::new();
+
+                                    self.body_ctx.field_resolution.insert(
+                                        tgt_expr,
+                                        FieldResolution::ModuleDef(ModuleDef::Function(it)),
+                                    );
+                                    return self.make_type(fn_ty.clone(), &mut env);
+                                }
+                                // ToDo: Add type to adt in hir and fix this.
+                                ResolveResult::Variant(it) => {
+                                    let var = self.new_ty_var();
+                                    self.unify_var_ty(
+                                        var,
+                                        Ty::Adt {
+                                            generic_params: Vec::new(),
+                                            adt_id: it.parent,
+                                        },
+                                    );
+                                    return var;
+                                }
+                            }
+                        }
+                        self.new_ty_var()
+                    }
                 };
                 self.unify_var(field_ty, field_var);
                 field_ty
@@ -622,13 +672,10 @@ impl<'db> InferCtx<'db> {
     fn resolve_variant(&mut self, name: &SmolStr) -> (TyVar, Vec<TyVar>) {
         match self.resolver.resolve_name(name) {
             // return field types aswell for unification
-            Some(ResolveResult::VariantId(var_id)) => {
+            Some(ResolveResult::Variant(variant)) => {
                 let mut ty_env = HashMap::new();
-                let variant = self.db.lookup_intern_variant(var_id);
-                let variant_data =
-                    &self.db.module_items(variant.value.file_id)[variant.value.value];
-                let params = variant_data
-                    .fields
+                let params = variant
+                    .fields(self.db.upcast())
                     .iter()
                     .map(|l| self.make_type(l.type_ref.clone(), &mut ty_env))
                     .collect();

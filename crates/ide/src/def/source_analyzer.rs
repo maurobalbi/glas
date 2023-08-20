@@ -6,7 +6,7 @@ use syntax::{
 };
 
 use crate::{
-    ty::{InferenceResult, TyDatabase, Ty},
+    ty::{InferenceResult, TyDatabase, Ty, FieldResolution},
     DefDatabase, FileId, InFile,
 };
 
@@ -91,7 +91,7 @@ impl SourceAnalyzer {
         Some(ty)
     }
     
-    pub(crate) fn resolve_field(&self, db: &dyn DefDatabase, call: &ast::FieldAccessExpr) -> Option<AdtId> {
+    pub(crate) fn resolve_field(&self, db: &dyn DefDatabase, call: &ast::FieldAccessExpr) -> Option<FieldResolution> {
         let expr_id = self.expr_id(&call.clone().into())?;
         self.infer.as_ref().and_then(|i| i.resolve_field(expr_id)).clone()
     }
@@ -128,30 +128,4 @@ fn scope_for(
         .find_map(|it| scopes.scope_for_expr(it))
 }
 
-// This is very inefficient
-// ToDo: build a source_map during lowering...
-pub fn find_def(db: &dyn DefDatabase, node: InFile<&SyntaxNode>) -> Option<ModuleDefId> {
-    let module = db.module_scope(node.file_id);
-    for node in node.ancestors() {
-        if let Some(def) = ast::ModuleStatement::cast(node.value) {
-            match def {
-                ast::ModuleStatement::Function(it) => {
-                    for (id, _) in module.declarations() {
-                        match id {
-                            ModuleDefId::FunctionId(func_id) => {
-                                let func = db.lookup_intern_function(*func_id);
-                                let data = &db.module_items(node.file_id)[func.value];
-                                if data.ast_ptr == AstPtr::new(&it) {
-                                    return Some(id.clone());
-                                }
-                            }
-                            _ => {}
-                        }
-                    }
-                }
-                _ => {}
-            }
-        }
-    }
-    None
-}
+

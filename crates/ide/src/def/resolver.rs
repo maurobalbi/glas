@@ -3,10 +3,11 @@ use std::sync::Arc;
 use indexmap::{map::Entry, IndexMap};
 use smol_str::SmolStr;
 
-use crate::{DefDatabase, FileId, ty::Ty};
+use crate::{ty::Ty, DefDatabase, FileId};
 
 use super::{
-    hir_def::{VariantId, ModuleDefId, AdtId},
+    hir::{Local, Function, Variant},
+    hir_def::{AdtId, ModuleDefId, VariantId},
     module::{ExprId, PatternId},
     scope::{ModuleScope, ScopeId},
     ExprScopes, FunctionId,
@@ -53,9 +54,9 @@ impl ScopeNames {
 }
 
 pub enum ResolveResult {
-    LocalBinding(PatternId),
-    FunctionId(FunctionId),
-    VariantId(VariantId),
+    Local(Local),
+    Function(Function),
+    Variant(Variant),
 }
 
 impl Resolver {
@@ -68,22 +69,30 @@ impl Resolver {
                     for expr_scope in scope.expr_scopes.scope_chain(Some(scope.scope_id)) {
                         let entries = scope.expr_scopes.entries(expr_scope);
                         for entry in entries {
-                            map.add(entry.name(), ResolveResult::LocalBinding(entry.pat()))
-                        };
-                    };
-                },
+                            if let Some(owner) = self.body_owner() {
+                                map.add(
+                                    entry.name(),
+                                    ResolveResult::Local(Local {
+                                        parent: owner,
+                                        pat_id: entry.pat(),
+                                    }),
+                                )
+                            }
+                        }
+                    }
+                }
             }
-        };
+        }
 
         for (name, moddef) in self.module_scope.values() {
             match moddef {
                 super::hir_def::ModuleDefId::FunctionId(it) => {
-                    map.add(name, ResolveResult::FunctionId(it.clone()))
-                },
-                super::hir_def::ModuleDefId::AdtId(_) => {},
+                    map.add(name, ResolveResult::Function(Function::from(*it).clone()))
+                }
+                super::hir_def::ModuleDefId::AdtId(_) => {}
                 super::hir_def::ModuleDefId::VariantId(it) => {
-                    map.add(name, ResolveResult::VariantId(it.clone()))
-                },
+                    map.add(name, ResolveResult::Variant(Variant::from(*it).clone()))
+                }
             }
         }
 
@@ -93,7 +102,7 @@ impl Resolver {
     pub fn resolve_type(&self, name: &SmolStr) -> Option<AdtId> {
         match self.module_scope.resovlve_type(name.clone()) {
             Some(ModuleDefId::AdtId(t)) => Some(t.clone()),
-            _ => None
+            _ => None,
         }
     }
 
@@ -105,8 +114,11 @@ impl Resolver {
                         .expr_scopes
                         .resolve_name_in_scope(scope.scope_id, name);
 
-                    if let Some(e) = entry {
-                        return Some(ResolveResult::LocalBinding(e.pat()));
+                    if let (Some(e), Some(owner)) = (entry, self.body_owner()) {
+                        return Some(ResolveResult::Local(Local {
+                            parent: owner,
+                            pat_id: e.pat(),
+                        }));
                     }
                 } // Scope::GenericParams { params, def } => {}
             }
@@ -115,11 +127,11 @@ impl Resolver {
         if let Some(res) = self.module_scope.resolve_name_locally(name.clone()) {
             match *res {
                 super::hir_def::ModuleDefId::FunctionId(it) => {
-                    return Some(ResolveResult::FunctionId(it))
+                    return Some(ResolveResult::Function(Function::from(it)))
                 }
                 super::hir_def::ModuleDefId::AdtId(_) => {}
                 super::hir_def::ModuleDefId::VariantId(it) => {
-                    return Some(ResolveResult::VariantId(it))
+                    return Some(ResolveResult::Variant(Variant::from(it)))
                 }
             }
         }

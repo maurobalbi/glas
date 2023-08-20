@@ -29,6 +29,28 @@ fn check_all(src: &str, expect: Expect) {
     expect.assert_eq(&got);
 }
 
+#[track_caller]
+fn check_fix(src: &str, expect: Expect) {
+    let (db, f) = TestDB::from_fixture(src).unwrap();
+    let scope = db.module_scope(f[0].file_id);
+    let mut output = Vec::new();
+    for fun in scope.declarations() {
+        match fun.0 {
+            crate::def::hir_def::ModuleDefId::FunctionId(fn_id) => {
+                let infer = db.infer_function(fn_id);
+                let func = db.lookup_intern_function(fn_id);
+                let func = &db.module_items(func.file_id)[func.value];
+                output.push(format!("{}: {}", func.name, infer.fn_ty.display(&db)));
+            }
+            crate::def::hir_def::ModuleDefId::AdtId(_) => {}
+            crate::def::hir_def::ModuleDefId::VariantId(_) => {}
+        }
+    }
+
+    let got = output.join("\n");
+    expect.assert_eq(&got);
+}
+
 #[test]
 fn let_in() {
     check_all(
@@ -250,4 +272,30 @@ fn boolean() {
     check_all("fn spread() {
         True
       }", expect!["spread: fn() -> Bool"])
+}
+
+
+#[test]
+fn field_access() {
+    check_fix(r#"
+#-test.gleam
+fn main() {
+    1
+}
+
+type Bla {
+    Bla
+}
+
+#-test2.gleam
+import test
+
+fn test() { "abc" }
+
+fn bla() {
+    test.$0Bla
+}
+"#, expect![r#"main: fn() -> Int
+test: fn() -> String
+bla: fn() -> Bla"#])
 }

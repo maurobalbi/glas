@@ -10,7 +10,7 @@ use crate::{DefDatabase, FileId, InFile};
 
 use super::{
     body::Body,
-    hir_def::{AdtLoc, FunctionLoc, ModuleDefId, VariantLoc},
+    hir_def::{AdtLoc, FunctionLoc, ModuleDefId, VariantId},
     module::{Clause, Expr, ExprId, ImportData, Pattern, PatternId, Statement, Visibility},
     resolver::ResolveResult,
     resolver_for_expr, FunctionId,
@@ -58,14 +58,8 @@ pub fn module_scope_query(db: &dyn DefDatabase, file_id: FileId) -> Arc<ModuleSc
         for variant_id in adt.variants.clone() {
             let variant = &module_data[variant_id];
             let name = &variant.name;
-            let variant_loc = db.intern_variant(VariantLoc {
-                parent: adt_loc,
-                value: InFile {
-                    value: variant_id,
-                    file_id,
-                },
-            });
-            let def = ModuleDefId::VariantId(variant_loc);
+  
+            let def = ModuleDefId::VariantId(VariantId {parent: adt_loc, local_id: variant_id});
             scope.values.insert(name.clone(), def.clone());
 
             //use visibility of adt
@@ -213,6 +207,8 @@ impl ExprScopes {
             Expr::FieldAccess {
                 base: container,
                 label,
+                base_string: _,
+                label_name: _,
             } => {
                 self.traverse_expr(body, *container, scope);
             }
@@ -351,8 +347,8 @@ pub(crate) fn dependency_order_query(
                     match expr {
                         Expr::Variable(name) => {
                             let resolver = resolver_for_expr(db, owner_id.clone(), e_id);
-                            let Some(ResolveResult::FunctionId(fn_id)) = resolver.resolve_name(name) else {return};
-                            edges.push((owner_id.clone().0.as_u32(), fn_id.0.as_u32()))
+                            let Some(ResolveResult::Function(fn_id)) = resolver.resolve_name(name) else {return};
+                            edges.push((owner_id.clone().0.as_u32(), fn_id.id.0.as_u32()))
                         },
                         _ => {},
                 });

@@ -7,7 +7,7 @@ use syntax::{
     AstPtr,
 };
 
-use crate::{DefDatabase, Diagnostic, FileId, InFile, ty};
+use crate::{ty, DefDatabase, Diagnostic, FileId, InFile};
 
 use super::{
     module::{Clause, Expr, ExprId, Pattern, PatternId, Statement},
@@ -145,12 +145,7 @@ pub(super) fn lower(db: &dyn DefDatabase, function_id: FunctionId) -> (Body, Bod
         }
     }
 
-    let expr_id = ctx.lower_expr_opt(ast::Expr::cast(
-        ast.body()
-            .expect("Expected a body, this is a compiler bug!")
-            .syntax()
-            .clone(),
-    ));
+    let expr_id = ctx.lower_expr_opt(ast.body().map(|b| ast::Expr::Block(b)));
     ctx.body.body_expr = expr_id;
 
     (ctx.body, ctx.source_map)
@@ -276,10 +271,15 @@ impl BodyLowerCtx<'_> {
             }
             ast::Expr::FieldAccessExpr(field) => {
                 let container = self.lower_expr_opt(field.base());
+                let label = self.lower_expr_opt(None);
                 self.alloc_expr(
                     Expr::FieldAccess {
+                        base_string: field
+                            .base()
+                            .map_or_else(Name::missing, |b| b.syntax().to_string().into()),
                         base: container,
-                        label: field
+                        label,
+                        label_name: field
                             .label()
                             .and_then(|t| t.text())
                             .unwrap_or_else(Name::missing),

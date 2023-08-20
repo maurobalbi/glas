@@ -3,7 +3,7 @@ use std::{ops::Index, sync::Arc};
 use crate::{base::Target, ty, Diagnostic, DiagnosticKind};
 
 use super::{
-    module::{AdtData, ConstructorField, FunctionData, ImportData, Param, VariantData, Visibility},
+    module::{AdtData, Field, FunctionData, ImportData, Param, VariantData, Visibility},
     AstPtr, DefDatabase,
 };
 use la_arena::{Arena, Idx, IdxRange, RawIdx};
@@ -234,7 +234,7 @@ impl<'a> LowerCtx<'a> {
         if let Some(fields) = constructor.field_list() {
             for field in fields.fields() {
                 if let Some(type_ref) = ty::ty_from_ast_opt(field.type_()) {
-                    fields_vec.push(ConstructorField {
+                    fields_vec.push(Field {
                         label: field.label().and_then(|t| t.text()),
                         type_ref,
                     })

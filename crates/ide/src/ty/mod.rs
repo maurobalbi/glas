@@ -7,7 +7,7 @@ mod tests;
 
 use std::{collections::HashMap, sync::Arc};
 
-pub use infer::InferenceResult;
+pub use infer::{FieldResolution, InferenceResult};
 use smol_str::SmolStr;
 use syntax::ast;
 
@@ -49,7 +49,7 @@ pub enum Ty {
     },
     Tuple {
         fields: Arc<Vec<Ty>>,
-    },
+    }
 }
 
 pub fn ty_from_ast_opt(type_ast: Option<ast::TypeExpr>) -> Option<Ty> {
@@ -62,8 +62,8 @@ pub fn ty_from_ast_opt(type_ast: Option<ast::TypeExpr>) -> Option<Ty> {
 pub fn ty_from_ast(ast_expr: ast::TypeExpr) -> Ty {
     tracing::info!("{:?}", ast_expr);
     match ast_expr {
-        ast::TypeExpr::FnType(_fn_type) => todo!(),
-        ast::TypeExpr::TupleType(_) => todo!(),
+        ast::TypeExpr::FnType(_fn_type) => Ty::Unknown,
+        ast::TypeExpr::TupleType(_) => Ty::Unknown,
         ast::TypeExpr::TypeNameRef(t) => {
             if let Some(ty) = t.constructor_name().and_then(|t| t.text()) {
                 match ty.as_str() {
