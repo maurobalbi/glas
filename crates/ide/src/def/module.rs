@@ -1,5 +1,4 @@
 use la_arena::{Idx, IdxRange};
-use ordered_float::OrderedFloat;
 use smol_str::SmolStr;
 use syntax::{
     ast::{self, BinaryOpKind, LiteralKind},

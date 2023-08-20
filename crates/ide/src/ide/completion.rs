@@ -1,22 +1,13 @@
 use smol_str::SmolStr;
 use syntax::{
     ast::{self, AstNode, SourceFile},
-    best_token_at_offset, find_node_at_offset, GleamLanguage, SyntaxKind, SyntaxNode, TextRange,
-    TextSize, T,
+    best_token_at_offset, find_node_at_offset, SyntaxKind, SyntaxNode, TextRange, TextSize, T,
 };
 
 use crate::{
-    def::{
-        find_def,
-        hir_def::{FunctionId, ModuleDefId},
-        resolver::{resolver_for_toplevel, Resolver},
-        resolver_for_expr,
-    },
-    ty::TyDatabase,
+    def::{find_def, hir_def::ModuleDefId, resolver::resolver_for_toplevel, resolver_for_expr},
     DefDatabase, FilePos, InFile,
 };
-
-use super::RootDatabase;
 
 /// A single completion variant in the editor pop-up.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -113,13 +104,13 @@ impl<'db> CompletionContext<'db> {
         }
     }
 
-    fn classify_name_ref(&mut self, original_file: &'db SourceFile, name_ref: &ast::NameRef) {}
+    fn classify_name_ref(&mut self, _original_file: &'db SourceFile, _name_ref: &ast::NameRef) {}
 }
 
 pub(crate) fn completions(
     db: &dyn DefDatabase,
-    fpos @ FilePos { file_id, pos }: FilePos,
-    trigger_char: Option<char>,
+    fpos @ FilePos { file_id, pos: _ }: FilePos,
+    _trigger_char: Option<char>,
 ) -> Option<Vec<CompletionItem>> {
     let parse = db.parse(file_id);
     let root = parse.root();
@@ -195,12 +186,10 @@ fn complete_snippet(acc: &mut Vec<CompletionItem>, ctx: &CompletionContext) {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
 
     use crate::base::SourceDatabase;
     use crate::tests::TestDB;
     use expect_test::{expect, Expect};
-    use tracing_test::traced_test;
 
     #[track_caller]
     fn check_no(fixture: &str, label: &str) {
@@ -212,7 +201,7 @@ mod tests {
 
     #[track_caller]
     fn check_trigger(fixture: &str, trigger_char: Option<char>, label: &str, expect: Expect) {
-        let (mut db, f) = TestDB::from_fixture(fixture).unwrap();
+        let (db, f) = TestDB::from_fixture(fixture).unwrap();
 
         let compes = super::completions(&db, f[0], trigger_char).expect("No completion");
         let item = compes
@@ -230,7 +219,7 @@ mod tests {
 
     #[track_caller]
     fn check_all(fixture: &str, trigger_char: Option<char>, expect: Expect) {
-        let (mut db, f) = TestDB::from_fixture(fixture).unwrap();
+        let (db, f) = TestDB::from_fixture(fixture).unwrap();
         let compes = super::completions(&db, f[0], trigger_char)
             .expect("No completion")
             .iter()

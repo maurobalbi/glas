@@ -1,14 +1,13 @@
 use super::NavigationTarget;
-use crate::def::hir_def::{AdtLoc, ModuleDefId};
-use crate::def::resolver::resolver_for_toplevel;
+
+use crate::def::semantics;
 use crate::def::source::HasSource;
 use crate::def::Semantics;
-use crate::def::{hir, resolver_for_expr, semantics};
-use crate::ty::{FieldResolution, TyDatabase};
-use crate::{DefDatabase, FilePos, InFile, VfsPath};
-use smol_str::SmolStr;
-use syntax::ast::{self, AstNode, FieldAccessExpr};
-use syntax::{best_token_at_offset, match_ast, TextRange, TextSize};
+use crate::ty::TyDatabase;
+use crate::{DefDatabase, FilePos, VfsPath};
+
+use syntax::ast::AstNode;
+use syntax::best_token_at_offset;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum GotoDefinitionResult {

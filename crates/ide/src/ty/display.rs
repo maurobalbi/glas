@@ -172,7 +172,7 @@ where
 impl TyDisplay for Ty {
     fn ty_fmt(
         &self,
-        f @ &mut TyFormatter { db, .. }: &mut TyFormatter<'_>,
+        f @ &mut TyFormatter { db: _, .. }: &mut TyFormatter<'_>,
     ) -> Result<(), TyDisplayError> {
         match self {
             Ty::Unknown => write!(f, "?"),

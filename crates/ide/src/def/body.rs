@@ -3,7 +3,7 @@ use std::{collections::HashMap, ops};
 use la_arena::{Arena, ArenaMap, Idx, IdxRange, RawIdx};
 use smol_str::SmolStr;
 use syntax::{
-    ast::{self, AstNode, Lambda, LiteralKind, Name, StatementExpr},
+    ast::{self, AstNode, Name, StatementExpr},
     AstPtr,
 };
 
@@ -292,7 +292,8 @@ impl BodyLowerCtx<'_> {
                     let start = self.next_pattern_idx();
                     for param in param_list.params() {
                         if let Some(pattern) = param.pattern() {
-                            let pat_id = self.lower_pattern(ast::Pattern::PatternVariable(pattern));
+                            let _pat_id =
+                                self.lower_pattern(ast::Pattern::PatternVariable(pattern));
                         }
                     }
                     let end = self.next_pattern_idx();

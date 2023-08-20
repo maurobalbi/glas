@@ -1,4 +1,4 @@
-use std::{ops::Index, sync::Arc};
+use std::ops::Index;
 
 use crate::{base::Target, ty, Diagnostic, DiagnosticKind};
 
@@ -9,7 +9,7 @@ use super::{
 use la_arena::{Arena, Idx, IdxRange, RawIdx};
 use smol_str::SmolStr;
 use syntax::{
-    ast::{self, AstNode, Name},
+    ast::{self, AstNode},
     Parse,
 };
 

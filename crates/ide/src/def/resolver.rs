@@ -3,12 +3,12 @@ use std::sync::Arc;
 use indexmap::{map::Entry, IndexMap};
 use smol_str::SmolStr;
 
-use crate::{ty::Ty, DefDatabase, FileId};
+use crate::{DefDatabase, FileId};
 
 use super::{
     hir::{Function, Local, Variant},
-    hir_def::{AdtId, ModuleDefId, VariantId},
-    module::{ExprId, PatternId},
+    hir_def::{AdtId, ModuleDefId},
+    module::ExprId,
     scope::{ModuleScope, ScopeId},
     ExprScopes, FunctionId,
 };

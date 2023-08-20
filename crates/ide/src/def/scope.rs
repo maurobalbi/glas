@@ -6,7 +6,7 @@ use petgraph::stable_graph::StableGraph;
 use salsa::InternId;
 use smol_str::SmolStr;
 
-use crate::{DefDatabase, FileId, InFile};
+use crate::{DefDatabase, FileId};
 
 use super::{
     body::Body,
@@ -211,7 +211,7 @@ impl ExprScopes {
             }
             Expr::FieldAccess {
                 base: container,
-                label,
+                label: _,
                 base_string: _,
                 label_name: _,
             } => {
@@ -312,15 +312,15 @@ impl ExprScopes {
             }
             Pattern::Hole => {}
             Pattern::VariantRef {
-                name,
-                module,
+                name: _,
+                module: _,
                 fields,
             } => {
                 for field in fields {
                     self.add_bindings(body, scope, field);
                 }
             }
-            Pattern::Literal { kind } => {}
+            Pattern::Literal { kind: _ } => {}
         }
     }
 }

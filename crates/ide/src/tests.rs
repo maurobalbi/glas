@@ -14,8 +14,6 @@ use std::{mem, ops};
 use syntax::ast::AstNode;
 use syntax::{GleamLanguage, SyntaxNode, TextSize};
 
-use crate::DEFAULT_IMPORT_FILE;
-
 pub const MARKER_INDICATOR: char = '$';
 
 #[salsa::database(

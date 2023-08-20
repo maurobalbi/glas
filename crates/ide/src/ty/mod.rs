@@ -11,11 +11,7 @@ pub use infer::{FieldResolution, InferenceResult};
 use smol_str::SmolStr;
 use syntax::ast;
 
-use crate::{
-    def::hir_def::{AdtId, FunctionId},
-    ide::Upcast,
-    DefDatabase,
-};
+use crate::{def::hir_def::FunctionId, ide::Upcast, DefDatabase};
 
 #[salsa::query_group(TyDatabaseStorage)]
 pub trait TyDatabase: DefDatabase + Upcast<dyn DefDatabase> {

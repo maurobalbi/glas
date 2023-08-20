@@ -1,14 +1,12 @@
 use crate::DefDatabase;
-use smol_str::SmolStr;
-use syntax::ast::AstNode;
-use syntax::{ast, best_token_at_offset, TextRange};
 
-use crate::def::hir_def::ModuleDefId;
-use crate::def::resolver::resolver_for_toplevel;
-use crate::def::{self, resolver_for_expr, semantics, Semantics};
+use syntax::ast::AstNode;
+use syntax::{best_token_at_offset, TextRange};
+
+use crate::def::{semantics, Semantics};
 use crate::ty::display::TyDisplay;
 use crate::ty::TyDatabase;
-use crate::{FilePos, InFile};
+use crate::FilePos;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HoverResult {
@@ -54,7 +52,6 @@ mod tests {
     use crate::base::SourceDatabase;
     use crate::tests::TestDB;
     use expect_test::{expect, Expect};
-    use tracing_test::traced_test;
 
     #[track_caller]
     fn check(fixture: &str, full: &str, expect: Expect) {

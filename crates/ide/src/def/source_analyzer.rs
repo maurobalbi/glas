@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use syntax::{
     ast::{self, AstNode},
-    AstPtr, SyntaxNode,
+    SyntaxNode,
 };
 
 use crate::{
@@ -12,7 +12,7 @@ use crate::{
 
 use super::{
     body::{Body, BodySourceMap},
-    hir_def::{AdtId, FunctionId, ModuleDefId},
+    hir_def::FunctionId,
     module::{ExprId, PatternId},
     resolver::{resolver_for_scope, Resolver},
     scope::{ExprScopes, ScopeId},
@@ -78,7 +78,7 @@ impl SourceAnalyzer {
         self.body_source_map()?.pattern_for_node(src)
     }
 
-    pub(crate) fn type_of_expr(&self, db: &dyn DefDatabase, expr: &ast::Expr) -> Option<Ty> {
+    pub(crate) fn type_of_expr(&self, _db: &dyn DefDatabase, expr: &ast::Expr) -> Option<Ty> {
         let expr_id = self.expr_id(expr)?;
         let infer = self.infer.as_ref()?;
         let ty = infer.ty_for_expr(expr_id).clone();
@@ -87,7 +87,7 @@ impl SourceAnalyzer {
 
     pub(crate) fn type_of_pattern(
         &self,
-        db: &dyn DefDatabase,
+        _db: &dyn DefDatabase,
         pattern: &ast::Pattern,
     ) -> Option<Ty> {
         let pattern_id = self.pattern_id(pattern)?;
@@ -98,7 +98,7 @@ impl SourceAnalyzer {
 
     pub(crate) fn resolve_field(
         &self,
-        db: &dyn DefDatabase,
+        _db: &dyn DefDatabase,
         call: &ast::FieldAccessExpr,
     ) -> Option<FieldResolution> {
         let expr_id = self.expr_id(&call.clone().into())?;

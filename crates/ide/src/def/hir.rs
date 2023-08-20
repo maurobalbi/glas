@@ -1,20 +1,16 @@
 use la_arena::Idx;
 use smol_str::SmolStr;
-use syntax::{
-    ast::{self, Pattern},
-    AstPtr,
-};
+use syntax::ast::{self};
 
 use crate::{
     impl_from,
     ty::{self, TyDatabase},
-    DefDatabase, InFile, SourceRootId,
+    DefDatabase, SourceRootId,
 };
 
 use super::{
     hir_def::{AdtId, LocalVariantId},
     module::{Field, PatternId, VariantData},
-    module_items,
     scope::ExprScopes,
     FunctionId, InternDatabase,
 };

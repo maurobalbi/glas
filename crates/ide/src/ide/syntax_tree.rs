@@ -1,5 +1,3 @@
-use syntax::{NodeOrToken, TextRange};
-
 use crate::{DefDatabase, FileId};
 
 use super::RootDatabase;

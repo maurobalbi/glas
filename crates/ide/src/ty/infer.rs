@@ -1,20 +1,13 @@
-use std::{
-    cmp::{max, min},
-    collections::HashMap,
-    hash::Hash,
-    mem,
-    ops::Deref,
-    sync::Arc,
-};
+use std::{cmp::min, collections::HashMap, mem, ops::Deref, sync::Arc};
 
 use la_arena::ArenaMap;
 use smol_str::SmolStr;
-use syntax::ast::{Adt, BinaryOpKind, LiteralKind, StmtExpr};
+use syntax::ast::{BinaryOpKind, LiteralKind};
 
 use crate::def::{
     body::Body,
     hir::{self, ModuleDef},
-    hir_def::{self, AdtId, FunctionId, ModuleDefId},
+    hir_def::{AdtId, FunctionId},
     module::{Expr, ExprId, Field, Pattern, PatternId, Statement},
     resolver::{resolver_for_toplevel, ResolveResult, Resolver},
     resolver_for_expr,
@@ -504,7 +497,7 @@ impl<'db> InferCtx<'db> {
             Expr::FieldAccess {
                 base_string,
                 base: container,
-                label,
+                label: _,
                 label_name,
             } => {
                 let ty = self.infer_expr(*container);
@@ -575,7 +568,7 @@ impl<'db> InferCtx<'db> {
                 for field in fields {
                     params.push(self.infer_expr(*field));
                 }
-                let (ty, params) = self.resolve_variant(name);
+                let (ty, _params) = self.resolve_variant(name);
                 ty
             }
             Expr::List { elements } => {
@@ -624,7 +617,7 @@ impl<'db> InferCtx<'db> {
         match &self.body[pattern] {
             Pattern::VariantRef {
                 name,
-                module,
+                module: _,
                 fields,
             } => {
                 let (pat_ty, mut field_tys) = self.resolve_variant(name);

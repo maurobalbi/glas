@@ -85,8 +85,6 @@ impl Upcast<dyn DefDatabase> for RootDatabase {
 
 impl Default for RootDatabase {
     fn default() -> Self {
-        use crate::SourceDatabase;
-
         let mut db = Self {
             storage: salsa::Storage::default(),
         };
