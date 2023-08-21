@@ -47,13 +47,21 @@ pub struct FunctionData {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub struct ModuleImport {
+    pub name: SmolStr,
+    pub accessor: SmolStr,
+
+    pub ast_ptr: AstPtr<ast::Import>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ImportData {
-    pub module: SmolStr, // e.g. import >>one/wobble<<
+    pub module: Idx<ModuleImport>, // e.g. import >>one/wobble<<
 
     pub unqualified_as_name: Option<SmolStr>, // e.g. {* as >>AsName<<}
     pub unqualified_name: SmolStr,            // e.g. { >>Name<< as Wobble }
 
-    pub ast_ptr: AstPtr<ast::Import>,
+    pub ast_ptr: AstPtr<ast::UnqualifiedImport>,
 }
 
 impl ImportData {

@@ -152,31 +152,34 @@ SOURCE_FILE@0..45079
     IMPORT@721..737
       IMPORT_KW@721..727 "import"
       WHITESPACE@727..728 " "
-      PATH@728..733
-        IDENT@728..733 "gleam"
-      SLASH@733..734 "/"
-      PATH@734..737
-        IDENT@734..737 "int"
+      MODULE_PATH@728..737
+        PATH@728..733
+          IDENT@728..733 "gleam"
+        SLASH@733..734 "/"
+        PATH@734..737
+          IDENT@734..737 "int"
   WHITESPACE@737..738 "\n"
   TARGET_GROUP@738..756
     IMPORT@738..756
       IMPORT_KW@738..744 "import"
       WHITESPACE@744..745 " "
-      PATH@745..750
-        IDENT@745..750 "gleam"
-      SLASH@750..751 "/"
-      PATH@751..756
-        IDENT@751..756 "float"
+      MODULE_PATH@745..756
+        PATH@745..750
+          IDENT@745..750 "gleam"
+        SLASH@750..751 "/"
+        PATH@751..756
+          IDENT@751..756 "float"
   WHITESPACE@756..757 "\n"
   TARGET_GROUP@757..783
     IMPORT@757..783
       IMPORT_KW@757..763 "import"
       WHITESPACE@763..764 " "
-      PATH@764..769
-        IDENT@764..769 "gleam"
-      SLASH@769..770 "/"
-      PATH@770..775
-        IDENT@770..775 "order"
+      MODULE_PATH@764..775
+        PATH@764..769
+          IDENT@764..769 "gleam"
+        SLASH@769..770 "/"
+        PATH@770..775
+          IDENT@770..775 "order"
       DOT@775..776 "."
       L_BRACE@776..777 "{"
       UNQUALIFIED_IMPORT@777..782
@@ -188,21 +191,23 @@ SOURCE_FILE@0..45079
     IMPORT@784..801
       IMPORT_KW@784..790 "import"
       WHITESPACE@790..791 " "
-      PATH@791..796
-        IDENT@791..796 "gleam"
-      SLASH@796..797 "/"
-      PATH@797..801
-        IDENT@797..801 "pair"
+      MODULE_PATH@791..801
+        PATH@791..796
+          IDENT@791..796 "gleam"
+        SLASH@796..797 "/"
+        PATH@797..801
+          IDENT@797..801 "pair"
   WHITESPACE@801..802 "\n"
   TARGET_GROUP@802..824
     IMPORT@802..824
       IMPORT_KW@802..808 "import"
       WHITESPACE@808..809 " "
-      PATH@809..814
-        IDENT@809..814 "gleam"
-      SLASH@814..815 "/"
-      PATH@815..818
-        IDENT@815..818 "map"
+      MODULE_PATH@809..818
+        PATH@809..814
+          IDENT@809..814 "gleam"
+        SLASH@814..815 "/"
+        PATH@815..818
+          IDENT@815..818 "map"
       DOT@818..819 "."
       L_BRACE@819..820 "{"
       UNQUALIFIED_IMPORT@820..823

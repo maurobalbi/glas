@@ -295,6 +295,7 @@ def! {
     EXPR_SPREAD,
     LITERAL,
     IMPORT,
+    MODULE_PATH,
     FUNCTION,
     LAMBDA,
     FN_BODY,

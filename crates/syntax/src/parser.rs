@@ -1066,6 +1066,7 @@ fn import(p: &mut Parser, m: MarkOpened) {
     p.expect(T!["import"]);
     let mut parsed_ident = false;
 
+    let module_path = p.start_node();
     while !p.at_any(STMT_RECOVERY) && !p.at(T!["."]) && !p.eof() {
         parsed_ident = true;
         let n = p.start_node();
@@ -1080,6 +1081,8 @@ fn import(p: &mut Parser, m: MarkOpened) {
             break;
         }
     }
+    p.finish_node(module_path, MODULE_PATH);
+
     if !parsed_ident {
         p.error(ErrorKind::ExpectedIdentifier);
     }

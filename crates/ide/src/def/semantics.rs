@@ -8,7 +8,7 @@ use syntax::{
 
 use crate::{
     impl_from,
-    ty::{FieldResolution, TyDatabase},
+    ty::{FieldResolution, TyDatabase, self},
     DefDatabase, FileId, InFile,
 };
 
@@ -117,6 +117,11 @@ impl<'db> Semantics<'db> {
         self.analyze(name.syntax())?
             .resolver
             .resolve_name(&SmolStr::from(name.text()?))
+    }
+
+    pub fn ty_of_expr(&self, expr: &ast::Expr) -> Option<ty::Ty> {
+       self.analyze(expr.syntax())?
+            .type_of_expr(self.db.upcast(), expr)
     }
 
     fn analyze(&self, node: &SyntaxNode) -> Option<SourceAnalyzer> {

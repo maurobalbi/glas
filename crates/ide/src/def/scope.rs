@@ -13,7 +13,7 @@ use super::{
     hir_def::{AdtLoc, FunctionLoc, ModuleDefId, VariantId},
     module::{Clause, Expr, ExprId, ImportData, Pattern, PatternId, Statement, Visibility},
     resolver::ResolveResult,
-    resolver_for_expr, FunctionId,
+    resolver_for_expr, FunctionId, ModuleItemData,
 };
 
 pub fn module_scope_query(db: &dyn DefDatabase, file_id: FileId) -> Arc<ModuleScope> {
@@ -21,8 +21,8 @@ pub fn module_scope_query(db: &dyn DefDatabase, file_id: FileId) -> Arc<ModuleSc
 
     let mut scope = ModuleScope::default();
 
-    for (_, import) in module_data.imports() {
-        if let Some(val) = scope.resolve_import(db, import) {
+    for (_, import) in module_data.unqualified_imports() {
+        if let Some(val) = scope.resolve_import(db, &module_data, import) {
             match val {
                 ModuleDefId::AdtId(_) => scope.types.insert(import.local_name(), val),
                 _ => scope.values.insert(import.local_name(), val),
@@ -110,13 +110,14 @@ impl ModuleScope {
         self.declarations.iter().map(|v| v.1)
     }
 
-    fn resolve_import(&self, db: &dyn DefDatabase, import: &ImportData) -> Option<ModuleDefId> {
+    fn resolve_import(&self, db: &dyn DefDatabase,module_items: &ModuleItemData, import: &ImportData) -> Option<ModuleDefId> {
         let ImportData {
             unqualified_name: unqualifed_name,
             module,
             ..
         } = import;
-        let file_id = db.module_map().file_for_module_name(module.clone())?;
+        let module = &module_items[*module];
+        let file_id = db.module_map().file_for_module_name(module.name.clone())?;
         let scope = db.module_scope(file_id);
         let Some((item, Visibility::Public)) = scope.declarations.get(unqualifed_name) else {
             return None

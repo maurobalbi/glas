@@ -3,7 +3,7 @@ use std::ops::Index;
 use crate::{base::Target, ty, Diagnostic, DiagnosticKind};
 
 use super::{
-    module::{AdtData, Field, FunctionData, ImportData, Param, VariantData, Visibility},
+    module::{AdtData, Field, FunctionData, ImportData, Param, VariantData, Visibility, ModuleImport},
     AstPtr, DefDatabase,
 };
 use la_arena::{Arena, Idx, IdxRange, RawIdx};
@@ -12,22 +12,25 @@ use syntax::{
     ast::{self, AstNode},
     Parse,
 };
+use tracing_subscriber::fmt::format;
 
 #[derive(Default, Debug, Eq, PartialEq)]
 pub struct ModuleItemData {
     functions: Arena<FunctionData>,
-    imports: Arena<ImportData>,
+    unqualified_imports: Arena<ImportData>,
     adts: Arena<AdtData>,
+
+    module_imports: Arena<ModuleImport>,
 
     variants: Arena<VariantData>,
     pub diagnostics: Vec<Diagnostic>,
 }
 
 impl ModuleItemData {
-    pub fn imports(
+    pub fn unqualified_imports(
         &self,
     ) -> impl Iterator<Item = (Idx<ImportData>, &ImportData)> + ExactSizeIterator + '_ {
-        self.imports.iter()
+        self.unqualified_imports.iter()
     }
 
     pub fn adts(&self) -> impl Iterator<Item = (Idx<AdtData>, &AdtData)> + ExactSizeIterator + '_ {
@@ -44,6 +47,12 @@ impl ModuleItemData {
         &self,
     ) -> impl Iterator<Item = (Idx<FunctionData>, &FunctionData)> + ExactSizeIterator + '_ {
         self.functions.iter()
+    }
+
+    pub fn module_imports(
+        &self,
+    ) -> impl Iterator<Item = (Idx<ModuleImport>, &ModuleImport)> + ExactSizeIterator + '_ {
+        self.module_imports.iter()
     }
 }
 
@@ -71,6 +80,13 @@ impl Index<Idx<FunctionData>> for ModuleItemData {
     }
 }
 
+impl Index<Idx<ModuleImport>> for ModuleItemData {
+    type Output = ModuleImport;
+
+    fn index(&self, index: Idx<ModuleImport>) -> &Self::Output {
+        &self.module_imports[index]
+    }
+}
 struct LowerCtx<'a> {
     db: &'a dyn DefDatabase,
     module_items: ModuleItemData,
@@ -101,8 +117,12 @@ impl<'a> LowerCtx<'a> {
         id
     }
 
-    fn alloc_import(&mut self, import: ImportData) -> Idx<ImportData> {
-        self.module_items.imports.alloc(import)
+    fn alloc_unqualified_import(&mut self, import: ImportData) -> Idx<ImportData> {
+        self.module_items.unqualified_imports.alloc(import)
+    }
+    
+    fn alloc_module_import(&mut self, import: ModuleImport) -> Idx<ModuleImport> {
+        self.module_items.module_imports.alloc(import)
     }
 
     fn diagnostic(&mut self, diag: Diagnostic) {
@@ -156,19 +176,34 @@ impl<'a> LowerCtx<'a> {
         let module_name: SmolStr = i
             .module_path()
             .into_iter()
+            .flat_map(|m| m.path())
             .filter_map(|t| Some(format!("{}", t.token()?.text())))
-            .collect();
+            .collect::<Vec<_>>()
+            .join("/")
+            .into();
+
+        let accessor:SmolStr = i
+            .module_path()
+            .into_iter()
+            .flat_map(|m| m.path())
+            .filter_map(|t| Some(format!("{}", t.token()?.text())))
+            .last()
+            .expect("This is a compiler bug")
+            .into();
+
+        let module_id = self.alloc_module_import(ModuleImport { name: module_name, accessor, ast_ptr });
 
         for unqualified in i.unqualified() {
             if let Some(unqualified_name) = unqualified.name().and_then(|t| t.text()) {
+                let ast_ptr = AstPtr::new(&unqualified);
                 let unqualified_as_name: Option<SmolStr> =
                     unqualified.as_name().and_then(|t| t.text());
 
-                self.alloc_import(ImportData {
-                    module: module_name.clone(),
+                self.alloc_unqualified_import(ImportData {
+                    module: module_id.clone(),
                     unqualified_as_name,
                     unqualified_name,
-                    ast_ptr: ast_ptr.clone(),
+                    ast_ptr: ast_ptr,
                 });
             }
         }

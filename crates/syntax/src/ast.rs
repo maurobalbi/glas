@@ -396,9 +396,12 @@ asts! {
         base: Expr,
     },
     IMPORT = Import {
-        module_path: [Path],
+        module_path: ModulePath,
         as_name: Name,
         unqualified: [UnqualifiedImport],
+    },
+    MODULE_PATH = ModulePath {
+        path: [Path],
     },
     VARIABLE = Variable {
         name: NameRef,
@@ -767,7 +770,8 @@ mod tests {
     #[test]
     fn import_module() {
         let e = parse::<Import>("import aa/a");
-        let mut iter = e.module_path();
+        let module_path = e.module_path();
+        let mut iter = module_path.unwrap().path();
         iter.next().unwrap().syntax().should_eq("aa");
         iter.next().unwrap().syntax().should_eq("a");
         assert!(iter.next().is_none());
@@ -793,6 +797,8 @@ mod tests {
 
         let str = e
             .module_path()
+            .unwrap()
+            .path()
             .filter_map(|t| Some(format!("{}", t.token()?.text())))
             .collect::<Vec<_>>()
             .join("/");
