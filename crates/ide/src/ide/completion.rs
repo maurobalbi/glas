@@ -8,6 +8,8 @@ use syntax::{
 use crate::{
     def::{
         find_def,
+        hir::Function,
+        hir::Variant,
         hir_def::ModuleDefId,
         resolver::{resolver_for_toplevel, ResolveResult},
         resolver_for_expr, Semantics,
@@ -43,6 +45,7 @@ pub enum CompletionItemKind {
     Keyword,
     Function,
     Variant,
+    Adt,
     Param,
     Module,
     Pattern,
@@ -64,7 +67,7 @@ impl<'db> CompletionContext<'db> {
         let sema = Semantics::new(db);
         let original_file = sema.parse(position.file_id);
         let tok = best_token_at_offset(original_file.syntax(), position.pos)?;
-
+        
         let mut ctx = CompletionContext {
             db,
             sema,
@@ -155,44 +158,76 @@ fn complete_dot(acc: &mut Vec<CompletionItem>, ctx: CompletionContext<'_>) -> Op
                 let map = ctx.db.module_map();
                 let file = map
                     .iter()
-                    .find(|(_, name)| name.ends_with(text.as_str()));
+                    .find(|(_, name)| name.ends_with(text.as_str()))?;
 
-                if let Some(resolver) = file.map(|f| resolver_for_toplevel(ctx.db.upcast(), f.0)) {
-                    for (name, res) in resolver.names_in_scope() {
-                        let kind = match res {
-                            ResolveResult::Module(_) => CompletionItemKind::Module,
-                            ResolveResult::Local(_) => CompletionItemKind::Param,
-                            ResolveResult::Function(_) => CompletionItemKind::Function,
-                            ResolveResult::Variant(_) => CompletionItemKind::Variant,
-                        };
-                        let replace = match res {
-                            ResolveResult::Function(it) => {
-                                let params = it.params(ctx.db.upcast());
-                                let params = params
-                                    .iter()
-                                    .enumerate()
-                                    .map(|(i, p)| match p.label.clone() {
-                                        Some(label) => format!("{}: ${{{}:{}}}", i + 1, label, p.name),
-                                        None => format!("${{{}:{}}}", i + 1, p.name),
-                                    })
-                                    .collect::<Vec<_>>()
-                                    .join(", ");
-                                format!("{}({})", name, params)
-                            }
-                            _ => format!("{}", name),
-                        };
-                        acc.push(CompletionItem {
-                            label: name.clone(),
-                            source_range: ctx.source_range,
-                            replace: replace.into(),
-                            kind: kind,
-                            signature: Some(String::from("signature")),
-                            description: Some(String::from("desription")),
-                            documentation: Some(String::from("docs")),
-                            is_snippet: false,
-                        });
+                let module_items = ctx.db.module_scope(file.0);
 
-                    }
+                for (def, _) in module_items.declarations() {
+                    let kind = match def {
+                        ModuleDefId::FunctionId(_) => CompletionItemKind::Function,
+                        ModuleDefId::AdtId(_) => CompletionItemKind::Adt,
+                        ModuleDefId::VariantId(_) => CompletionItemKind::Variant,
+                    };
+                    let (name, replace) = match def {
+                        ModuleDefId::FunctionId(it) => {
+                            let it = Function { id: *it};
+                            let params = it.params(ctx.db.upcast());
+                            let params = params
+                                .iter()
+                                .enumerate()
+                                .map(|(i, p)|
+                                    match p.label.clone() {
+                                        Some(label) => {
+                                            format!("{}: ${{{}:{}}}", label, i + 1, p.name)
+                                        }
+                                        None => {
+                                            format!("${{{}:{}}}", i + 1, p.name)
+                                        }
+                                    }
+                                )
+                                .collect::<Vec<_>>()
+                                .join(", ");
+                            let name = it.name(ctx.db.upcast());
+                            let label = if params.len() > 0 {
+                                format!("{}(…)", name)
+                            } else {
+                                format!("{}()", name)
+                            };
+                            (label, format!("{}({})", name, params))
+                        }
+                        ModuleDefId::VariantId(it) => {
+                            let it = Variant { parent: it.parent, id: it.local_id };
+                            let fields = it.fields(ctx.db.upcast());
+                            let fields_str = fields
+                                .iter()
+                                .enumerate()
+                                .map(|(i, p)|
+                                    format!("${{{}:{}}}", i + 1, p.label.clone().unwrap_or("()".into()))
+                                )
+                                .collect::<Vec<_>>()
+                                .join(", ");
+                            let name = it.name(ctx.db.upcast());
+                            let label = if fields.len() > 0 {
+                                format!("{}(…)", name)
+                            } else {
+                                format!("{}()", name)
+                            };
+                            (label, format!("{}({})", name, fields_str))
+                        },
+                        _ => { continue }
+                    };
+                    acc.push(CompletionItem {
+                        label: name.into(),
+                        source_range: ctx.source_range,
+                        replace: replace.into(),
+                        kind: kind,
+                        signature: Some(String::from("signature")),
+                        description: Some(String::from("desription")),
+                        documentation: Some(String::from("docs")),
+                        is_snippet: false,
+                    });
+
+
                 }
 
             },

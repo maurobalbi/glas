@@ -289,7 +289,18 @@ fn boolean() {
     )
 }
 
-#[traced_test]
+#[test]
+fn let_block_let() {
+    check_all(
+        "fn spread() {
+        let x = {
+            let y = 1
+        }
+      }",
+        expect!["spread: fn() -> Int"],
+    )
+}
+
 #[test]
 fn field_access() {
     check_fix(

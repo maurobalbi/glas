@@ -73,6 +73,7 @@ pub(crate) fn to_completion_item(line_map: &LineMap, item: CompletionItem) -> ls
         CompletionItemKind::Pattern => lsp::CompletionItemKind::FIELD,
         CompletionItemKind::Function => lsp::CompletionItemKind::FUNCTION,
         CompletionItemKind::Variant => lsp::CompletionItemKind::ENUM_MEMBER,
+        CompletionItemKind::Adt => lsp::CompletionItemKind::CLASS,
         CompletionItemKind::Module => lsp::CompletionItemKind::MODULE,
     };
     lsp::CompletionItem {
