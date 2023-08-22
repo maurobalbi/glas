@@ -10,7 +10,7 @@ use crate::{
 
 use super::{
     hir_def::{AdtId, LocalVariantId},
-    module::{Field, PatternId, VariantData},
+    module::{Field, PatternId, VariantData, Param, FunctionData},
     scope::ExprScopes,
     FunctionId, InternDatabase,
 };
@@ -115,14 +115,21 @@ pub struct Function {
 
 impl Function {
     pub fn name(self, db: &dyn DefDatabase) -> SmolStr {
-        let func = db.lookup_intern_function(self.id);
-        let func_data = &db.module_items(func.file_id)[func.value];
-        func_data.name.clone()
+        self.function_data(db).name.clone()
+    }
+
+    pub fn params(self, db: &dyn DefDatabase) -> Vec<Param> {
+        self.function_data(db).params.clone()
     }
 
     pub fn ty(&self, db: &dyn TyDatabase) -> ty::Ty {
         let infer = db.infer_function(self.id);
         infer.fn_ty.clone()
+    }
+
+    fn function_data(self, db: &dyn DefDatabase) -> FunctionData {
+        let func = db.lookup_intern_function(self.id);
+        db.module_items(func.file_id)[func.value].clone()
     }
 }
 

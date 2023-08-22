@@ -78,6 +78,7 @@ impl<'db> CompletionContext<'db> {
         ctx.source_range = match ctx.tok.kind() {
             T!["."] => TextRange::empty(position.pos),
             SyntaxKind::IDENT | SyntaxKind::U_IDENT => ctx.tok.text_range(),
+            a if a.is_keyword() => ctx.tok.text_range(),
             _ => TextRange::empty(position.pos),
         };
         let top_node = ctx
@@ -126,7 +127,7 @@ pub(crate) fn completions(
     fpos @ FilePos { file_id, pos: _ }: FilePos,
     trigger_char: Option<char>,
 ) -> Option<Vec<CompletionItem>> {
-    tracing::info!("Completeing compl");
+    tracing::info!("Completeing complk {:?}", fpos);
     let ctx = CompletionContext::new(db, fpos)?;
 
     let mut acc = Vec::default();
@@ -164,10 +165,26 @@ fn complete_dot(acc: &mut Vec<CompletionItem>, ctx: CompletionContext<'_>) -> Op
                             ResolveResult::Function(_) => CompletionItemKind::Function,
                             ResolveResult::Variant(_) => CompletionItemKind::Variant,
                         };
+                        let replace = match res {
+                            ResolveResult::Function(it) => {
+                                let params = it.params(ctx.db.upcast());
+                                let params = params
+                                    .iter()
+                                    .enumerate()
+                                    .map(|(i, p)| match p.label.clone() {
+                                        Some(label) => format!("{}: ${{{}:{}}}", i + 1, label, p.name),
+                                        None => format!("${{{}:{}}}", i + 1, p.name),
+                                    })
+                                    .collect::<Vec<_>>()
+                                    .join(", ");
+                                format!("{}({})", name, params)
+                            }
+                            _ => format!("{}", name),
+                        };
                         acc.push(CompletionItem {
                             label: name.clone(),
                             source_range: ctx.source_range,
-                            replace: name,
+                            replace: replace.into(),
                             kind: kind,
                             signature: Some(String::from("signature")),
                             description: Some(String::from("desription")),
@@ -231,15 +248,31 @@ fn complete_expr(acc: &mut Vec<CompletionItem>, ctx: &CompletionContext<'_>) -> 
             ResolveResult::Function(_) => CompletionItemKind::Function,
             ResolveResult::Variant(_) => CompletionItemKind::Variant,
         };
+        let replace = match def {
+            ResolveResult::Function(it) => {
+                let params = it.params(ctx.db.upcast());
+                let params = params
+                    .iter()
+                    .enumerate()
+                    .map(|(i, p)| match p.label.clone() {
+                        Some(label) => format!("{}: ${{{}:{}}}", label, i + 1, p.name),
+                        None => format!("${{{}:{}}}", i + 1, p.name),
+                    })
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                format!("{}({})", name, params)
+            }
+            _ => format!("{}", name),
+        };
         acc.push(CompletionItem {
             label: name.clone(),
             source_range: ctx.source_range,
-            replace: name.clone(),
+            replace: replace.into(),
             kind,
             signature: None,
             description: None,
             documentation: None,
-            is_snippet: false,
+            is_snippet: true,
         })
     }
 
