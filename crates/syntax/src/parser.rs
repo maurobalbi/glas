@@ -416,8 +416,6 @@ fn custom_type(p: &mut Parser, m: MarkOpened) {
             p.expect(T!["="]);
             if p.at_any(TYPE_FIRST) && p.nth(1) != IDENT {
                 type_expr(p);
-            } else {
-                p.error(ErrorKind::ExpectedType)
             }
             p.finish_node(m, CUSTOM_TYPE_ALIAS);
         }
@@ -483,11 +481,7 @@ fn function(p: &mut Parser, m: MarkOpened, is_anon: bool) -> MarkClosed {
 
     // UX: when user is typing '-' error could be nicer
     if p.eat(T!["->"]) {
-        if p.at_any(TYPE_FIRST) && p.nth(1) != IDENT {
-            type_expr(p);
-        } else {
-            p.error(ErrorKind::ExpectedType);
-        }
+        type_expr(p)
     }
 
     if p.at(T!["{"]) {
@@ -506,7 +500,7 @@ fn param_list(p: &mut Parser, is_anon: bool) {
     p.expect(T!["("]);
 
     while !p.at(T![")"]) && !p.eof() {
-        if p.at(IDENT) {
+        if p.at_any(TokenSet::new(&[IDENT, DISCARD_IDENT])) {
             param(p, is_anon);
         } else {
             if p.at_any(PARAM_LIST_RECOVERY) {
@@ -520,7 +514,7 @@ fn param_list(p: &mut Parser, is_anon: bool) {
 }
 
 fn param(p: &mut Parser, is_anon: bool) {
-    assert!(p.at(IDENT));
+    assert!(p.at_any(TokenSet::new(&[IDENT, DISCARD_IDENT])));
     let m = p.start_node();
     if p.nth(1) == IDENT {
         if is_anon {
@@ -530,16 +524,19 @@ fn param(p: &mut Parser, is_anon: bool) {
         p.expect(IDENT);
         p.finish_node(n, LABEL);
     }
-    let pat = p.start_node();
-    if p.at(IDENT) || p.at(DISCARD_IDENT) {
-        p.bump()
+    if p.at(IDENT) {
+        let pat = p.start_node();
+        p.bump();
+        p.finish_node(pat, PATTERN_VARIABLE);
+    } else if p.at(DISCARD_IDENT) {
+        let pat = p.start_node();
+        p.bump();
+        p.finish_node(pat, HOLE);
     } else {
         p.error(ErrorKind::ExpectedIdentifier);
     }
-    p.finish_node(pat, PATTERN_VARIABLE);
 
-    if p.at(T![":"]) {
-        p.expect(T![":"]);
+    if p.eat(T![":"]) {
         type_expr(p);
     }
     if !p.at(T![")"]) {
@@ -619,8 +616,7 @@ fn stmt_let(p: &mut Parser) {
         p.expect(T!["assert"]);
     }
     pattern(p);
-    if p.at(T![":"]) {
-        p.expect(T![":"]);
+    if p.eat(T![":"]) {
         type_expr(p);
     }
 
@@ -1191,8 +1187,7 @@ fn module_const(p: &mut Parser, m: MarkOpened) {
     let n = p.start_node();
     p.expect(IDENT);
     p.finish_node(n, NAME);
-    if p.at(T![":"]) {
-        p.expect(T![":"]);
+    if p.eat(T![":"]) {
         type_expr(p);
     }
     p.expect(T!["="]);
@@ -1280,9 +1275,6 @@ fn type_arg_list(p: &mut Parser) {
 
 fn type_arg(p: &mut Parser) {
     let m = p.start_node();
-    if !p.at_any(TYPE_FIRST) && p.nth(1) != IDENT {
-        p.error(ErrorKind::ExpectedExpression);
-    }
     type_expr(p);
     if !p.at(T![")"]) {
         p.expect(T![","]);
@@ -1321,6 +1313,7 @@ fn type_expr(p: &mut Parser) {
         // tuple
         T!("#") => tuple_type(p),
         _ => {
+            p.error(ErrorKind::ExpectedType);
             return;
             // p.bump_with_error(ErrorKind::ExpectedType);
         }
@@ -1378,11 +1371,7 @@ fn fn_type(p: &mut Parser) -> MarkClosed {
 
     p.expect(T![")"]);
     p.expect(T!["->"]);
-    if p.at_any(TYPE_FIRST) && p.nth(1) != IDENT {
-        type_expr(p);
-    } else {
-        p.error(ErrorKind::ExpectedType);
-    }
+    type_expr(p);
     p.finish_node(m, FN_TYPE)
 }
 

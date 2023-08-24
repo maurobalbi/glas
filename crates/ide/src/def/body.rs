@@ -138,7 +138,7 @@ pub(super) fn lower(db: &dyn DefDatabase, function_id: FunctionId) -> (Body, Bod
     if let Some(param_list) = ast.param_list() {
         for param in param_list.params() {
             if let Some(pattern) = param.pattern() {
-                let pat_id = ctx.lower_pattern(ast::Pattern::PatternVariable(pattern));
+                let pat_id = ctx.lower_pattern(pattern.into());
                 let ty = ty::ty_from_ast_opt(param.ty());
                 ctx.body.params.push((pat_id, ty));
             }
@@ -293,7 +293,7 @@ impl BodyLowerCtx<'_> {
                     for param in param_list.params() {
                         if let Some(pattern) = param.pattern() {
                             let _pat_id =
-                                self.lower_pattern(ast::Pattern::PatternVariable(pattern));
+                                self.lower_pattern(pattern.into());
                         }
                     }
                     let end = self.next_pattern_idx();

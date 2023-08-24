@@ -3,13 +3,15 @@ use std::ops::Index;
 use crate::{base::Target, ty, Diagnostic, DiagnosticKind};
 
 use super::{
-    module::{AdtData, Field, FunctionData, ImportData, Param, VariantData, Visibility, ModuleImport},
+    module::{
+        AdtData, Field, FunctionData, ImportData, ModuleImport, Param, VariantData, Visibility,
+    },
     AstPtr, DefDatabase,
 };
 use la_arena::{Arena, Idx, IdxRange, RawIdx};
 use smol_str::SmolStr;
 use syntax::{
-    ast::{self, AstNode},
+    ast::{self, AstNode, ParamPattern},
     Parse,
 };
 use tracing_subscriber::fmt::format;
@@ -120,7 +122,7 @@ impl<'a> LowerCtx<'a> {
     fn alloc_unqualified_import(&mut self, import: ImportData) -> Idx<ImportData> {
         self.module_items.unqualified_imports.alloc(import)
     }
-    
+
     fn alloc_module_import(&mut self, import: ModuleImport) -> Idx<ModuleImport> {
         self.module_items.module_imports.alloc(import)
     }
@@ -182,7 +184,7 @@ impl<'a> LowerCtx<'a> {
             .join("/")
             .into();
 
-        let accessor:SmolStr = i
+        let accessor: SmolStr = i
             .module_path()
             .into_iter()
             .flat_map(|m| m.path())
@@ -191,7 +193,11 @@ impl<'a> LowerCtx<'a> {
             .expect("This is a compiler bug")
             .into();
 
-        let module_id = self.alloc_module_import(ModuleImport { name: module_name, accessor, ast_ptr });
+        let module_id = self.alloc_module_import(ModuleImport {
+            name: module_name,
+            accessor,
+            ast_ptr,
+        });
 
         for unqualified in i.unqualified() {
             if let Some(unqualified_name) = unqualified.name().and_then(|t| t.text()) {
@@ -216,11 +222,16 @@ impl<'a> LowerCtx<'a> {
 
         if let Some(param_list) = fun.param_list() {
             for param in param_list.params() {
-                if let Some(param_name) = param.pattern()?.text() {
-                    params.push(Param {
-                        name: param_name.into(),
-                        label: param.label().and_then(|n| n.text()),
-                    });
+                match param.pattern() {
+                    Some(ParamPattern::PatternVariable(it)) => {
+                        it.text().map(|t| {
+                            params.push(Param {
+                                name: t,
+                                label: param.label().and_then(|n| n.text()),
+                            })
+                        });
+                    }
+                    _ => {},
                 }
             }
         };

@@ -217,6 +217,10 @@ enums! {
         Hole,
         PatternSpread,
     },
+    ParamPattern {
+        PatternVariable,
+        Hole,
+    },
     TypeNameOrName {
         Name,
         TypeName,
@@ -262,6 +266,15 @@ impl FieldAccessExpr {
             Some(candidate)
         } else {
             None
+        }
+    }
+}
+
+impl From<ParamPattern> for Pattern {
+    fn from(value: ParamPattern) -> Self {
+        match value {
+            ParamPattern::PatternVariable(it) => Pattern::PatternVariable(it),
+            ParamPattern::Hole(it) => Pattern::Hole(it),
         }
     }
 }
@@ -472,7 +485,7 @@ asts! {
       as_name[1]: TypeNameOrName,
     },
     PARAM = Param {
-        pattern: PatternVariable, // this mostly a pattern to make name resolution easier
+        pattern: ParamPattern, // this is a pattern to make name resolution easier
         label: Label,
         ty: TypeExpr,
     },

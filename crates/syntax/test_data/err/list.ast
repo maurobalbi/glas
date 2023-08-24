@@ -99,8 +99,6 @@
 33634..33635: ExpectedExpression
 33639..33640: ExpectToken(R_ARROW)
 33639..33640: ExpectedExpression
-41788..41789: ExpectedParameter
-41789..41790: ExpectedParameter
 SOURCE_FILE@0..45079
   COMMENT_MODULE@0..77 "//// Lists are an ord ..."
   WHITESPACE@77..78 "\n"
@@ -18584,9 +18582,9 @@ SOURCE_FILE@0..45079
                     FN_KW@41785..41787 "fn"
                     PARAM_LIST@41787..41796
                       L_PAREN@41787..41788 "("
-                      ERROR@41788..41789
-                        DISCARD_IDENT@41788..41789 "_"
-                      ERROR@41789..41790
+                      PARAM@41788..41790
+                        HOLE@41788..41789
+                          DISCARD_IDENT@41788..41789 "_"
                         COMMA@41789..41790 ","
                       WHITESPACE@41790..41791 " "
                       PARAM@41791..41795

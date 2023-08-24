@@ -169,6 +169,7 @@ fn complete_dot(acc: &mut Vec<CompletionItem>, ctx: CompletionContext<'_>) -> Op
                         ModuleDefId::VariantId(_) => CompletionItemKind::Variant,
                     };
                     let (name, replace) = match def {
+                        // ToDo: Extract to function because it's also used in complete_expr
                         ModuleDefId::FunctionId(it) => {
                             let it = Function { id: *it};
                             let params = it.params(ctx.db.upcast());
@@ -381,7 +382,6 @@ fn find_node_in_file<N: AstNode<Language = GleamLanguage>>(
 
 #[cfg(test)]
 mod tests {
-
     use crate::base::SourceDatabase;
     use crate::tests::TestDB;
     use expect_test::{expect, Expect};
