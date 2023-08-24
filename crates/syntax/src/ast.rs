@@ -192,6 +192,7 @@ enums! {
         Variable,
         Lambda,
         BinaryOp,
+        Hole,
         Pipe,
         UnaryOp,
         List,

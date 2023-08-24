@@ -204,6 +204,9 @@ impl BodyLowerCtx<'_> {
                     .for_each(|a| self.lower_expr_stmt(&mut stmts, a));
                 self.alloc_expr(Expr::Block { stmts: stmts }, ptr)
             }
+            ast::Expr::Hole(_) => {
+                self.alloc_expr(Expr::Hole, ptr)
+            }
             ast::Expr::ExprCall(call) => {
                 let func = self.lower_expr_opt(call.func());
                 let mut arg_ids = Vec::new();

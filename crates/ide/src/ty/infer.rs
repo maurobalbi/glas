@@ -179,6 +179,7 @@ impl<'db> InferCtx<'db> {
     fn make_type(&mut self, ty: super::Ty, env: &mut HashMap<SmolStr, TyVar>) -> TyVar {
         let ty = match ty {
             super::Ty::Unknown => return self.new_ty_var(),
+            // this is not correct, same name obviously doesnt have same type e.g fn a(a:a) {a} and fn b(b: a} {b} dont have the same type!
             super::Ty::Generic { name } => {
                 tracing::info!("making generic type: {}", name);
                 return match env.get(&name) {
@@ -350,6 +351,7 @@ impl<'db> InferCtx<'db> {
         tracing::info!("inferring {:?}", &self.body[tgt_expr]);
         match &self.body[tgt_expr] {
             Expr::Missing => self.new_ty_var(),
+            Expr::Hole => self.new_ty_var(),
             Expr::Literal(lit) => match lit {
                 LiteralKind::Int => Ty::Int,
                 LiteralKind::Float => Ty::Float,
@@ -439,9 +441,24 @@ impl<'db> InferCtx<'db> {
             }
             Expr::Call { func, args } => {
                 let mut arg_tys = Vec::new();
+                let mut hole = None;
+                let mut count = 0;
+
                 for arg in args {
-                    arg_tys.push(self.infer_expr(*arg));
+                    match self.body[*arg] {
+                        Expr::Hole => {
+                            count += 1;
+                            let var = self.infer_expr(*arg);
+                            hole = Some(var);
+                            arg_tys.push(var);
+                        }
+                        _ => {
+                            arg_tys.push(self.infer_expr(*arg));
+                        }
+                    }
                 }
+                // add(_, 1) => fn(_hole) { add(_hole, 1) }
+
                 let ret_ty = self.new_ty_var();
                 let fun_ty = self.infer_expr(*func);
 
@@ -452,6 +469,12 @@ impl<'db> InferCtx<'db> {
                         return_: ret_ty,
                     },
                 );
+
+                if let Some(hole) = hole {
+                    let new_ty = self.new_ty_var();
+                    self.unify_var_ty(new_ty, Ty::Function { params: vec![hole], return_: ret_ty  });
+                    return new_ty
+                }
                 ret_ty
             }
             Expr::Variable(name) => {

@@ -302,6 +302,28 @@ fn let_block_let() {
 }
 
 #[test]
+fn lambda_shorthand() {
+    check_all(
+        "fn add(a: Float, b: Int) {
+        a
+      }
+
+      fn test() {
+        add(_, 1)
+      }
+
+      fn test2() {
+        add(1.1, _)
+      }
+      ",
+        expect![r#"
+        add: fn(Float, Int) -> Float
+        test: fn() -> fn(Float) -> Float
+        test2: fn() -> fn(Int) -> Float"#],
+    )
+}
+
+#[test]
 fn field_access() {
     check_fix(
         r#"

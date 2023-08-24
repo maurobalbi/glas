@@ -113,6 +113,7 @@ pub type ExprId = Idx<Expr>;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Expr {
     Missing,
+    Hole,
     Literal(LiteralKind),
     Block {
         stmts: Vec<Statement>,
