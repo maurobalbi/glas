@@ -81,7 +81,7 @@ fn fn_params_annotation() {
         "fn bla(a: blabla, b: bubu) { b }",
         expect![
             r#"
-        bla: fn(blabla, bubu) -> bubu"#
+        bla: fn(a, b) -> b"#
         ],
     )
 }
@@ -132,7 +132,7 @@ fn lablelled_args() {
     check_all(
         "fn wobble(b: generic, f a: Int) { a } fn main() { abc(1) }",
         expect![[r#"
-            wobble: fn(generic, Int) -> Int
+            wobble: fn(a, Int) -> Int
             main: fn() -> a"#]],
     )
 }
@@ -316,10 +316,12 @@ fn lambda_shorthand() {
         add(1.1, _)
       }
       ",
-        expect![r#"
+        expect![
+            r#"
         add: fn(Float, Int) -> Float
         test: fn() -> fn(Float) -> Float
-        test2: fn() -> fn(Int) -> Float"#],
+        test2: fn() -> fn(Int) -> Float"#
+        ],
     )
 }
 

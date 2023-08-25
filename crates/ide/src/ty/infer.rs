@@ -1,4 +1,4 @@
-use std::{cmp::min, collections::HashMap, mem, ops::Deref, sync::Arc};
+use std::{cmp::min, collections::HashMap, mem, ops::Deref, sync::Arc, hash::Hash};
 
 use la_arena::ArenaMap;
 use smol_str::SmolStr;
@@ -25,9 +25,6 @@ struct TyVar(u32);
 enum Ty {
     Unknown {
         idx: u32,
-    },
-    Generic {
-        name: SmolStr,
     },
     Bool,
     Int,
@@ -186,7 +183,7 @@ impl<'db> InferCtx<'db> {
                     Some(var) => *var,
                     None => {
                         let var = self.new_ty_var();
-                        self.unify_var_ty(var, Ty::Generic { name: name.clone() });
+                        self.unify_var_ty(var, Ty::Unknown { idx: var.0 });
                         env.insert(name, var);
                         var
                     }
@@ -457,8 +454,8 @@ impl<'db> InferCtx<'db> {
                         }
                     }
                 }
-                // add(_, 1) => fn(_hole) { add(_hole, 1) }
 
+                // add(_, 1) => fn(_hole) { add(_hole, 1) }
                 let ret_ty = self.new_ty_var();
                 let fun_ty = self.infer_expr(*func);
 
@@ -717,7 +714,9 @@ impl<'db> InferCtx<'db> {
                     .iter()
                     .map(|l| self.make_type(l.type_ref.clone(), &mut ty_env))
                     .collect();
-
+                
+                // ToDo: infer function for unsaturated constructor
+                // e.g. type Bla { Bla(Int, Int) } => let b = Bla => fn(Int, Int) -> Bla
                 let ty = Ty::Adt {
                     adt_id: variant.parent,
                     generic_params: Vec::new(),
@@ -889,7 +888,6 @@ impl<'a> Collector<'a> {
                     params: Arc::new(Vec::new()),
                 }
             }
-            Ty::Generic { name } => super::Ty::Generic { name: name.clone() },
         }
     }
 }

@@ -175,6 +175,7 @@ impl<'a> LowerCtx<'a> {
     fn lower_import(&mut self, i: &ast::Import) {
         let ast_ptr = AstPtr::new(i);
 
+        //ToDo: Diagnostics wrong imports!
         let module_name: SmolStr = i
             .module_path()
             .into_iter()
