@@ -169,6 +169,9 @@ def! {
     #[token(":")]
     COLON = [":"],
 
+    #[token("@")]
+    AT = ["@"],
+
     #[token(",")]
     COMMA = [","],
 
@@ -312,7 +315,6 @@ def! {
     GENERIC_PARAM_LIST,
     VARIANT,
     TARGET,
-    TARGET_GROUP,
     FN_TYPE,
     TYPE_APPLICATION,
     TYPE_ARG_LIST,
@@ -335,17 +337,20 @@ def! {
     CASE,
     MISSING,
     CLAUSE,
-    ALTERNATIVE_PATTERN,
+        ALTERNATIVE_PATTERN,
     PATTERN_VARIABLE,
     VARIANT_REF,
     PATTERN_SPREAD,
     PATTERN_TUPLE,
     PATTERN_LIST,
+    PATTERN_GUARD,
     VARIANT_REF_FIELD_LIST,
     VARIANT_REF_FIELD,
     LIST,
     RECORD,
     BITSTRING,
+    EXTERNAL_ATTR,
+    TARGET_ATTR,
 
     __LAST,
 }

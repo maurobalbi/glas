@@ -110,7 +110,12 @@ impl ModuleScope {
         self.declarations.iter().map(|v| v.1)
     }
 
-    fn resolve_import(&self, db: &dyn DefDatabase,module_items: &ModuleItemData, import: &ImportData) -> Option<ModuleDefId> {
+    fn resolve_import(
+        &self,
+        db: &dyn DefDatabase,
+        module_items: &ModuleItemData,
+        import: &ImportData,
+    ) -> Option<ModuleDefId> {
         let ImportData {
             unqualified_name: unqualifed_name,
             module,

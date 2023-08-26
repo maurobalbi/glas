@@ -175,7 +175,7 @@ fn find_root(node: &SyntaxNode) -> SyntaxNode {
     node.ancestors().last().unwrap()
 }
 
-// This is very inefficient
+// This seems inefficient
 // ToDo: build a source_map during lowering...
 pub fn find_def(db: &dyn DefDatabase, node: InFile<&SyntaxNode>) -> Option<ModuleDefId> {
     let module = db.module_scope(node.file_id);

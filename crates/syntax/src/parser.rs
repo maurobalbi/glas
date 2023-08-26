@@ -4,7 +4,7 @@ use crate::ast::{AstNode, SourceFile};
 use crate::lexer::{GleamLexer, LexToken};
 use crate::token_set::TokenSet;
 use crate::SyntaxKind::{self, *};
-use crate::{Error, ErrorKind, SyntaxNode};
+use crate::{Error, ErrorKind, SyntaxNode, SyntaxToken};
 use rowan::{GreenNode, GreenNodeBuilder, TextRange, TextSize};
 
 const STMT_RECOVERY: TokenSet = TokenSet::new(&[
@@ -298,46 +298,16 @@ impl<'i> Parser<'i> {
 fn module(p: &mut Parser) {
     let m = p.start_node();
     while !p.eof() {
-        stmnt_or_tg(p)
+        statement(p)
     }
     p.finish_node(m, SOURCE_FILE);
-}
-
-fn stmnt_or_tg(p: &mut Parser) {
-    let m = p.start_node();
-    match p.nth(0) {
-        T!["if"] => target_group(p),
-        _ => statement(p),
-    }
-
-    p.finish_node(m, TARGET_GROUP);
-}
-
-fn target_group(p: &mut Parser) {
-    assert!(p.at(T!["if"]));
-    p.expect(T!["if"]);
-    let t = p.start_node();
-    p.expect(IDENT);
-    p.finish_node(t, TARGET);
-    if p.at(T!["{"]) {
-        statements_block(p);
-    }
-}
-
-fn statements_block(p: &mut Parser) {
-    assert!(p.at(T!["{"]));
-    // let m = p.start_node();
-    p.expect(T!["{"]);
-    while !p.at(T!["}"]) && !p.eof() {
-        statement(p);
-    }
-    p.expect(T!["}"]);
-    // p.finish_node(m, STATEMENTS);
 }
 
 fn statement(p: &mut Parser) {
     let m = p.start_node();
     //parse attribute
+    attributes(p);
+
     let is_pub = p.eat(T!["pub"]);
 
     match p.nth(0) {
@@ -359,6 +329,50 @@ fn statement(p: &mut Parser) {
             p.finish_node(m, ERROR);
         }
     }
+}
+
+fn attributes(p: &mut Parser<'_>) {
+    while p.at(T!["@"]) && !p.eof() {
+        attribute(p);
+    }
+}
+
+fn attribute(p: &mut Parser) {
+    assert!(p.at(T!["@"]));
+    let attr = p.start_node();
+    p.expect(T!["@"]); 
+    match p.nth(0) {
+        T!["external"] => external(p, attr),
+        IDENT => {
+            target(p, attr);
+        }
+        _ => {
+            p.error(ErrorKind::ExpectedAttribute);
+            p.finish_node(attr, ERROR);
+        }
+    }
+}
+
+fn external(p: &mut Parser, attr: MarkOpened) {
+    assert!(p.at(T!["external"]));
+    p.expect(T!["external"]);
+    p.expect(T!["("]);
+    p.expect(IDENT);
+    p.expect(T![","]);
+    p.expect(STRING);
+    p.expect(T![","]);
+    p.expect(STRING);
+    p.expect(T![")"]); 
+    p.finish_node(attr, EXTERNAL_ATTR);
+}
+
+fn target(p: &mut Parser, attr: MarkOpened) {
+    assert!(p.at(IDENT));
+    p.expect(IDENT);
+    p.expect(T!["("]);
+    p.expect(IDENT);
+    p.expect(T![")"]);
+    p.finish_node(attr, TARGET_ATTR);
 }
 
 fn custom_type(p: &mut Parser, m: MarkOpened) {
@@ -524,7 +538,7 @@ fn param(p: &mut Parser, is_anon: bool) {
         p.expect(IDENT);
         p.finish_node(n, LABEL);
     }
-    if p.at(IDENT) {
+        if p.at(IDENT) {
         let pat = p.start_node();
         p.bump();
         p.finish_node(pat, PATTERN_VARIABLE);
@@ -535,7 +549,7 @@ fn param(p: &mut Parser, is_anon: bool) {
     } else {
         p.error(ErrorKind::ExpectedIdentifier);
     }
-
+    
     if p.eat(T![":"]) {
         type_expr(p);
     }
@@ -823,6 +837,9 @@ fn clause(p: &mut Parser) {
     if p.at(T!["if"]) {
         // parse guards
         p.expect(T!["if"]);
+        let guard = p.start_node();
+        expr(p);
+        p.finish_node(guard, PATTERN_GUARD);
     }
 
     p.expect(T!["->"]);
@@ -840,7 +857,7 @@ fn alternative_pattern(p: &mut Parser) {
     while !p.at(T![","]) && !p.eof() {
         if p.at_any(PATTERN_FIRST) {
             pattern(p);
-            if !p.eat(T!["|"]) {
+                        if !p.eat(T!["|"]) {
                 break;
             }
         } else {
@@ -854,8 +871,6 @@ fn alternative_pattern(p: &mut Parser) {
 }
 
 fn pattern(p: &mut Parser) {
-    let mut parse_application = false;
-
     let _res = match p.nth(0) {
         // variable definition or qualified constructor type
         IDENT => {
@@ -868,7 +883,6 @@ fn pattern(p: &mut Parser) {
                 return;
             }
 
-            parse_application = true;
             let module_m = p.finish_node(m, MODULE_NAME);
             let t_ref = p.start_node_before(module_m);
             p.expect(T!["."]);
@@ -876,16 +890,17 @@ fn pattern(p: &mut Parser) {
             if p.at(T!["("]) {
                 pattern_constructor_arg_list(p);
             }
+
             p.finish_node(t_ref, VARIANT_REF)
         }
         // constructor
         U_IDENT => {
-            parse_application = true;
             let m = p.start_node();
             name_ref(p);
             if p.at(T!["("]) {
                 pattern_constructor_arg_list(p);
             }
+
             p.finish_node(m, VARIANT_REF)
         }
         DISCARD_IDENT => {
@@ -906,9 +921,6 @@ fn pattern(p: &mut Parser) {
         _ => return,
     };
 
-    if !parse_application {
-        return;
-    }
 }
 
 fn pattern_list(p: &mut Parser<'_>) -> MarkClosed {

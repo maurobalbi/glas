@@ -105,30 +105,4 @@ mod tests {
         "#]],
         )
     }
-
-    #[test]
-    fn target_group() {
-        check_lex(
-            "if erlang { pub const a = \"123\" }",
-            expect![[r#"
-                IF_KW "if"
-                WHITESPACE " "
-                IDENT "erlang"
-                WHITESPACE " "
-                L_BRACE "{"
-                WHITESPACE " "
-                PUB_KW "pub"
-                WHITESPACE " "
-                CONST_KW "const"
-                WHITESPACE " "
-                IDENT "a"
-                WHITESPACE " "
-                EQ "="
-                WHITESPACE " "
-                STRING "\"123\""
-                WHITESPACE " "
-                R_BRACE "}"
-            "#]],
-        );
-    }
 }

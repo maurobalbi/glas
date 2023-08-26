@@ -424,7 +424,7 @@ asts! {
         expr: Expr,
     },
     SOURCE_FILE = SourceFile {
-        statements: [TargetGroup],
+        statements: [ModuleStatement],
     },
     MODULE_NAME = ModuleName {
         pub fn token(&self) -> SyntaxToken {
@@ -538,10 +538,6 @@ asts! {
         pattern: Pattern,
         annotation: TypeExpr,
     },
-    TARGET_GROUP = TargetGroup {
-        target: Target,
-        statements: [ModuleStatement],
-    },
     CONSTANT_TUPLE = ConstantTuple {
         elements: [ConstantExpr],
     },
@@ -617,6 +613,9 @@ asts! {
     },
     PATTERN_LIST = PatternList {
         elements: [Pattern],
+    },
+    PATTERN_GUARD = PatternGuard {
+        expr: Expr,
     },
 }
 
@@ -702,15 +701,6 @@ mod tests {
         assert!(iter.next().is_some());
         assert!(iter.next().is_some());
         assert!(iter.next().is_none());
-    }
-
-    #[test]
-    fn target_group() {
-        let e =
-            parse::<TargetGroup>("if erlang {const a = 1} const b = 2 if javascript {const c = 3}");
-        e.target().unwrap().syntax().should_eq("erlang");
-        let mut iter = e.statements();
-        iter.next().unwrap().syntax().should_eq("const a = 1");
     }
 
     #[test]

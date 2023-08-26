@@ -353,3 +353,26 @@ bla: fn() -> Bla"#
         ],
     )
 }
+
+#[test]
+fn generic_params_naming() {
+    check_all(
+        "fn do_filter_map(
+            list,
+            fun,
+            acc,
+          ) {
+            case list {
+              [] -> acc
+              [x, ..xs] -> {
+                let new_acc = case fun(x) {
+                  x -> [x, ..acc]
+                  x -> acc
+                }
+                do_filter_map(xs, fun, new_acc)
+              }
+            }
+          }",
+        expect!["do_filter_map: fn(List(a), fn(a) -> b, List(b)) -> List(b)"],
+    )
+}

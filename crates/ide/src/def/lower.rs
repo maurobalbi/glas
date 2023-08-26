@@ -1,6 +1,6 @@
 use std::ops::Index;
 
-use crate::{base::Target, ty, Diagnostic, DiagnosticKind};
+use crate::{ ty, Diagnostic};
 
 use super::{
     module::{
@@ -11,10 +11,9 @@ use super::{
 use la_arena::{Arena, Idx, IdxRange, RawIdx};
 use smol_str::SmolStr;
 use syntax::{
-    ast::{self, AstNode, ParamPattern},
+    ast::{self, Pattern, ParamPattern},
     Parse,
 };
-use tracing_subscriber::fmt::format;
 
 #[derive(Default, Debug, Eq, PartialEq)]
 pub struct ModuleItemData {
@@ -132,26 +131,8 @@ impl<'a> LowerCtx<'a> {
     }
 
     fn lower_module(&mut self, module: ast::SourceFile) {
-        for tg in module.statements() {
-            self.lower_target_group(&tg)
-        }
-    }
-
-    fn lower_target_group(&mut self, tg: &ast::TargetGroup) {
-        let package_info = self.db.source_root_package_info(crate::SourceRootId(0));
-        if let (Some(token), Some(package_info)) =
-            (tg.target().and_then(|t| t.token()), package_info)
-        {
-            if Target::from(token.text()) != package_info.target {
-                self.diagnostic(Diagnostic::new(
-                    tg.syntax().text_range(),
-                    DiagnosticKind::InactiveTarget,
-                ));
-                return;
-            }
-        }
-        for statement in tg.statements() {
-            self.lower_module_statement(&statement)
+        for stmt in module.statements() {
+            self.lower_module_statement(&stmt)
         }
     }
 
