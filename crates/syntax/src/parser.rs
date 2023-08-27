@@ -340,7 +340,7 @@ fn attributes(p: &mut Parser<'_>) {
 fn attribute(p: &mut Parser) {
     assert!(p.at(T!["@"]));
     let attr = p.start_node();
-    p.expect(T!["@"]); 
+    p.expect(T!["@"]);
     match p.nth(0) {
         T!["external"] => external(p, attr),
         IDENT => {
@@ -362,7 +362,7 @@ fn external(p: &mut Parser, attr: MarkOpened) {
     p.expect(STRING);
     p.expect(T![","]);
     p.expect(STRING);
-    p.expect(T![")"]); 
+    p.expect(T![")"]);
     p.finish_node(attr, EXTERNAL_ATTR);
 }
 
@@ -434,8 +434,7 @@ fn custom_type(p: &mut Parser, m: MarkOpened) {
             p.finish_node(m, CUSTOM_TYPE_ALIAS);
         }
         _ => {
-            p.error(ErrorKind::ExpectedType);
-            p.finish_node(m, ERROR);
+            p.finish_node(m, ADT);
         }
     }
 }
@@ -538,7 +537,8 @@ fn param(p: &mut Parser, is_anon: bool) {
         p.expect(IDENT);
         p.finish_node(n, LABEL);
     }
-        if p.at(IDENT) {
+    let as_pat = p.start_node();
+    if p.at(IDENT) {
         let pat = p.start_node();
         p.bump();
         p.finish_node(pat, PATTERN_VARIABLE);
@@ -549,7 +549,8 @@ fn param(p: &mut Parser, is_anon: bool) {
     } else {
         p.error(ErrorKind::ExpectedIdentifier);
     }
-    
+    p.finish_node(as_pat, AS_PATTERN);
+
     if p.eat(T![":"]) {
         type_expr(p);
     }
@@ -857,7 +858,8 @@ fn alternative_pattern(p: &mut Parser) {
     while !p.at(T![","]) && !p.eof() {
         if p.at_any(PATTERN_FIRST) {
             pattern(p);
-                        if !p.eat(T!["|"]) {
+
+            if !p.eat(T!["|"]) {
                 break;
             }
         } else {
@@ -871,6 +873,7 @@ fn alternative_pattern(p: &mut Parser) {
 }
 
 fn pattern(p: &mut Parser) {
+    let m_pat = p.start_node();
     let _res = match p.nth(0) {
         // variable definition or qualified constructor type
         IDENT => {
@@ -880,6 +883,8 @@ fn pattern(p: &mut Parser) {
             if !p.at(T!["."]) {
                 // p.finish_node(n, NAME);
                 p.finish_node(m, PATTERN_VARIABLE);
+
+                p.finish_node(m_pat, AS_PATTERN);
                 return;
             }
 
@@ -918,9 +923,19 @@ fn pattern(p: &mut Parser) {
         T!["-"] => todo!("unary"),
         // tuple
         T!("#") => pattern_tuple(p),
-        _ => return,
+        _ =>  {
+            p.finish_node(m_pat, ERROR);
+            p.error(ErrorKind::ExpectedPattern);
+            return
+        }
     };
+    if p.eat(T!["as"]) {
+        let var = p.start_node();
+        p.expect(IDENT);
+        p.finish_node(var, PATTERN_VARIABLE);
+    }
 
+    p.finish_node(m_pat, AS_PATTERN);
 }
 
 fn pattern_list(p: &mut Parser<'_>) -> MarkClosed {
@@ -930,14 +945,18 @@ fn pattern_list(p: &mut Parser<'_>) -> MarkClosed {
     p.expect(T!["["]);
     while !p.at(T!["]"]) && !p.eof() {
         if p.at_any(TokenSet::new(&[T![".."]]).union(PATTERN_FIRST)) {
-            let spread = if p.at(T![".."]) {
+            if p.at(T![".."]) {
+                let as_pat = p.start_node();
+                let spread = p.start_node();
                 p.expect(T![".."]);
-                Some(p.start_node())
-            } else {
-                None
-            };
+                if p.at(IDENT) {
+                    name(p);
+                } 
+                p.finish_node(spread, PATTERN_SPREAD);
+                p.finish_node(as_pat, AS_PATTERN);
+                break;
+            }
             pattern(p);
-            spread.map(|s| p.finish_node(s, PATTERN_SPREAD));
             if !p.at(T!["]"]) {
                 p.expect(T![","]);
             }

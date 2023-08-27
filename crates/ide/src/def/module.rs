@@ -146,7 +146,7 @@ pub enum Expr {
     },
     Lambda {
         body: ExprId,
-        params: IdxRange<Pattern>,
+        params: IdxRange<AsPattern>,
     },
     Spread {
         expr: ExprId,
@@ -159,7 +159,13 @@ pub enum Expr {
     Variable(SmolStr),
 }
 
-pub type PatternId = Idx<Pattern>;
+pub type PatternId = Idx<AsPattern>;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AsPattern {
+    pub pattern: Pattern,
+    pub as_name: Option<Pattern>,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Pattern {
@@ -175,7 +181,7 @@ pub enum Pattern {
         kind: LiteralKind,
     },
     Spread {
-        pattern: PatternId,
+        name: Option<SmolStr>,
     },
     List {
         elements: Vec<PatternId>,

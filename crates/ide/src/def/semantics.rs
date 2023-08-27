@@ -114,7 +114,7 @@ impl<'db> Semantics<'db> {
             return Some(ResolveResult::Module(module.into()));
         }
 
-        self.analyze(name.syntax())?
+        analyzer
             .resolver
             .resolve_name(&SmolStr::from(name.text()?))
     }

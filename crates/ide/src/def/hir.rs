@@ -1,4 +1,3 @@
-use la_arena::Idx;
 use smol_str::SmolStr;
 use syntax::ast::{self};
 
@@ -145,7 +144,7 @@ pub struct Local {
 }
 
 impl Local {
-    pub fn source(&self, db: &dyn DefDatabase) -> ast::Pattern {
+    pub fn source(&self, db: &dyn DefDatabase) -> ast::AsPattern {
         let (_body, source_map) = db.body_with_source_map(self.parent);
         let src = source_map
             .node_for_pattern(self.pat_id)

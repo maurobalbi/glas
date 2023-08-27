@@ -113,4 +113,33 @@ mod tests {
             "#]],
         );
     }
+    
+    #[test]
+    fn module() {
+        check(
+            r#"
+            #- test.gleam
+            fn bobo() {}
+
+            #- main.gleam
+            import test
+
+            fn use_func(a) {
+                a(1)
+            }
+            
+            fn test(test) {
+                use test <- use_func
+                test |>
+                $0test.bobo()
+            }
+            "#,
+            "test",
+            expect![[r#"
+                ```gleam
+                fn() -> a
+                ```
+            "#]],
+        );
+    }
 }

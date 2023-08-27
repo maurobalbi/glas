@@ -9,5 +9,4 @@ Features for 1.0:
   - Find references, highlight related
   - Add rename assists!
   - completion expr.use, maybe more?
-  - 
   - improve documentation

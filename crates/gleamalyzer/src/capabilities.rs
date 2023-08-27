@@ -58,7 +58,7 @@ pub(crate) fn negotiate_capabilities(
             },
         )),
         completion_provider: Some(CompletionOptions {
-            trigger_characters: Some(vec![".".into()]),
+            trigger_characters: Some(vec![".".into(), "@".into()]),
             ..Default::default()
         }),
         hover_provider: Some(HoverProviderCapability::Simple(true)),

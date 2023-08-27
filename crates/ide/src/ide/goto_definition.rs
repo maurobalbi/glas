@@ -94,6 +94,7 @@ mod tests {
     use crate::base::SourceDatabase;
     use crate::tests::TestDB;
     use expect_test::{expect, Expect};
+    use tracing_test::traced_test;
     
     #[track_caller]
     fn check_no(fixture: &str) {
@@ -170,6 +171,15 @@ mod tests {
         check(
             "type Mogie { Mogie(name: Int) } fn wops() { case Mogie { $0Mogie -> 1 } }",
             expect!["<Mogie(name: Int)>"],
+        );
+    }
+    
+    #[traced_test]
+    #[test]
+    fn pattern_spread() {
+        check(
+            "fn spread() { case [] { [..name] -> $0name }",
+            expect!["[<..name>]"],
         );
     }
 

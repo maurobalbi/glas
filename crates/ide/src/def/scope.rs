@@ -290,7 +290,7 @@ impl ExprScopes {
 
     fn add_bindings(&mut self, body: &Body, scope: ScopeId, pattern_id: &PatternId) {
         let pattern = &body[*pattern_id];
-        match pattern {
+        match &pattern.pattern {
             Pattern::Variable { name } => {
                 self.scopes[scope].entries.push(ScopeEntry {
                     name: name.clone(),
@@ -303,8 +303,13 @@ impl ExprScopes {
                     self.add_bindings(body, scope, pattern);
                 }
             }
-            Pattern::Spread { pattern } => {
-                self.add_bindings(body, scope, pattern);
+            Pattern::Spread { name } => {
+                name.clone().map(|name| 
+                    self.scopes[scope].entries.push(ScopeEntry {
+                        name,
+                        pat: *pattern_id,
+                    }
+                ));
             }
             Pattern::AlternativePattern { patterns } => {
                 for pattern in patterns {

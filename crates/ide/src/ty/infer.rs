@@ -551,7 +551,7 @@ impl<'db> InferCtx<'db> {
                         let map = self.db.module_map();
                         let file = map
                             .iter()
-                            .find(|(_, name)| name.ends_with(base_string.as_str()));
+                            .find(|(_, name)| name.split('/').last().eq(&Some(base_string.as_str())));
                         tracing::info!("fileid for modulename {:?} {}", file, base_string);
                         if let Some(res) = file
                             .map(|f| resolver_for_toplevel(self.db.upcast(), f.0))
@@ -654,7 +654,7 @@ impl<'db> InferCtx<'db> {
             self.table.get_mut(expected_ty_var.0)
         );
         let pat_var = self.ty_for_pattern(pattern);
-        match &self.body[pattern] {
+        match &self.body[pattern].pattern {
             Pattern::VariantRef {
                 name,
                 module: _,
@@ -685,11 +685,9 @@ impl<'db> InferCtx<'db> {
                 LiteralKind::String => self.unify_var_ty(pat_var, Ty::String),
                 LiteralKind::Bool => self.unify_var_ty(pat_var, Ty::Bool),
             },
-            Pattern::Spread { pattern } => {
-                let pat = self.ty_for_pattern(*pattern);
-                let of = self.new_ty_var();
-                self.unify_var_ty(pat, Ty::List { of });
-                self.unify_var(pat_var, of);
+            Pattern::Spread { name: _ } => {
+                self.unify_var_ty(pat_var, Ty::List { of: expected_ty_var });
+                return pat_var;
             }
             Pattern::List { elements } => {
                 let of = self.new_ty_var();

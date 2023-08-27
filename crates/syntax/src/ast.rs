@@ -212,15 +212,10 @@ enums! {
         PatternVariable,
         VariantRef,
         PatternTuple,
-        AlternativePattern,
         Literal,
         PatternList,
         Hole,
         PatternSpread,
-    },
-    ParamPattern {
-        PatternVariable,
-        Hole,
     },
     TypeNameOrName {
         Name,
@@ -267,15 +262,6 @@ impl FieldAccessExpr {
             Some(candidate)
         } else {
             None
-        }
-    }
-}
-
-impl From<ParamPattern> for Pattern {
-    fn from(value: ParamPattern) -> Self {
-        match value {
-            ParamPattern::PatternVariable(it) => Pattern::PatternVariable(it),
-            ParamPattern::Hole(it) => Pattern::Hole(it),
         }
     }
 }
@@ -486,7 +472,7 @@ asts! {
       as_name[1]: TypeNameOrName,
     },
     PARAM = Param {
-        pattern: ParamPattern, // this is a pattern to make name resolution easier
+        pattern: AsPattern, // this is a pattern to make name resolution easier
         label: Label,
         ty: TypeExpr,
     },
@@ -526,7 +512,7 @@ asts! {
         expr: Expr,
     },
     STMT_LET = StmtLet {
-        pattern: Pattern,
+        pattern: AsPattern,
         annotation: TypeExpr,
         body: Expr,
     },
@@ -535,7 +521,7 @@ asts! {
         expr: Expr,
     },
     USE_ASSIGNMENT = UseAssignment {
-        pattern: Pattern,
+        pattern: AsPattern,
         annotation: TypeExpr,
     },
     CONSTANT_TUPLE = ConstantTuple {
@@ -579,11 +565,15 @@ asts! {
         clauses: [Clause],
     },
     CLAUSE = Clause {
-        patterns: [Pattern],
+        patterns: [AlternativePattern],
         body: Expr,
     },
+    AS_PATTERN = AsPattern {
+        pattern: Pattern,
+        as_name: Pattern,
+    },
     ALTERNATIVE_PATTERN = AlternativePattern {
-        patterns: [Pattern],
+        patterns: [AsPattern],
     },
     PATTERN_VARIABLE = PatternVariable {
         pub fn token(&self) -> Option<SyntaxToken> {
@@ -603,16 +593,16 @@ asts! {
         fields: [VariantRefField],
     },
     VARIANT_REF_FIELD = VariantRefField {
-        field: Pattern,
+        field: AsPattern,
     },
     PATTERN_TUPLE = PatternTuple {
-        field_patterns: [Pattern],
+        field_patterns: [AsPattern],
     },
     PATTERN_SPREAD = PatternSpread {
-        pattern: Pattern,
+       name: Name, 
     },
     PATTERN_LIST = PatternList {
-        elements: [Pattern],
+        elements: [AsPattern],
     },
     PATTERN_GUARD = PatternGuard {
         expr: Expr,
@@ -710,6 +700,22 @@ mod tests {
         let mut iter = e.param_list().unwrap().params();
         iter.next().unwrap().syntax().should_eq("Int");
         iter.next().unwrap().syntax().should_eq("String");
+    }
+    
+    #[test]
+    fn pattern_spread() {
+        let e = parse::<Pattern>("fn spread() { case [] { [..name] -> name } }");
+        e.syntax().should_eq("[..name]");
+        match e {
+            Pattern::PatternList(list) => {
+                match list.elements().next().unwrap().pattern().unwrap() {
+                    Pattern::PatternSpread(spread) => spread.name().unwrap().syntax().should_eq("name"),
+                    _ => unreachable!()
+                }
+                
+            },
+            _ => unreachable!()
+        }
     }
 
     #[test]

@@ -67,7 +67,7 @@ impl<'db> CompletionContext<'db> {
         let sema = Semantics::new(db);
         let original_file = sema.parse(position.file_id);
         let tok = best_token_at_offset(original_file.syntax(), position.pos)?;
-        
+
         let mut ctx = CompletionContext {
             db,
             sema,
@@ -139,12 +139,60 @@ pub(crate) fn completions(
         complete_dot(&mut acc, ctx);
         return Some(acc);
     }
+    if trigger_char == Some('@') {
+        complete_at(&mut acc, ctx);
+        return Some(acc);
+    }
 
     complete_snippet(&mut acc, &ctx);
     complete_expr(&mut acc, &ctx);
     complete_import(&mut acc, &ctx);
 
     Some(acc)
+}
+
+fn complete_at(acc: &mut Vec<CompletionItem>, ctx: CompletionContext<'_>) {
+    
+    acc.push(CompletionItem {
+        label: "target(javscript)".into(),
+        source_range: ctx.source_range,
+        replace: "target(javascript)".into(),
+        kind: CompletionItemKind::Keyword,
+        signature: None,
+        description: None,
+        documentation: None,
+        is_snippet: true,
+    });
+    acc.push(CompletionItem {
+        label: "target(erlang)".into(),
+        source_range: ctx.source_range,
+        replace: "target(erlang)".into(),
+        kind: CompletionItemKind::Keyword,
+        signature: None,
+        description: None,
+        documentation: None,
+        is_snippet: true,
+    });
+    acc.push(CompletionItem {
+        label: "external(javascript, ..)".into(),
+        source_range: ctx.source_range,
+        replace: "external(javascript, \"$1\", \"$2\")".into(),
+        kind: CompletionItemKind::Keyword,
+        signature: None,
+        description: None,
+        documentation: None,
+        is_snippet: true,
+    });
+    acc.push(CompletionItem {
+        label: "external(erlang, ..)".into(),
+        source_range: ctx.source_range,
+        replace: "external(erlang, \"$1\", \"$2\")".into(),
+        kind: CompletionItemKind::Keyword,
+        signature: None,
+        description: None,
+        documentation: None,
+        is_snippet: true,
+    });
 }
 
 fn complete_dot(acc: &mut Vec<CompletionItem>, ctx: CompletionContext<'_>) -> Option<()> {
@@ -158,8 +206,7 @@ fn complete_dot(acc: &mut Vec<CompletionItem>, ctx: CompletionContext<'_>) -> Op
                 let map = ctx.db.module_map();
                 let file = map
                     .iter()
-                    .find(|(_, name)| name.ends_with(text.as_str()))?;
-
+                    .find(|(_, name)| name.split('/').last().eq(&Some(text.as_str())))?;
                 let module_items = ctx.db.module_scope(file.0);
 
                 for (def, _) in module_items.declarations() {

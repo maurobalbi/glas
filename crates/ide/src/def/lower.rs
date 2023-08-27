@@ -11,7 +11,7 @@ use super::{
 use la_arena::{Arena, Idx, IdxRange, RawIdx};
 use smol_str::SmolStr;
 use syntax::{
-    ast::{self, Pattern, ParamPattern},
+    ast::{self, Pattern},
     Parse,
 };
 
@@ -204,8 +204,8 @@ impl<'a> LowerCtx<'a> {
 
         if let Some(param_list) = fun.param_list() {
             for param in param_list.params() {
-                match param.pattern() {
-                    Some(ParamPattern::PatternVariable(it)) => {
+                match param.pattern().and_then(|p| p.pattern()) {
+                    Some(Pattern::PatternVariable(it)) => {
                         it.text().map(|t| {
                             params.push(Param {
                                 name: t,
