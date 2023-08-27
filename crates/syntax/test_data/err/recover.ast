@@ -2,37 +2,33 @@
 15..16: ExpectedStatement
 17..18: ExpectedStatement
 SOURCE_FILE@0..30
-  TARGET_GROUP@0..14
-    MODULE_CONSTANT@0..14
-      CONST_KW@0..5 "const"
-      WHITESPACE@5..6 " "
-      NAME@6..7
-        IDENT@6..7 "a"
-      COLON@7..8 ":"
-      WHITESPACE@8..9 " "
-      TYPE_NAME_REF@9..12
-        TYPE_NAME@9..12
-          U_IDENT@9..12 "Int"
-      WHITESPACE@12..13 " "
-      LITERAL@13..14
-        INTEGER@13..14 "1"
+  MODULE_CONSTANT@0..14
+    CONST_KW@0..5 "const"
+    WHITESPACE@5..6 " "
+    NAME@6..7
+      IDENT@6..7 "a"
+    COLON@7..8 ":"
+    WHITESPACE@8..9 " "
+    TYPE_NAME_REF@9..12
+      TYPE_NAME@9..12
+        U_IDENT@9..12 "Int"
+    WHITESPACE@12..13 " "
+    LITERAL@13..14
+      INTEGER@13..14 "1"
   WHITESPACE@14..15 " "
-  TARGET_GROUP@15..16
-    ERROR@15..16
-      EQ@15..16 "="
+  ERROR@15..16
+    EQ@15..16 "="
   WHITESPACE@16..17 " "
-  TARGET_GROUP@17..18
-    ERROR@17..18
-      INTEGER@17..18 "1"
+  ERROR@17..18
+    INTEGER@17..18 "1"
   WHITESPACE@18..19 "\n"
-  TARGET_GROUP@19..30
-    MODULE_CONSTANT@19..30
-      CONST_KW@19..24 "const"
-      WHITESPACE@24..25 " "
-      NAME@25..26
-        IDENT@25..26 "b"
-      WHITESPACE@26..27 " "
-      EQ@27..28 "="
-      WHITESPACE@28..29 " "
-      LITERAL@29..30
-        INTEGER@29..30 "2"
+  MODULE_CONSTANT@19..30
+    CONST_KW@19..24 "const"
+    WHITESPACE@24..25 " "
+    NAME@25..26
+      IDENT@25..26 "b"
+    WHITESPACE@26..27 " "
+    EQ@27..28 "="
+    WHITESPACE@28..29 " "
+    LITERAL@29..30
+      INTEGER@29..30 "2"

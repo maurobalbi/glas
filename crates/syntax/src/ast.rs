@@ -682,12 +682,12 @@ mod tests {
     #[test]
     fn module() {
         let e =
-            parse::<SourceFile>("if erlang {const a = 1} const b = 2 if javascript {const c = 3}");
+            parse::<SourceFile>("@target(erlang)\nconst a = 1 const b = 2 @target(javascript) const c = 3");
         let mut iter = e.statements();
         iter.next()
             .unwrap()
             .syntax()
-            .should_eq("if erlang {const a = 1}");
+            .should_eq("@target(erlang)\nconst a = 1");
         assert!(iter.next().is_some());
         assert!(iter.next().is_some());
         assert!(iter.next().is_none());
@@ -982,11 +982,11 @@ mod tests {
             "fn a() { 
                     case wobble, 1 + 7 
                     { 
-                        int.Bla(Some(a)) -> 2
+                        int.Bla(Some(a)), 1 -> 2
                     }}",
         );
         p.syntax().should_eq("int.Bla(Some(a))");
-        let pattern = VariantRef::cast(p.patterns().next().unwrap().syntax().clone()).unwrap();
+        let pattern = VariantRef::cast(p.patterns().next().unwrap().pattern().unwrap().syntax().clone()).unwrap();
         pattern
             .field_list()
             .unwrap()

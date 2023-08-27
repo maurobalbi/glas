@@ -137,7 +137,7 @@ mod tests {
             "test",
             expect![[r#"
                 ```gleam
-                fn() -> a
+                import test
                 ```
             "#]],
         );
