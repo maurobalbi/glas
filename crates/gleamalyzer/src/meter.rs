@@ -6,7 +6,10 @@ use std::task::{Context, Poll};
 use std::time::Instant;
 
 use async_lsp::{AnyEvent, AnyNotification, AnyRequest, LspService};
+use serde::Serialize;
 use tower::{Layer, Service};
+
+const LEVEL: tracing::Level = tracing::Level::DEBUG;
 
 pub struct Meter<S> {
     service: S,
@@ -15,6 +18,8 @@ pub struct Meter<S> {
 impl<S: LspService> Service<AnyRequest> for Meter<S>
 where
     S::Future: 'static,
+    S::Response: Serialize,
+    S::Error: Serialize,
 {
     type Response = S::Response;
     type Error = S::Error;
@@ -26,7 +31,7 @@ where
 
     fn call(&mut self, req: AnyRequest) -> Self::Future {
         // Fast path.
-        if !tracing::event_enabled!(tracing::Level::INFO) {
+        if !tracing::event_enabled!(LEVEL) {
             return Box::pin(self.service.call(req));
         }
 
@@ -41,7 +46,7 @@ where
                 Err(err) => serde_json::to_writer(&mut counter, err),
             }
             .expect("Failed to serialize");
-            tracing::info!("respond with ~{} bytes in {:?}", counter.0, elapsed);
+            tracing::event!(LEVEL, "respond with ~{} bytes in {:?}", counter.0, elapsed);
             ret
         })
     }
@@ -50,17 +55,23 @@ where
 impl<S: LspService> LspService for Meter<S>
 where
     S::Future: 'static,
+    S::Response: Serialize,
+    S::Error: Serialize,
 {
     fn notify(&mut self, notif: AnyNotification) -> ControlFlow<async_lsp::Result<()>> {
         let inst = Instant::now();
         let ret = self.service.notify(notif);
         let elapsed = inst.elapsed();
-        tracing::info!("handled notification in {:?}", elapsed);
+        tracing::event!(LEVEL, "handled notification in {elapsed:?}");
         ret
     }
 
     fn emit(&mut self, event: AnyEvent) -> ControlFlow<async_lsp::Result<()>> {
-        self.service.emit(event)
+        let inst = Instant::now();
+        let ret = self.service.emit(event);
+        let elapsed = inst.elapsed();
+        tracing::event!(LEVEL, "handled event in {elapsed:?}");
+        ret
     }
 }
 

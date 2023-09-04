@@ -83,7 +83,7 @@ pub async fn run_server_stdio() -> Result<()> {
         });
     }
 
-    let (frontend, _) = async_lsp::Frontend::new_server(|client| {
+    let (mainloop, _) = async_lsp::MainLoop::new_server(|client| {
         ServiceBuilder::new()
             .layer(TracingLayer::default())
             .layer(MeterLayer::default())
@@ -93,8 +93,18 @@ pub async fn run_server_stdio() -> Result<()> {
             .layer(ClientProcessMonitorLayer::new(client.clone()))
             .service(Server::new_router(client, init_messages))
     });
+    // Prefer truly asynchronous piped stdin/stdout without blocking tasks.
+    #[cfg(unix)]
+    let (stdin, stdout) = (
+        async_lsp::stdio::PipeStdin::lock_tokio().unwrap(),
+        async_lsp::stdio::PipeStdout::lock_tokio().unwrap(),
+    );
+    // Fallback to spawn blocking read/write otherwise.
+    #[cfg(not(unix))]
+    let (stdin, stdout) = (
+        tokio_util::compat::TokioAsyncReadCompatExt::compat(tokio::io::stdin()),
+        tokio_util::compat::TokioAsyncWriteCompatExt::compat_write(tokio::io::stdout()),
+    );
 
-    let input = BufReader::new(tokio::io::stdin());
-    let output = tokio::io::stdout();
-    Ok(frontend.run(input, output).await?)
+    Ok(mainloop.run_buffered(stdin, stdout).await?)
 }
