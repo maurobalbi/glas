@@ -2,39 +2,49 @@ use crate::capabilities::{negotiate_capabilities, NegotiatedCapabilities};
 use crate::config::{Config, CONFIG_KEY};
 use crate::{convert, handler, lsp_ext, UrlExt, Vfs, MAX_FILE_LEN};
 use anyhow::{bail, Context, Result};
+use async_lsp::concurrency::ConcurrencyLayer;
+use async_lsp::panic::CatchUnwindLayer;
 use async_lsp::router::Router;
-use async_lsp::{ClientSocket, ErrorCode, LanguageClient, ResponseError};
+use async_lsp::tracing::TracingLayer;
+use async_lsp::{
+    ClientSocket, ErrorCode, LanguageClient, LanguageServer, ResponseError, ServerSocket,
+};
 use gleam_interop;
 use ide::{
-    module_name, Analysis, AnalysisHost, Cancelled, FileSet, ModuleMap, PackageInfo, SourceRoot,
-    VfsPath,
+    module_name, Analysis, AnalysisHost, Cancelled, Diagnostic, FileId, FileSet, ModuleMap,
+    PackageInfo, SourceRoot, VfsPath,
 };
-use lsp_types::notification::Notification;
+use lsp_types::notification::{Notification, PublishDiagnostics};
 use lsp_types::request::{self as req, Request};
 use lsp_types::{
-    notification as notif, ConfigurationItem, ConfigurationParams, DidChangeConfigurationParams,
-    DidChangeTextDocumentParams, DidChangeWatchedFilesParams,
+    notification as notif, ClientCapabilities, ConfigurationItem, ConfigurationParams,
+    DidChangeConfigurationParams, DidChangeTextDocumentParams, DidChangeWatchedFilesParams,
     DidChangeWatchedFilesRegistrationOptions, DidCloseTextDocumentParams,
-    DidOpenTextDocumentParams, FileChangeType, FileEvent, FileSystemWatcher, GlobPattern,
-    InitializeParams, InitializeResult, InitializedParams, MessageType, NumberOrString, OneOf,
-    ProgressParams, ProgressParamsValue, PublishDiagnosticsParams, Registration,
-    RegistrationParams, RelativePattern, ServerInfo, ShowMessageParams, Url, WorkDoneProgress,
-    WorkDoneProgressBegin, WorkDoneProgressCreateParams, WorkDoneProgressEnd,
-    WorkDoneProgressReport,
+    DidOpenTextDocumentParams, DidSaveTextDocumentParams, FileChangeType, FileEvent,
+    FileSystemWatcher, GlobPattern, InitializeParams, InitializeResult, InitializedParams,
+    MessageType, NumberOrString, OneOf, ProgressParams, ProgressParamsValue,
+    PublishDiagnosticsParams, Registration, RegistrationParams, RelativePattern, ServerInfo,
+    ShowMessageParams, TextDocumentClientCapabilities, TextDocumentContentChangeEvent,
+    TextDocumentSyncClientCapabilities, Url, VersionedTextDocumentIdentifier,
+    WindowClientCapabilities, WorkDoneProgress, WorkDoneProgressBegin,
+    WorkDoneProgressCreateParams, WorkDoneProgressEnd, WorkDoneProgressReport,
 };
+use serde::de;
+use tower::ServiceBuilder;
 
 use std::backtrace::Backtrace;
 use std::borrow::BorrowMut;
 use std::cell::Cell;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use std::future::{ready, Future};
 use std::io::{ErrorKind, Read};
-use std::ops::ControlFlow;
+use std::ops::{ControlFlow, DerefMut};
 use std::panic::UnwindSafe;
 use std::path::{Path, PathBuf};
+use std::process::Stdio;
 
-use std::sync::{Arc, Once, RwLock};
+use std::sync::{Arc, Mutex, Once, RwLock};
 use std::time::Duration;
 use std::{fmt, panic};
 use tokio::task;
@@ -47,12 +57,26 @@ type NotifyResult = ControlFlow<async_lsp::Result<()>>;
 struct UpdateConfigEvent(serde_json::Value);
 struct SetPackageInfoEvent(Option<(PackageInfo, Vec<PathBuf>)>);
 
+#[derive(Debug)]
+pub enum CollectDiagnosticsEvent {
+    External(PublishDiagnosticsParams),
+    Internal(PublishDiagnosticsParams),
+}
+
+#[derive(Debug)]
+struct DiagnosticCollector {
+    external: HashMap<Url, PublishDiagnosticsParams>,
+    internal: HashMap<Url, PublishDiagnosticsParams>,
+}
+
 const LSP_SERVER_NAME: &str = "gleamalyzer";
 pub const GLEAM_TOML: &str = "gleam.toml";
 pub const MANIFEST_TOML: &str = "manifest.toml";
 const LOAD_WORKSPACE_PROGRESS_TOKEN: &str = "gleamalyzer/loadWorkspaceProgress";
 
 const LOAD_GLEAM_WORKSPACE_DEBOUNCE_DURATION: Duration = Duration::from_millis(100);
+
+struct ClientState {}
 
 pub struct Server {
     // States.
@@ -62,6 +86,8 @@ pub struct Server {
     opened_files: HashMap<Url, FileData>,
     config: Arc<Config>,
 
+    gleam_interop_client: Option<ServerSocket>,
+    diagnostics: DiagnosticCollector,
     // Ongoing tasks.
     load_gleam_workspace_fut: Option<JoinHandle<()>>,
 
@@ -92,6 +118,7 @@ impl Server {
             .notification::<notif::DidCloseTextDocument>(Self::on_did_close)
             .notification::<notif::DidChangeTextDocument>(Self::on_did_change)
             .notification::<notif::DidChangeConfiguration>(Self::on_did_change_configuration)
+            .notification::<notif::DidSaveTextDocument>(Self::on_did_save)
             // NB. This handler is mandatory.
             // > In former implementations clients pushed file events without the server actively asking for it.
             // Ref: https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspace_didChangeWatchedFiles
@@ -104,6 +131,7 @@ impl Server {
             //// Events ////
             .event(Self::on_set_package_info)
             .event(Self::on_update_config)
+            .event(Self::on_update_diagnostics)
             // Loopback event.
             .event(Self::on_did_change_watched_files);
         router
@@ -118,8 +146,15 @@ impl Server {
 
             load_gleam_workspace_fut: None,
 
+            gleam_interop_client: None,
+            diagnostics: DiagnosticCollector {
+                // client,
+                external: HashMap::new(),
+                internal: HashMap::new(),
+            },
+
             source_root_config: Vec::new(),
-            client,
+            client: client,
             init_messages,
             capabilities: NegotiatedCapabilities::default(),
         }
@@ -160,18 +195,70 @@ impl Server {
         }
         *Arc::get_mut(&mut self.config).expect("No concurrent access yet") = cfg;
 
-        ready(Ok(InitializeResult {
-            capabilities: server_caps,
-            server_info: Some(ServerInfo {
-                name: LSP_SERVER_NAME.into(),
-                version: option_env!("CFG_RELEASE").map(Into::into),
-            }),
-        }))
+        let (mainloop, mut server) = async_lsp::MainLoop::new_client(|_server| {
+            let mut router = Router::new(ClientState {});
+
+            let client = self.client.clone();
+            router.notification::<PublishDiagnostics>(move |_, params| {
+                let _ = client.emit(CollectDiagnosticsEvent::External(params));
+                ControlFlow::Continue(())
+            });
+
+            ServiceBuilder::new()
+                .layer(TracingLayer::default())
+                .layer(CatchUnwindLayer::default())
+                .layer(ConcurrencyLayer::default())
+                .service(router)
+        });
+
+        let child = async_process::Command::new("gleam")
+            .arg("lsp")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::inherit())
+            .kill_on_drop(false)
+            .spawn()
+            .expect("Failed to run gleam lsp");
+        let stdout = child.stdout.unwrap();
+        let stdin = child.stdin.unwrap();
+
+        tokio::spawn(async move {
+            mainloop.run_buffered(stdout, stdin).await.unwrap();
+        });
+        self.gleam_interop_client = Some(server.clone());
+
+        // Initialize.
+        async move {
+            let _params = server
+                .initialize(InitializeParams {
+                    root_uri: Some(params.root_uri.unwrap()),
+                    capabilities: ClientCapabilities {
+                        window: Some(WindowClientCapabilities {
+                            work_done_progress: Some(true),
+                            ..WindowClientCapabilities::default()
+                        }),
+                        ..ClientCapabilities::default()
+                    },
+                    ..InitializeParams::default()
+                })
+                .await
+                .unwrap();
+            server.initialized(InitializedParams {}).unwrap();
+
+            Ok(InitializeResult {
+                capabilities: server_caps,
+                server_info: Some(ServerInfo {
+                    name: LSP_SERVER_NAME.into(),
+                    version: option_env!("CFG_RELEASE").map(Into::into),
+                }),
+            })
+        }
     }
 
     fn on_initialized(&mut self, _params: InitializedParams) -> NotifyResult {
         for msg in std::mem::take(&mut self.init_messages) {
             tracing::warn!("Init message ({:?}): {}", msg.typ, msg.message);
+
             let _: Result<_, _> = self.client.show_message(msg);
         }
 
@@ -257,10 +344,11 @@ impl Server {
             return ControlFlow::Continue(());
         }
 
-        let uri = params.text_document.uri;
+        let uri = params.text_document.uri.clone();
         self.opened_files.insert(uri.clone(), FileData::default());
-        self.set_vfs_file_content(&uri, params.text_document.text);
+        self.set_vfs_file_content(&uri, params.text_document.text.clone());
 
+        let _ = self.gleam_interop_client.as_ref().unwrap().did_open(params);
         self.spawn_update_diagnostics(uri);
 
         ControlFlow::Continue(())
@@ -316,6 +404,35 @@ impl Server {
 
         self.spawn_update_diagnostics(uri);
 
+        ControlFlow::Continue(())
+    }
+
+    fn on_did_save(&mut self, params: DidSaveTextDocumentParams) -> NotifyResult {
+        tracing::info!("Received save notification");
+        let vfs = self.vfs.write().unwrap();
+        let Ok(file) = vfs.file_for_uri(&params.text_document.uri) else { return ControlFlow::Continue(()) };
+        let file_content = vfs.content_for_file(file);
+
+        let content_changes = vec![TextDocumentContentChangeEvent {
+            range: None,
+            range_length: None,
+            text: file_content.to_string(),
+        }];
+
+        let params = DidChangeTextDocumentParams {
+            text_document: VersionedTextDocumentIdentifier {
+                uri: params.text_document.uri,
+                version: 1,
+            },
+            content_changes,
+        };
+
+        let _ = self
+            .gleam_interop_client
+            .as_ref()
+            .unwrap()
+            .did_change(params);
+        drop(vfs);
         ControlFlow::Continue(())
     }
 
@@ -630,6 +747,38 @@ impl Server {
         ControlFlow::Continue(())
     }
 
+    fn on_update_diagnostics(&mut self, event: CollectDiagnosticsEvent) -> NotifyResult {
+        let diag = match event {
+            CollectDiagnosticsEvent::External(diagnostics) => {
+                let uri = diagnostics.uri.clone();
+                let mut new_diags = diagnostics.clone();
+                self.diagnostics.external.insert(uri.clone(), diagnostics);
+                let mut internal = self
+                    .diagnostics
+                    .internal
+                    .get(&uri)
+                    .map_or_else(|| Vec::new(), |e| e.diagnostics.clone());
+                new_diags.diagnostics.append(&mut internal);
+                new_diags
+            }
+            CollectDiagnosticsEvent::Internal(diagnostics) => {
+                let uri = diagnostics.uri.clone();
+                let mut new_diags = diagnostics.clone();
+                self.diagnostics.internal.insert(uri.clone(), diagnostics);
+                let mut external = self
+                    .diagnostics
+                    .external
+                    .get(&uri)
+                    .map_or_else(|| Vec::new(), |e| e.diagnostics.clone());
+                new_diags.diagnostics.append(&mut external);
+                new_diags
+            }
+        };
+        let _ = self.client.publish_diagnostics(diag);
+
+        ControlFlow::Continue(())
+    }
+
     fn spawn_update_diagnostics(&mut self, uri: Url) {
         let task = self.spawn_with_snapshot({
             let uri = uri.clone();
@@ -653,17 +802,26 @@ impl Server {
             prev_task.abort();
         }
 
-        let mut client = self.client.clone();
-        task::spawn(async move {
-            if let Ok(diagnostics) = task.await {
-                tracing::debug!("Publish {} diagnostics for {}", diagnostics.len(), uri);
-                let _: Result<_, _> = client.publish_diagnostics(PublishDiagnosticsParams {
-                    uri,
-                    diagnostics,
-                    version: None,
-                });
-            } else {
-                // Task cancelled, then there must be another task queued already. Do nothing.
+        task::spawn({
+            let client = self.client.clone();
+            async move {
+                if let Ok(diagnostics) = task.await {
+                    tracing::debug!("Publish {} diagnostics for {}", diagnostics.len(), uri);
+                    let _ = client.emit(CollectDiagnosticsEvent::Internal(
+                        PublishDiagnosticsParams {
+                            uri,
+                            diagnostics,
+                            version: None,
+                        },
+                    ));
+                    // let _: Result<_, _> = client.publish_diagnostics(PublishDiagnosticsParams {
+                    //     uri,
+                    //     diagnostics,
+                    //     version: None,
+                    // });
+                } else {
+                    // Task cancelled, then there must be another task queued already. Do nothing.
+                }
             }
         });
     }

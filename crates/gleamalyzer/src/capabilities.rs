@@ -54,7 +54,7 @@ pub(crate) fn negotiate_capabilities(
                 change: Some(TextDocumentSyncKind::INCREMENTAL),
                 will_save: None,
                 will_save_wait_until: None,
-                save: None,
+                save: Some(lsp_types::TextDocumentSyncSaveOptions::Supported(true)),
             },
         )),
         completion_provider: Some(CompletionOptions {
