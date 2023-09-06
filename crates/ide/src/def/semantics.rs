@@ -3,19 +3,19 @@ use std::{cell::RefCell, collections::HashMap};
 use smol_str::SmolStr;
 use syntax::{
     ast::{self, AstNode},
-    match_ast, AstPtr, SyntaxNode,
+    match_ast, AstPtr, SyntaxNode, GleamLanguage,
 };
 
 use crate::{
     impl_from,
-    ty::{FieldResolution, TyDatabase, self},
+    ty::{self, FieldResolution, TyDatabase},
     DefDatabase, FileId, InFile,
 };
 
 use super::{
     hir::{Adt, Function, Local, Module, Variant},
     hir_def::ModuleDefId,
-    module::Field,
+    module::{Field, Pattern},
     resolver::{resolver_for_toplevel, ResolveResult},
     source_analyzer::SourceAnalyzer,
 };
@@ -62,9 +62,23 @@ pub fn classify_node(sema: Semantics, node: &SyntaxNode) -> Option<Definition> {
     match_ast! {
         match node {
             ast::NameRef(name_ref) => classify_name_ref(sema, &name_ref),
+            ast::Name(name) => classify_name(sema, &name),
             _ => None,
         }
     }
+}
+
+fn classify_name(sema: Semantics, name: &ast::Name) -> Option<Definition> {
+    let parent = name.syntax().parent()?;
+
+    match_ast! {
+        match parent {
+            ast::Function(it) => return sema.to_def(&it).map(From::from),
+            _ => {},
+        }
+    }
+
+    return None;
 }
 
 fn classify_name_ref(sema: Semantics, name_ref: &ast::NameRef) -> Option<Definition> {
@@ -114,19 +128,17 @@ impl<'db> Semantics<'db> {
             return Some(ResolveResult::Module(module.into()));
         }
 
-        analyzer
-            .resolver
-            .resolve_name(&SmolStr::from(name.text()?))
+        analyzer.resolver.resolve_name(&SmolStr::from(name.text()?))
     }
 
     pub fn ty_of_expr(&self, expr: &ast::Expr) -> Option<ty::Ty> {
-       self.analyze(expr.syntax())?
+        self.analyze(expr.syntax())?
             .type_of_expr(self.db.upcast(), expr)
     }
 
     fn analyze(&self, node: &SyntaxNode) -> Option<SourceAnalyzer> {
         let node = self.find_file(node);
-        let resolver = match find_def(self.db.upcast(), node) {
+        let resolver = match find_container(self.db.upcast(), node) {
             Some(ModuleDefId::FunctionId(id)) => {
                 return Some(SourceAnalyzer::new_for_function(self.db, id, node));
             }
@@ -165,6 +177,11 @@ impl<'db> Semantics<'db> {
         InFile::new(file_id, node)
     }
 
+    fn to_def<T: ToDef>(&self, src: &T) -> Option<T::Def> {
+        let src = self.find_file(src.syntax()).with_value(src).cloned();
+        T::to_def(self, src)
+    }
+
     fn lookup(&self, root_node: &SyntaxNode) -> Option<FileId> {
         let cache = self.cache.borrow();
         cache.get(root_node).copied()
@@ -174,27 +191,41 @@ impl<'db> Semantics<'db> {
 fn find_root(node: &SyntaxNode) -> SyntaxNode {
     node.ancestors().last().unwrap()
 }
+pub trait ToDef: AstNode<Language = GleamLanguage> + Clone {
+    type Def;
 
+    fn to_def(sema: &Semantics<'_>, src: InFile<Self>) -> Option<Self::Def>;
+}
+
+impl ToDef for ast::Function {
+    type Def = Function;
+
+    fn to_def(sema: &Semantics<'_>, src: InFile<Self>) -> Option<Self::Def> {
+        let map = sema.db.module_source_map(src.file_id);
+        let fn_id = map.node_to_function(&src.value);
+        return fn_id.map(From::from);
+    }
+}
+
+// impl ToDef for ast::Pattern {
+//     type Def = Pattern;
+
+//     fn to_def(sema: &Semantics<'_>, src: InFile<Self>) -> Option<Self::Def> {
+//         let map = sema.db.module_source_map(src.file_id);
+//         let fn_id = map.node_to_function(&src.value);
+//         return fn_id.map(From::from);
+//     }
+// }
 // This seems inefficient
 // ToDo: build a source_map during lowering...
-pub fn find_def(db: &dyn DefDatabase, node: InFile<&SyntaxNode>) -> Option<ModuleDefId> {
-    let module = db.module_scope(node.file_id);
+pub fn find_container(db: &dyn DefDatabase, node: InFile<&SyntaxNode>) -> Option<ModuleDefId> {
+    let map = db.module_source_map(node.file_id);
     for node in node.ancestors() {
         if let Some(def) = ast::ModuleStatement::cast(node.value) {
             match def {
                 ast::ModuleStatement::Function(it) => {
-                    for (id, _) in module.declarations() {
-                        match id {
-                            ModuleDefId::FunctionId(func_id) => {
-                                let func = db.lookup_intern_function(*func_id);
-                                let data = &db.module_items(node.file_id)[func.value];
-                                if data.ast_ptr == AstPtr::new(&it) {
-                                    return Some(id.clone());
-                                }
-                            }
-                            _ => {}
-                        }
-                    }
+                    let fn_id = map.node_to_function(&it);
+                    return fn_id.map(From::from);
                 }
                 _ => {}
             }

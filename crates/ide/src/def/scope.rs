@@ -1,25 +1,27 @@
-use std::{ops, sync::Arc};
+use std::{ops, sync::Arc, collections::HashMap};
 
 use indexmap::IndexMap;
 use la_arena::{Arena, ArenaMap, Idx};
 use petgraph::stable_graph::StableGraph;
 use salsa::InternId;
 use smol_str::SmolStr;
+use syntax::{AstPtr, ast};
 
 use crate::{DefDatabase, FileId};
 
 use super::{
     body::Body,
-    hir_def::{AdtLoc, FunctionLoc, ModuleDefId, VariantId},
+    hir_def::{AdtLoc, FunctionLoc, ModuleDefId, VariantId, AdtId},
     module::{Clause, Expr, ExprId, ImportData, Pattern, PatternId, Statement, Visibility},
     resolver::ResolveResult,
     resolver_for_expr, FunctionId, ModuleItemData,
 };
 
-pub fn module_scope_query(db: &dyn DefDatabase, file_id: FileId) -> Arc<ModuleScope> {
+pub fn module_scope_with_map_query(db: &dyn DefDatabase, file_id: FileId) -> (Arc<ModuleScope>, Arc<ModuleSourceMap>) {
     let module_data = db.module_items(file_id);
 
     let mut scope = ModuleScope::default();
+    let mut module_source_map = ModuleSourceMap::default();
 
     for (_, import) in module_data.unqualified_imports() {
         if let Some(val) = scope.resolve_import(db, &module_data, import) {
@@ -36,6 +38,8 @@ pub fn module_scope_query(db: &dyn DefDatabase, file_id: FileId) -> Arc<ModuleSc
             file_id,
             value: func_id,
         });
+
+        module_source_map.function_map.insert(func.ast_ptr.clone(), func_loc);
         let def = ModuleDefId::FunctionId(func_loc);
         scope.values.insert(name.clone(), def.clone());
         scope
@@ -50,6 +54,8 @@ pub fn module_scope_query(db: &dyn DefDatabase, file_id: FileId) -> Arc<ModuleSc
             value: adt_id,
         });
         let def = ModuleDefId::AdtId(adt_loc);
+
+        module_source_map.adt_map.insert(adt.ast_ptr.clone(), adt_loc);
         scope.types.insert(name.clone(), def.clone());
         scope
             .declarations
@@ -59,10 +65,13 @@ pub fn module_scope_query(db: &dyn DefDatabase, file_id: FileId) -> Arc<ModuleSc
             let variant = &module_data[variant_id];
             let name = &variant.name;
 
-            let def = ModuleDefId::VariantId(VariantId {
+            let variant_id = VariantId {
                 parent: adt_loc,
                 local_id: variant_id,
-            });
+            };
+            let def = ModuleDefId::VariantId(variant_id);
+
+            module_source_map.variant_map.insert(variant.ast_ptr.clone(), variant_id);
             scope.values.insert(name.clone(), def.clone());
 
             //use visibility of adt
@@ -72,7 +81,31 @@ pub fn module_scope_query(db: &dyn DefDatabase, file_id: FileId) -> Arc<ModuleSc
         }
     }
 
-    Arc::new(scope)
+    (Arc::new(scope), Arc::new(module_source_map))
+}
+
+#[derive(Debug, Default, PartialEq, Eq)]
+pub struct ModuleSourceMap {
+    function_map: HashMap<AstPtr<ast::Function>, FunctionId>,
+    adt_map: HashMap<AstPtr<ast::Adt>, AdtId>,
+    variant_map: HashMap<AstPtr<ast::Variant>, VariantId>,
+}
+
+impl ModuleSourceMap {
+    pub fn node_to_function(&self, node: &ast::Function) -> Option<FunctionId> {
+        let src = AstPtr::new(node);
+        self.function_map.get(&src).copied()
+    }
+ 
+    pub fn node_to_adt(&self, node: &ast::Adt) -> Option<AdtId> {
+        let src = AstPtr::new(node);
+        self.adt_map.get(&src).copied()
+    }
+
+    pub fn node_to_variant(&self, node: &ast::Variant) -> Option<VariantId> {
+        let src = AstPtr::new(node);
+        self.variant_map.get(&src).copied()
+    }
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]

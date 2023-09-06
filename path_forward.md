@@ -3,6 +3,9 @@ Features for 1.0:
   ✓ Finish parser: attribute syntax, pattern guards, record spread 
   - Finish inference for Result, Tuple, Case multiple subjects
   - Fix function label / Record label lowering + inference
+  - Finish hover for names
+  - Add signature help
+  - Add Inlay - Hints ?
   - Fix magic completion in pipes
   - Reimplement target based compiliation
   - Find references, highlight related

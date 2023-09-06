@@ -7,7 +7,7 @@ use syntax::{
 
 use crate::{
     def::{
-        find_def,
+        find_container,
         hir::Function,
         hir::Variant,
         hir_def::ModuleDefId,
@@ -311,7 +311,7 @@ fn complete_import(acc: &mut Vec<CompletionItem>, ctx: &CompletionContext<'_>) -
 
 fn complete_expr(acc: &mut Vec<CompletionItem>, ctx: &CompletionContext<'_>) -> Option<()> {
     let expr_ptr = ctx.expr_ptr.clone()?;
-    let resolver = match find_def(ctx.db.upcast(), expr_ptr.as_ref()) {
+    let resolver = match find_container(ctx.db.upcast(), expr_ptr.as_ref()) {
         Some(ModuleDefId::FunctionId(id)) => {
             let source_map = ctx.db.body_source_map(id);
             let expr_ptr = expr_ptr.with_value(ast::Expr::cast(expr_ptr.value.clone())?);
