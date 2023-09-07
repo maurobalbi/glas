@@ -356,7 +356,6 @@ asts! {
     },
     VARIANT_CONSTRUCTOR = VariantConstructor {
         name: NameRef,
-        args: ArgList,
     },
     CONSTRUCTOR_FIELD_LIST = ConstructorFieldList {
         fields: [ConstructorField],
@@ -1030,7 +1029,7 @@ mod tests {
     #[test]
     fn variant_constructor() {
         let f = parse::<VariantConstructor>("fn fields() { Muddle(name: 5) }");
-        f.args().unwrap().syntax().should_eq("(name: 5)");
+        // f.args().unwrap().syntax().should_eq("(name: 5)");
         f.name().unwrap().syntax().should_eq("Muddle");
     }
 

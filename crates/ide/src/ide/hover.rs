@@ -95,7 +95,7 @@ mod tests {
             "main",
             expect![[r#"
                 ```gleam
-                fn() -> a
+                fn main() -> a
                 ```
             "#]],
         );

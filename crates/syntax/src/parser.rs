@@ -741,9 +741,6 @@ fn expr_unit(p: &mut Parser) -> Option<MarkClosed> {
         U_IDENT => {
             let b = p.start_node();
             name_ref(p);
-            if p.at(T!["("]) {
-                arg_list(p);
-            }
             p.finish_node(b, VARIANT_CONSTRUCTOR)
         }
         DISCARD_IDENT => {

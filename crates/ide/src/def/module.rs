@@ -131,7 +131,6 @@ pub enum Expr {
     },
     VariantLiteral {
         name: SmolStr,
-        fields: Vec<ExprId>,
     },
     Call {
         func: ExprId,

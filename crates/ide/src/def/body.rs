@@ -229,13 +229,7 @@ impl BodyLowerCtx<'_> {
                     .and_then(|n| n.text())
                     .unwrap_or_else(Name::missing);
 
-                let mut fields = Vec::new();
-                if let Some(args) = constr.args() {
-                    for field in args.args() {
-                        fields.push(self.lower_expr_opt(field.value()));
-                    }
-                }
-                self.alloc_expr(Expr::VariantLiteral { name, fields }, ptr)
+                self.alloc_expr(Expr::VariantLiteral { name }, ptr)
             }
             ast::Expr::BinaryOp(e) => {
                 let left = self.lower_expr_opt(e.lhs());

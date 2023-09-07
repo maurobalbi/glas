@@ -93,6 +93,14 @@ fn let_infer_pattern() {
     )
 }
 
+#[test]
+fn unsaturated_constructor() {
+    check_all(
+        "type Snow { Snow(Int) } fn snow() {Snow}",
+        expect!["snow: fn() -> fn(Int) -> Snow"]
+    )
+}
+
 #[traced_test]
 #[test]
 fn let_infer() {

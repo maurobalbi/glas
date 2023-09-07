@@ -602,14 +602,17 @@ impl<'db> InferCtx<'db> {
                 self.unify_var(field_ty, field_var);
                 field_ty
             }
-            Expr::VariantLiteral { name, fields } => {
-                let mut params = Vec::new();
-                // also unify fields
-                for field in fields {
-                    params.push(self.infer_expr(*field));
+            Expr::VariantLiteral { name } => {
+                let (ty, params) = self.resolve_variant(name);
+                if params.len() > 0 {
+                    Ty::Function {
+                        params,
+                        return_: ty,
                 }
-                let (ty, _params) = self.resolve_variant(name);
+                    .intern(self)
+                } else {
                 ty
+            }
             }
             Expr::List { elements } => {
                 let of_ty = self.new_ty_var();
