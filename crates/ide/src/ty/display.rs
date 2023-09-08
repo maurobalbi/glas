@@ -176,10 +176,18 @@ impl TyDisplay for Ty {
     ) -> Result<(), TyDisplayError> {
         match self {
             Ty::Unknown => write!(f, "?"),
+            Ty::Nil => write!(f, "Nil"),
             Ty::Bool => write!(f, "Bool"),
             Ty::Int => write!(f, "Int"),
             Ty::Float => write!(f, "Float"),
             Ty::String => write!(f, "String"),
+            Ty::Result{ok, err} => {
+                write!(f, "Result(")?;
+                ok.ty_fmt(f)?;
+                write!(f, ", ")?;
+                err.ty_fmt(f)?;
+                write!(f, ")")
+            },
             Ty::Function { params, return_ } => {
                 write!(f, "fn(")?;
                 f.write_joined(params.as_ref().clone().into_iter(), ", ")?;

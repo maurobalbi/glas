@@ -6,7 +6,7 @@ use smol_str::SmolStr;
 use crate::{DefDatabase, FileId};
 
 use super::{
-    hir::{Function, Local, Module, Variant},
+    hir::{Function, Local, Module, Variant, BuiltIn},
     hir_def::{AdtId, ModuleDefId},
     module::ExprId,
     scope::{ModuleScope, ScopeId},
@@ -58,6 +58,8 @@ pub enum ResolveResult {
     Function(Function),
     Variant(Variant),
     Module(Module),
+    BuiltIn(BuiltIn)
+    // BuiltIn()
 }
 
 impl Resolver {
@@ -135,6 +137,10 @@ impl Resolver {
                     return Some(ResolveResult::Variant(Variant::from(it)))
                 }
             }
+        }
+
+        if let Some(val) = BuiltIn::values().get(name) {
+            return Some(ResolveResult::BuiltIn(val.clone()))
         }
 
         None

@@ -13,7 +13,7 @@ use crate::{
 };
 
 use super::{
-    hir::{Adt, Function, Local, Module, Variant},
+    hir::{Adt, Function, Local, Module, Variant, BuiltIn},
     hir_def::ModuleDefId,
     module::{Field, Pattern},
     resolver::{resolver_for_toplevel, ResolveResult},
@@ -27,10 +27,11 @@ pub enum Definition {
     Field(Field),
     Local(Local),
     Module(Module),
+    BuiltIn(BuiltIn)
 }
 
 impl_from!(
-    Adt, Local, Function, Field, Variant, Module
+    Adt, Local, Function, Field, Variant, Module, BuiltIn
     for Definition
 );
 
@@ -54,6 +55,7 @@ impl From<ResolveResult> for Definition {
             ResolveResult::Function(it) => it.into(),
             ResolveResult::Variant(it) => it.into(),
             ResolveResult::Module(it) => it.into(),
+            ResolveResult::BuiltIn(it) => it.into(),
         }
     }
 }
@@ -216,8 +218,6 @@ impl ToDef for ast::Function {
 //         return fn_id.map(From::from);
 //     }
 // }
-// This seems inefficient
-// ToDo: build a source_map during lowering...
 pub fn find_container(db: &dyn DefDatabase, node: InFile<&SyntaxNode>) -> Option<ModuleDefId> {
     let map = db.module_source_map(node.file_id);
     for node in node.ancestors() {

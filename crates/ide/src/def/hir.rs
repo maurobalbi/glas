@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use smol_str::SmolStr;
 use syntax::ast::{self};
 
@@ -9,7 +11,7 @@ use crate::{
 
 use super::{
     hir_def::{AdtId, LocalVariantId},
-    module::{Field, PatternId, VariantData, Param, FunctionData},
+    module::{Field, FunctionData, Param, PatternId, VariantData},
     scope::ExprScopes,
     FunctionId, InternDatabase,
 };
@@ -158,5 +160,24 @@ impl Local {
         let infer = db.infer_function(def);
         let ty = infer.ty_for_pattern(self.pat_id).clone();
         ty
+    }
+}
+
+#[derive(Clone, Eq, Debug, PartialEq)]
+pub enum BuiltIn {
+    Nil,
+    Ok,
+    Error,
+}
+
+impl BuiltIn {
+    pub fn values() -> HashMap<SmolStr, BuiltIn> {
+        [
+            ("Nil".into(), BuiltIn::Nil),
+            ("Ok".into(), BuiltIn::Ok),
+            ("Error".into(), BuiltIn::Error),
+        ]
+        .into_iter()
+        .collect()
     }
 }

@@ -28,10 +28,15 @@ pub enum Ty {
     Generic {
         name: SmolStr,
     },
+    Nil,
     Bool,
     Int,
     Float,
     String,
+    Result {
+        ok: Arc<Ty>,
+        err: Arc<Ty>,
+    },
     List {
         of: Arc<Ty>,
     },
@@ -61,11 +66,21 @@ pub fn ty_from_ast(ast_expr: ast::TypeExpr) -> Ty {
         ast::TypeExpr::FnType(_fn_type) => Ty::Unknown,
         ast::TypeExpr::TupleType(_) => Ty::Unknown,
         ast::TypeExpr::TypeNameRef(t) => {
-            if let Some(ty) = t.constructor_name().and_then(|t| t.text()) {
+            if let Some((ty, token)) = t
+                .constructor_name()
+                .and_then(|t| Some((t.text()?, t.token()?)))
+            {
                 match ty.as_str() {
                     "Int" => return Ty::Int,
                     "Float" => return Ty::Float,
                     "String" => return Ty::String,
+                    // ToDo: Diagnostics
+                    a if token.kind() == syntax::SyntaxKind::U_IDENT => {
+                        return Ty::Adt {
+                            name: a.into(),
+                            params: Arc::new(Vec::new()),
+                        }
+                    }
                     a => return Ty::Generic { name: a.into() },
                 }
             }

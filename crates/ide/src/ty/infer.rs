@@ -1,4 +1,4 @@
-use std::{cmp::min, collections::HashMap, mem, ops::Deref, sync::Arc, hash::Hash};
+use std::{cmp::min, collections::HashMap, hash::Hash, mem, ops::Deref, sync::Arc};
 
 use la_arena::ArenaMap;
 use smol_str::SmolStr;
@@ -26,10 +26,15 @@ enum Ty {
     Unknown {
         idx: u32,
     },
+    Nil,
     Bool,
     Int,
     Float,
     String,
+    Result {
+        ok: TyVar,
+        err: TyVar,
+    },
     List {
         of: TyVar,
     },
@@ -189,10 +194,16 @@ impl<'db> InferCtx<'db> {
                     }
                 };
             }
+            super::Ty::Nil => Ty::Nil,
             super::Ty::Bool => Ty::Bool,
             super::Ty::Int => Ty::Int,
             super::Ty::Float => Ty::Float,
             super::Ty::String => Ty::String,
+            super::Ty::Result { ok, err } => {
+                let ok = self.make_type(ok.deref().clone(), env);
+                let err = self.make_type(err.deref().clone(), env);
+                Ty::Result { ok, err }
+            }
             super::Ty::List { of } => {
                 let ty = self.make_type(of.deref().clone(), env);
                 Ty::List { of: ty }
@@ -240,11 +251,11 @@ impl<'db> InferCtx<'db> {
 
     fn infer_function(&mut self, body: &Body) -> TyVar {
         let mut param_tys = Vec::new();
+        let mut env = HashMap::new();
         for (param, ty) in &body.params {
             let pat_ty = self.ty_for_pattern(*param);
             tracing::info!("inferring function param ty {:?}", ty);
             if let Some(ty) = ty {
-                let mut env = HashMap::new();
                 let param_ty = self.make_type(ty.clone(), &mut env);
                 self.unify_var(pat_ty, param_ty);
             }
@@ -469,8 +480,14 @@ impl<'db> InferCtx<'db> {
 
                 if let Some(hole) = hole {
                     let new_ty = self.new_ty_var();
-                    self.unify_var_ty(new_ty, Ty::Function { params: vec![hole], return_: ret_ty  });
-                    return new_ty
+                    self.unify_var_ty(
+                        new_ty,
+                        Ty::Function {
+                            params: vec![hole],
+                            return_: ret_ty,
+                        },
+                    );
+                    return new_ty;
                 }
                 ret_ty
             }
@@ -549,9 +566,9 @@ impl<'db> InferCtx<'db> {
                     _ => {
                         tracing::info!("INFERRING FIELD_RESOLUTION NON ADT");
                         let map = self.db.module_map();
-                        let file = map
-                            .iter()
-                            .find(|(_, name)| name.split('/').last().eq(&Some(base_string.as_str())));
+                        let file = map.iter().find(|(_, name)| {
+                            name.split('/').last().eq(&Some(base_string.as_str()))
+                        });
                         tracing::info!("fileid for modulename {:?} {}", file, base_string);
                         if let Some(res) = file
                             .map(|f| resolver_for_toplevel(self.db.upcast(), f.0))
@@ -593,6 +610,7 @@ impl<'db> InferCtx<'db> {
                                     );
                                     return var;
                                 }
+                                ResolveResult::BuiltIn(_) => todo!(),
                                 ResolveResult::Module(_) => todo!(),
                             }
                         }
@@ -608,11 +626,11 @@ impl<'db> InferCtx<'db> {
                     Ty::Function {
                         params,
                         return_: ty,
-                }
+                    }
                     .intern(self)
                 } else {
-                ty
-            }
+                    ty
+                }
             }
             Expr::List { elements } => {
                 let of_ty = self.new_ty_var();
@@ -689,7 +707,12 @@ impl<'db> InferCtx<'db> {
                 LiteralKind::Bool => self.unify_var_ty(pat_var, Ty::Bool),
             },
             Pattern::Spread { name: _ } => {
-                self.unify_var_ty(pat_var, Ty::List { of: expected_ty_var });
+                self.unify_var_ty(
+                    pat_var,
+                    Ty::List {
+                        of: expected_ty_var,
+                    },
+                );
                 return pat_var;
             }
             Pattern::List { elements } => {
@@ -715,9 +738,7 @@ impl<'db> InferCtx<'db> {
                     .iter()
                     .map(|l| self.make_type(l.type_ref.clone(), &mut ty_env))
                     .collect();
-                
-                // ToDo: infer function for unsaturated constructor
-                // e.g. type Bla { Bla(Int, Int) } => let b = Bla => fn(Int, Int) -> Bla
+
                 let ty = Ty::Adt {
                     adt_id: variant.parent,
                     generic_params: Vec::new(),
@@ -725,7 +746,29 @@ impl<'db> InferCtx<'db> {
                 .intern(self);
                 (ty, params)
             }
-
+            Some(ResolveResult::BuiltIn(it)) => match it {
+                hir::BuiltIn::Nil => (Ty::Nil.intern(self), Vec::new()),
+                hir::BuiltIn::Ok => {
+                    let ok = self.new_ty_var();
+                    (
+                    Ty::Result {
+                        ok,
+                        err: self.new_ty_var(),
+                    }
+                    .intern(self),
+                    vec![ok],
+                )},
+                hir::BuiltIn::Error => {
+                    let err = self.new_ty_var();
+                    (
+                    Ty::Result {
+                        ok: self.new_ty_var(),
+                        err,
+                    }
+                    .intern(self),
+                    vec![err],
+                )},
+            },
             _ => {
                 // ToDo: Add diagnostics
                 (self.new_ty_var(), Vec::new())
@@ -739,6 +782,11 @@ impl<'db> InferCtx<'db> {
                 idx: min(idx, idx2),
             },
             (Ty::Unknown { .. }, other) | (other, Ty::Unknown { .. }) => other,
+            (Ty::Result { ok, err }, Ty::Result { ok: okr, err: errr }) => {
+                self.unify_var(ok, okr);
+                self.unify_var(err, errr);
+                Ty::Result { ok, err }
+            }
             (Ty::List { of: of1 }, Ty::List { of: of2 }) => {
                 self.unify_var(of1, of2);
                 Ty::List { of: of1 }
@@ -857,10 +905,19 @@ impl<'a> Collector<'a> {
                 };
                 super::Ty::Generic { name }
             }
+            Ty::Nil => super::Ty::Nil,
             Ty::Bool => super::Ty::Bool,
             Ty::Int => super::Ty::Int,
             Ty::Float => super::Ty::Float,
             Ty::String => super::Ty::String,
+            Ty::Result { ok, err } => {
+                let ok = self.collect(*ok);
+                let err = self.collect(*err);
+                super::Ty::Result {
+                    ok: Arc::new(ok),
+                    err: Arc::new(err),
+                }
+            }
             Ty::List { of } => {
                 let of = self.collect(*of);
                 super::Ty::List { of: Arc::new(of) }

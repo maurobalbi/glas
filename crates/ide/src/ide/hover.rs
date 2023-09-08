@@ -28,17 +28,22 @@ pub(crate) fn hover(db: &dyn TyDatabase, FilePos { file_id, pos }: FilePos) -> O
         semantics::Definition::Function(it) => {
             let name = it.name(db.upcast());
             match it.ty(db) {
-                ty::Ty::Function { params, return_ } =>{ 
-                    let params = params.iter().map(|ty| format!("{}", ty.display(db))).collect::<Vec<_>>().join(", ");
+                ty::Ty::Function { params, return_ } => {
+                    let params = params
+                        .iter()
+                        .map(|ty| format!("{}", ty.display(db)))
+                        .collect::<Vec<_>>()
+                        .join(", ");
                     Some(HoverResult {
-                    range: tok.text_range(),
-                    markup: format!(
-                        "```gleam\nfn {}({}) -> {}\n```",
-                        name,
-                        params,
-                        return_.display(db)
-                    ),
-                })},
+                        range: tok.text_range(),
+                        markup: format!(
+                            "```gleam\nfn {}({}) -> {}\n```",
+                            name,
+                            params,
+                            return_.display(db)
+                        ),
+                    })
+                }
                 _ => None,
             }
         }
@@ -57,6 +62,10 @@ pub(crate) fn hover(db: &dyn TyDatabase, FilePos { file_id, pos }: FilePos) -> O
         semantics::Definition::Module(it) => Some(HoverResult {
             range: tok.text_range(),
             markup: format!("```gleam\nimport {}\n```", it.name(db.upcast())),
+        }),
+        semantics::Definition::BuiltIn(it) => Some(HoverResult {
+            range: tok.text_range(),
+            markup: format!("```gleam\n{:?}\n```", it),
         }),
     }
 }

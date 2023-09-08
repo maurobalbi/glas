@@ -1,5 +1,6 @@
 use super::NavigationTarget;
 
+use crate::def::hir::BuiltIn;
 use crate::def::semantics;
 use crate::def::source::HasSource;
 use crate::def::Semantics;
@@ -85,6 +86,7 @@ pub(crate) fn goto_definition(
                 full_range,
             }]))
         }
+        semantics::Definition::BuiltIn(_) => None,
     }
 }
 

@@ -330,6 +330,8 @@ fn complete_expr(acc: &mut Vec<CompletionItem>, ctx: &CompletionContext<'_>) -> 
             ResolveResult::Local(_) => CompletionItemKind::Param,
             ResolveResult::Function(_) => CompletionItemKind::Function,
             ResolveResult::Variant(_) => CompletionItemKind::Variant,
+            ResolveResult::BuiltIn(_) => CompletionItemKind::Variant,
+            
         };
         let replace = match def {
             ResolveResult::Function(it) => {

@@ -101,12 +101,19 @@ fn unsaturated_constructor() {
     )
 }
 
-#[traced_test]
 #[test]
 fn let_infer() {
     check_all(
         "type Biboop {Biboop(Int)} fn biboob(a) { let b = a b }",
         expect!["biboob: fn(a) -> a"],
+    )
+}
+
+#[test]
+fn generic_params() {
+    check_all(
+        "fn biboob(a: a, b: a) { a + 1 }",
+        expect!["biboob: fn(Int, Int) -> Int"],
     )
 }
 
