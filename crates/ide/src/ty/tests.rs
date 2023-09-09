@@ -118,6 +118,20 @@ fn generic_params() {
 }
 
 #[test]
+fn generic_adt() {
+    check_all(r#"type Animal(a, b) {
+        Dog(a, String)
+        Cat(b)
+      }
+      fn animais(b) {
+        case b {
+          Cat(a) -> Cat("kitty")
+          Dog(1, "goofy") -> Dog(a, "goofy")
+        }
+      }"#, expect!["animais: fn(Animal(Int, a)) -> Animal(b, String)"])
+}
+
+#[test]
 fn mutual_recursion() {
     check_all(
         "fn ding() { wobsie(1) } fn wobsie(a) { ding() + 1 }",
