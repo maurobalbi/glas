@@ -337,6 +337,10 @@ asts! {
     ADT = Adt {
         name: TypeName,
         constructors: [Variant],
+        generic_params: GenericParamList,
+    },
+    GENERIC_PARAM_LIST = GenericParamList {
+        params: [TypeExpr],
     },
     CUSTOM_TYPE_ALIAS = CustomTypeAlias {
         name: TypeName,
@@ -1040,5 +1044,16 @@ mod tests {
             todo
         }",
         );
+    }
+    
+    #[test]
+    fn adt_generic_params() {
+        let adt = parse::<Adt>(
+            "type List(a) { Cons(a) Nil }",
+        );
+
+        let params = adt.generic_params().unwrap();
+        params.syntax().should_eq("(a)");
+        params.params().next().unwrap().syntax().should_eq("a");
     }
 }

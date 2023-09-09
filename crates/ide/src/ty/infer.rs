@@ -739,9 +739,17 @@ impl<'db> InferCtx<'db> {
                     .map(|l| self.make_type(l.type_ref.clone(), &mut ty_env))
                     .collect();
 
+                let adt_idx = self.db.lookup_intern_adt(variant.parent);
+                let adt_data = &self.db.module_items(adt_idx.file_id)[adt_idx.value];
+                tracing::info!("ADT DATA {:?}", adt_data);
+                let mut generic_params = Vec::new();
+                for param in adt_data.params.iter() {
+                    generic_params.push(self.make_type(param.clone(), &mut ty_env));
+                }
+
                 let ty = Ty::Adt {
                     adt_id: variant.parent,
-                    generic_params: Vec::new(),
+                    generic_params,
                 }
                 .intern(self);
                 (ty, params)
@@ -751,23 +759,25 @@ impl<'db> InferCtx<'db> {
                 hir::BuiltIn::Ok => {
                     let ok = self.new_ty_var();
                     (
-                    Ty::Result {
-                        ok,
-                        err: self.new_ty_var(),
-                    }
-                    .intern(self),
-                    vec![ok],
-                )},
+                        Ty::Result {
+                            ok,
+                            err: self.new_ty_var(),
+                        }
+                        .intern(self),
+                        vec![ok],
+                    )
+                }
                 hir::BuiltIn::Error => {
                     let err = self.new_ty_var();
                     (
-                    Ty::Result {
-                        ok: self.new_ty_var(),
-                        err,
-                    }
-                    .intern(self),
-                    vec![err],
-                )},
+                        Ty::Result {
+                            ok: self.new_ty_var(),
+                            err,
+                        }
+                        .intern(self),
+                        vec![err],
+                    )
+                }
             },
             _ => {
                 // ToDo: Add diagnostics
@@ -786,6 +796,22 @@ impl<'db> InferCtx<'db> {
                 self.unify_var(ok, okr);
                 self.unify_var(err, errr);
                 Ty::Result { ok, err }
+            }
+            (
+                Ty::Adt {
+                    adt_id: id1,
+                    generic_params: params1,
+                },
+                Ty::Adt {
+                    adt_id: id2,
+                    generic_params: params2,
+                },
+            ) => {
+                // diagnostic if adt_id not the same!
+                for (p1, p2) in params1.clone().into_iter().zip(params2.into_iter()) {
+                    self.unify_var(p1, p2)
+                }
+                Ty::Adt { adt_id: id1, generic_params: params1 }
             }
             (Ty::List { of: of1 }, Ty::List { of: of2 }) => {
                 self.unify_var(of1, of2);
@@ -936,14 +962,19 @@ impl<'a> Collector<'a> {
             Ty::Tuple { fields: _ } => todo!(),
             Ty::Adt {
                 adt_id,
-                generic_params: _,
+                generic_params,
             } => {
                 let adt = self.db.lookup_intern_adt(*adt_id);
                 let module = self.db.module_items(adt.file_id);
                 let adt_data = &module[adt.value];
+                let mut params = Vec::new();
+                for param in generic_params {
+                    params.push(self.collect(*param));
+                }
+
                 super::Ty::Adt {
                     name: adt_data.name.clone(),
-                    params: Arc::new(Vec::new()),
+                    params: Arc::new(params),
                 }
             }
         }

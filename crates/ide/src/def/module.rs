@@ -13,7 +13,7 @@ pub struct AdtData {
 
     pub variants: IdxRange<VariantData>,
 
-    pub params: Vec<TypeParam>,
+    pub params: Vec<ty::Ty>,
     pub visibility: Visibility,
 
     pub ast_ptr: AstPtr<ast::Adt>,

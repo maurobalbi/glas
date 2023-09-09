@@ -392,9 +392,11 @@ fn custom_type(p: &mut Parser, m: MarkOpened) {
         p.expect(T!["("]);
         while !p.at(T![")"]) && !p.eof() {
             if p.at(IDENT) {
+                let ty = p.start_node();
                 let g = p.start_node();
                 p.expect(IDENT);
                 p.finish_node(g, TYPE_NAME);
+                p.finish_node(ty, TYPE_NAME_REF);
                 if !p.at(T![")"]) {
                     p.expect(T![","]);
                 }
