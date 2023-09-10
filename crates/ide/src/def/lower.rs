@@ -6,7 +6,7 @@ use super::{
     module::{
         AdtData, Field, FunctionData, ImportData, ModuleImport, Param, VariantData, Visibility,
     },
-    AstPtr, DefDatabase,
+    AstPtr, DefDatabase, fields::FieldMap,
 };
 use la_arena::{Arena, Idx, IdxRange, RawIdx};
 use smol_str::SmolStr;
@@ -200,8 +200,8 @@ impl<'a> LowerCtx<'a> {
     fn lower_function(&mut self, fun: &ast::Function) -> Option<Idx<FunctionData>> {
         let ast_ptr = AstPtr::new(fun);
 
+        
         let mut params = Vec::new();
-
         if let Some(param_list) = fun.param_list() {
             for param in param_list.params() {
                 match param.pattern().and_then(|p| p.pattern()) {
@@ -221,6 +221,7 @@ impl<'a> LowerCtx<'a> {
         Some(self.alloc_function(FunctionData {
             name: fun.name()?.text()?,
             params,
+            param_map: FieldMap::new(0),
             visibility: Visibility::Public,
             ast_ptr: ast_ptr,
         }))
@@ -229,6 +230,12 @@ impl<'a> LowerCtx<'a> {
     fn lower_custom_type(&mut self, ct: &ast::Adt) -> Option<Idx<AdtData>> {
         let ast_ptr = AstPtr::new(ct);
         let name = ct.name()?.text()?;
+        let mut generic_params = Vec::new();
+        if let  Some(params) = ct.generic_params() {
+            for param in params.params() {
+                generic_params.push(ty::ty_from_ast(param));
+            }
+        }
 
         let visibility = Visibility::Public;
 
@@ -236,7 +243,7 @@ impl<'a> LowerCtx<'a> {
         Some(self.alloc_custom_type(AdtData {
             name,
             variants: constructors,
-            params: Vec::new(),
+            params: generic_params,
             visibility,
             ast_ptr,
         }))
@@ -273,6 +280,7 @@ impl<'a> LowerCtx<'a> {
         Some(self.alloc_variant(VariantData {
             name,
             fields: fields_vec,
+            field_map: FieldMap::new(0),
             ast_ptr,
         }))
     }

@@ -11,7 +11,7 @@ use crate::{
 
 use super::{
     hir_def::{AdtId, LocalVariantId},
-    module::{Field, FunctionData, Param, PatternId, VariantData},
+    module::{Field, FunctionData, Param, PatternId, VariantData, AdtData},
     scope::ExprScopes,
     FunctionId, InternDatabase,
 };
@@ -82,6 +82,12 @@ impl Adt {
             })
             .collect()
     }
+
+    pub fn data(&self, db: &dyn DefDatabase) -> AdtData {
+        let adt = db.lookup_intern_adt(self.id);
+        let module_items = db.module_items(adt.file_id);
+        module_items[adt.value].clone()
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -99,10 +105,10 @@ impl Variant {
     }
 
     pub fn fields(&self, db: &dyn DefDatabase) -> Vec<Field> {
-        self.variant_data(db).fields
+        self.data(db).fields
     }
 
-    fn variant_data(&self, db: &dyn DefDatabase) -> VariantData {
+    fn data(&self, db: &dyn DefDatabase) -> VariantData {
         let adt = db.lookup_intern_adt(self.parent);
         let module_items = db.module_items(adt.file_id);
         module_items[self.id].clone()
@@ -116,11 +122,11 @@ pub struct Function {
 
 impl Function {
     pub fn name(self, db: &dyn DefDatabase) -> SmolStr {
-        self.function_data(db).name.clone()
+        self.data(db).name.clone()
     }
 
     pub fn params(self, db: &dyn DefDatabase) -> Vec<Param> {
-        self.function_data(db).params.clone()
+        self.data(db).params.clone()
     }
 
     pub fn ty(&self, db: &dyn TyDatabase) -> ty::Ty {
@@ -128,7 +134,7 @@ impl Function {
         infer.fn_ty.clone()
     }
 
-    fn function_data(self, db: &dyn DefDatabase) -> FunctionData {
+    fn data(self, db: &dyn DefDatabase) -> FunctionData {
         let func = db.lookup_intern_function(self.id);
         db.module_items(func.file_id)[func.value].clone()
     }

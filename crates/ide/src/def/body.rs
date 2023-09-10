@@ -10,7 +10,7 @@ use syntax::{
 use crate::{ty, DefDatabase, Diagnostic, FileId, InFile};
 
 use super::{
-    module::{Clause, Expr, ExprId, Pattern, PatternId, Statement, AsPattern},
+    module::{AsPattern, Clause, Expr, ExprId, Pattern, PatternId, Statement},
     FunctionId,
 };
 
@@ -26,7 +26,7 @@ pub struct Body {
     pub patterns: Arena<AsPattern>,
     pub exprs: Arena<Expr>,
 
-    pub params: Vec<(PatternId, Option<ty::Ty>)>,
+    pub params: Vec<(PatternId, Option<ty::Ty>, Option<SmolStr>)>,
 
     pub body_expr: ExprId,
 }
@@ -140,7 +140,9 @@ pub(super) fn lower(db: &dyn DefDatabase, function_id: FunctionId) -> (Body, Bod
             if let Some(pattern) = param.pattern() {
                 let pat_id = ctx.lower_as_pattern(pattern);
                 let ty = ty::ty_from_ast_opt(param.ty());
-                ctx.body.params.push((pat_id, ty));
+                ctx.body
+                    .params
+                    .push((pat_id, ty, param.label().and_then(|l| l.text()?.into())));
             }
         }
     }
@@ -182,7 +184,10 @@ impl BodyLowerCtx<'_> {
     }
 
     fn missing_pat(&mut self) -> PatternId {
-        self.body.patterns.alloc(AsPattern { pattern: Pattern::Missing, as_name: None})
+        self.body.patterns.alloc(AsPattern {
+            pattern: Pattern::Missing,
+            as_name: None,
+        })
     }
 
     fn lower_expr(&mut self, expr: ast::Expr) -> ExprId {
@@ -204,15 +209,16 @@ impl BodyLowerCtx<'_> {
                     .for_each(|a| self.lower_expr_stmt(&mut stmts, a));
                 self.alloc_expr(Expr::Block { stmts: stmts }, ptr)
             }
-            ast::Expr::Hole(_) => {
-                self.alloc_expr(Expr::Hole, ptr)
-            }
+            ast::Expr::Hole(_) => self.alloc_expr(Expr::Hole, ptr),
             ast::Expr::ExprCall(call) => {
                 let func = self.lower_expr_opt(call.func());
-                let mut arg_ids = Vec::new();
+                let mut arg_ids: Vec<(Option<SmolStr>, ExprId)> = Vec::new();
                 if let Some(args) = call.arguments() {
                     for arg in args.args() {
-                        arg_ids.push(self.lower_expr_opt(arg.value()));
+                        arg_ids.push((
+                            arg.label().and_then(|t| t.text().into()),
+                            self.lower_expr_opt(arg.value()),
+                        ));
                     }
                 }
                 self.alloc_expr(
@@ -254,7 +260,9 @@ impl BodyLowerCtx<'_> {
                 let clauses = case
                     .clauses()
                     .map(|clause| {
-                        let pattern = self.lower_as_pattern_opt(clause.patterns().next().and_then(|p| p.patterns().next()));
+                        let pattern = self.lower_as_pattern_opt(
+                            clause.patterns().next().and_then(|p| p.patterns().next()),
+                        );
 
                         // ToDo: Make tuple type of pattern
                         Clause {
@@ -289,8 +297,7 @@ impl BodyLowerCtx<'_> {
                     let start = self.next_pattern_idx();
                     for param in param_list.params() {
                         if let Some(pattern) = param.pattern() {
-                            let _pat_id =
-                                self.lower_as_pattern(pattern);
+                            let _pat_id = self.lower_as_pattern(pattern);
                         }
                     }
                     let end = self.next_pattern_idx();
@@ -378,11 +385,11 @@ impl BodyLowerCtx<'_> {
                         }
                     }
                 }
-                    Pattern::VariantRef {
-                        name: pat.variant()?.text().unwrap_or_else(Name::missing),
-                        module: pat.module().map(|t| t.text()),
-                        fields,
-                    }
+                Pattern::VariantRef {
+                    name: pat.variant()?.text().unwrap_or_else(Name::missing),
+                    module: pat.module().map(|t| t.text()),
+                    fields,
+                }
             }
             ast::Pattern::PatternTuple(pat) => {
                 let mut pats = Vec::new();
@@ -391,9 +398,9 @@ impl BodyLowerCtx<'_> {
                 }
                 Pattern::Tuple { fields: pats }
             }
-            ast::Pattern::PatternSpread(spread) => {
-                Pattern::Spread { name: spread.name().and_then(|n| n.text()) }
-            }
+            ast::Pattern::PatternSpread(spread) => Pattern::Spread {
+                name: spread.name().and_then(|n| n.text()),
+            },
             ast::Pattern::PatternList(list) => {
                 let elements = list
                     .elements()
@@ -402,7 +409,7 @@ impl BodyLowerCtx<'_> {
                     .collect();
                 Pattern::List { elements }
             }
-            ast::Pattern::Hole(_) => Pattern::Hole
+            ast::Pattern::Hole(_) => Pattern::Hole,
         };
         Some(pat)
     }
@@ -410,13 +417,13 @@ impl BodyLowerCtx<'_> {
     fn lower_as_pattern(&mut self, as_pattern: ast::AsPattern) -> PatternId {
         let ptr = AstPtr::new(&as_pattern);
 
-        let pattern = as_pattern.pattern().and_then(|p| self.lower_pattern(p)).unwrap_or_else(|| Pattern::Missing);
+        let pattern = as_pattern
+            .pattern()
+            .and_then(|p| self.lower_pattern(p))
+            .unwrap_or_else(|| Pattern::Missing);
         let as_name = as_pattern.as_name().and_then(|p| self.lower_pattern(p));
 
-        self.alloc_pattern(AsPattern {
-            pattern,
-            as_name
-        }, ptr)
+        self.alloc_pattern(AsPattern { pattern, as_name }, ptr)
     }
 
     fn lower_as_pattern_opt(&mut self, pat: Option<ast::AsPattern>) -> PatternId {
@@ -433,5 +440,4 @@ impl BodyLowerCtx<'_> {
     fn next_pattern_idx(&self) -> Idx<AsPattern> {
         Idx::from_raw(RawIdx::from(self.body.patterns.len() as u32))
     }
-
 }

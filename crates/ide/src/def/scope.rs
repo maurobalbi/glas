@@ -233,7 +233,7 @@ impl ExprScopes {
             }
             Expr::Call { func, args } => {
                 for arg in args {
-                    self.traverse_expr(body, *arg, scope);
+                    self.traverse_expr(body, arg.1, scope);
                 }
                 self.traverse_expr(body, *func, scope);
             }

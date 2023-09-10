@@ -1,6 +1,7 @@
 pub mod body;
 pub mod hir;
 pub mod hir_def;
+mod fields;
 mod lower;
 pub mod module;
 pub mod resolver;
