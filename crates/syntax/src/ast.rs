@@ -217,6 +217,7 @@ enums! {
         PatternList,
         Hole,
         PatternSpread,
+        AsPattern,
     },
     TypeNameOrName {
         Name,
@@ -479,7 +480,7 @@ asts! {
       as_name[1]: TypeNameOrName,
     },
     PARAM = Param {
-        pattern: AsPattern, // this is a pattern to make name resolution easier
+        pattern: Pattern, // this is a pattern to make name resolution easier
         label: Label,
         ty: TypeExpr,
     },
@@ -519,7 +520,7 @@ asts! {
         expr: Expr,
     },
     STMT_LET = StmtLet {
-        pattern: AsPattern,
+        pattern: Pattern,
         annotation: TypeExpr,
         body: Expr,
     },
@@ -528,7 +529,7 @@ asts! {
         expr: Expr,
     },
     USE_ASSIGNMENT = UseAssignment {
-        pattern: AsPattern,
+        pattern: Pattern,
         annotation: TypeExpr,
     },
     CONSTANT_TUPLE = ConstantTuple {
@@ -577,10 +578,11 @@ asts! {
     },
     AS_PATTERN = AsPattern {
         pattern: Pattern,
-        as_name: Pattern,
+        // Is a pattern to make scoping it easier!
+        as_name[1]: Pattern,
     },
     ALTERNATIVE_PATTERN = AlternativePattern {
-        patterns: [AsPattern],
+        patterns: [Pattern],
     },
     PATTERN_VARIABLE = PatternVariable {
         pub fn token(&self) -> Option<SyntaxToken> {
@@ -600,16 +602,16 @@ asts! {
         fields: [VariantRefField],
     },
     VARIANT_REF_FIELD = VariantRefField {
-        field: AsPattern,
+        field: Pattern,
     },
     PATTERN_TUPLE = PatternTuple {
-        field_patterns: [AsPattern],
+        field_patterns: [Pattern],
     },
     PATTERN_SPREAD = PatternSpread {
        name: Name, 
     },
     PATTERN_LIST = PatternList {
-        elements: [AsPattern],
+        elements: [Pattern],
     },
     PATTERN_GUARD = PatternGuard {
         expr: Expr,
@@ -661,8 +663,10 @@ mod tests {
     fn assert() {
         let e = crate::parse_module(
             "fn a() { 
-                        let Dog(a) = Dog(1) 
-                    }",
+                    case wobble, 1 + 7 
+                    { 
+                        int.Bla(Some(a)), 1 -> 2
+                    }}",
         );
         for error in e.errors() {
             println!("{}", error);
@@ -715,7 +719,7 @@ mod tests {
         e.syntax().should_eq("[..name]");
         match e {
             Pattern::PatternList(list) => {
-                match list.elements().next().unwrap().pattern().unwrap() {
+                match list.elements().next().unwrap() {
                     Pattern::PatternSpread(spread) => spread.name().unwrap().syntax().should_eq("name"),
                     _ => unreachable!()
                 }
@@ -993,7 +997,7 @@ mod tests {
                     }}",
         );
         p.syntax().should_eq("int.Bla(Some(a))");
-        let pattern = VariantRef::cast(p.patterns().next().unwrap().pattern().unwrap().syntax().clone()).unwrap();
+        let pattern = VariantRef::cast(p.patterns().next().unwrap().syntax().clone()).unwrap();
         pattern
             .field_list()
             .unwrap()
@@ -1049,7 +1053,19 @@ mod tests {
         }",
         );
     }
-    
+       
+    #[test]
+    fn as_pattern() {
+        let p = parse::<AsPattern>(
+            "fn todoo() {
+            case 1 {
+                5 as b -> b
+            }
+        }"
+        );
+        p.as_name().unwrap().syntax().should_eq("b")
+    }
+
     #[test]
     fn adt_generic_params() {
         let adt = parse::<Adt>(

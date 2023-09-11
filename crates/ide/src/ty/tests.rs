@@ -198,6 +198,17 @@ fn pattern() {
 }
 
 #[test]
+fn as_pattern() {
+    check_all(
+        "type Massa { Much } fn bla() { case Much {
+            Much as a -> a
+        }  }",
+        expect![[r#"
+        bla: fn() -> Massa"#]],
+    );
+}
+
+#[test]
 fn function() {
     check_all(
         "fn func() {fn(a,b) {a + b}",
@@ -309,6 +320,17 @@ fn tuple() {
 }
 
 #[test]
+fn case_multiple_subjects() {
+    check_all("type Dog(a, a) { Dog(a, a) } fn subjects(a, b) {
+        case a, b {
+            #(1, more), Dog(2.5, d) -> Dog(more, d)
+        }
+    }
+    ", expect!["subjects: fn(#(Int, Float), Dog(Float, Float)) -> Dog(Float, Float)"])
+}
+
+#[test]
+#[traced_test]
 fn pattern_spread() {
     check_all(
         "fn spread() {

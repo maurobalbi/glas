@@ -526,22 +526,17 @@ impl<'db> InferCtx<'db> {
                     _ => self.new_ty_var(),
                 }
             }
-            Expr::Case { subject, clauses } => {
-                // let subj_tys = subjects.iter().map(|s| self.infer_expr(*s)).collect::<Vec<_>>();
-
-                // let last = self.new_ty_var();
-                // for clause in clauses.into_iter() {
-                //     subj_tys.iter().zip(clause.patterns.iter()).for_each(|(sub, pat)| {
-                //         self.infer_pattern(*pat, *sub);
-                //         let expr_ty = self.infer_expr(clause.expr);
-                //         self.unify_var(last, expr_ty);
-                //     })
-                // }
-                // last
+            Expr::Case { subjects, clauses } => {
+                let mut subject_tys = Vec::new();
+                for subject in subjects.iter() {
+                    subject_tys.push(self.infer_expr(*subject));
+                }
                 let ret = self.new_ty_var();
-                let ty = self.infer_expr(*subject);
+                
                 for clause in clauses.iter() {
-                    self.infer_pattern(clause.pattern, ty);
+                    for (pat, ty) in clause.patterns.iter().zip(subject_tys.iter()) {
+                        self.infer_pattern(*pat,* ty);
+                    }
                     let expr_ty = self.infer_expr(clause.expr);
                     self.unify_var(expr_ty, ret);
                 }
@@ -682,7 +677,7 @@ impl<'db> InferCtx<'db> {
             self.table.get_mut(expected_ty_var.0)
         );
         let pat_var = self.ty_for_pattern(pattern);
-        match &self.body[pattern].pattern {
+        match &self.body[pattern] {
             Pattern::VariantRef {
                 name,
                 module: _,
@@ -706,6 +701,13 @@ impl<'db> InferCtx<'db> {
                 for pat in patterns.iter() {
                     self.infer_pattern(*pat, expected_ty_var);
                 }
+            }
+            Pattern::AsPattern { pattern, as_name } => {
+                let sub_pat = self.infer_pattern(*pattern, expected_ty_var);
+                if let Some(as_name) = as_name {
+                    self.infer_pattern(*as_name, expected_ty_var);
+                }
+                self.unify_var(pat_var, sub_pat)
             }
             Pattern::Literal { kind } => match kind {
                 LiteralKind::Int => self.unify_var_ty(pat_var, Ty::Int),

@@ -70,7 +70,7 @@ impl SourceAnalyzer {
         sm.expr_for_node(src.as_ref())
     }
 
-    fn pattern_id(&self, pat: &ast::AsPattern) -> Option<PatternId> {
+    fn pattern_id(&self, pat: &ast::Pattern) -> Option<PatternId> {
         // FIXME: macros, see `expr_id`
         let src = InFile {
             file_id: self.file_id,
@@ -89,7 +89,7 @@ impl SourceAnalyzer {
     pub(crate) fn type_of_pattern(
         &self,
         db: &dyn DefDatabase,
-        pattern: &ast::AsPattern,
+        pattern: &ast::Pattern,
     ) -> Option<Ty> {
         let pattern_id = self.pattern_id(pattern)?;
         let infer = self.infer.as_ref()?;

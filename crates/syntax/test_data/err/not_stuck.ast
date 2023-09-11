@@ -10,15 +10,13 @@ SOURCE_FILE@0..46
     PARAM_LIST@11..17
       L_PAREN@11..12 "("
       PARAM@12..14
-        AS_PATTERN@12..13
-          PATTERN_VARIABLE@12..13
-            IDENT@12..13 "a"
+        PATTERN_VARIABLE@12..13
+          IDENT@12..13 "a"
         COMMA@13..14 ","
       WHITESPACE@14..15 " "
       PARAM@15..16
-        AS_PATTERN@15..16
-          PATTERN_VARIABLE@15..16
-            IDENT@15..16 "b"
+        PATTERN_VARIABLE@15..16
+          IDENT@15..16 "b"
       R_PAREN@16..17 ")"
     WHITESPACE@17..18 " "
     BLOCK@18..29

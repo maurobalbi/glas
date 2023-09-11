@@ -1,23 +1,26 @@
-use std::{ops, sync::Arc, collections::HashMap};
+use std::{collections::HashMap, ops, sync::Arc};
 
 use indexmap::IndexMap;
 use la_arena::{Arena, ArenaMap, Idx};
 use petgraph::stable_graph::StableGraph;
 use salsa::InternId;
 use smol_str::SmolStr;
-use syntax::{AstPtr, ast};
+use syntax::{ast, AstPtr};
 
 use crate::{DefDatabase, FileId};
 
 use super::{
     body::Body,
-    hir_def::{AdtLoc, FunctionLoc, ModuleDefId, VariantId, AdtId},
+    hir_def::{AdtId, AdtLoc, FunctionLoc, ModuleDefId, VariantId},
     module::{Clause, Expr, ExprId, ImportData, Pattern, PatternId, Statement, Visibility},
     resolver::ResolveResult,
     resolver_for_expr, FunctionId, ModuleItemData,
 };
 
-pub fn module_scope_with_map_query(db: &dyn DefDatabase, file_id: FileId) -> (Arc<ModuleScope>, Arc<ModuleSourceMap>) {
+pub fn module_scope_with_map_query(
+    db: &dyn DefDatabase,
+    file_id: FileId,
+) -> (Arc<ModuleScope>, Arc<ModuleSourceMap>) {
     let module_data = db.module_items(file_id);
 
     let mut scope = ModuleScope::default();
@@ -39,7 +42,9 @@ pub fn module_scope_with_map_query(db: &dyn DefDatabase, file_id: FileId) -> (Ar
             value: func_id,
         });
 
-        module_source_map.function_map.insert(func.ast_ptr.clone(), func_loc);
+        module_source_map
+            .function_map
+            .insert(func.ast_ptr.clone(), func_loc);
         let def = ModuleDefId::FunctionId(func_loc);
         scope.values.insert(name.clone(), def.clone());
         scope
@@ -55,7 +60,9 @@ pub fn module_scope_with_map_query(db: &dyn DefDatabase, file_id: FileId) -> (Ar
         });
         let def = ModuleDefId::AdtId(adt_loc);
 
-        module_source_map.adt_map.insert(adt.ast_ptr.clone(), adt_loc);
+        module_source_map
+            .adt_map
+            .insert(adt.ast_ptr.clone(), adt_loc);
         scope.types.insert(name.clone(), def.clone());
         scope
             .declarations
@@ -71,7 +78,9 @@ pub fn module_scope_with_map_query(db: &dyn DefDatabase, file_id: FileId) -> (Ar
             };
             let def = ModuleDefId::VariantId(variant_id);
 
-            module_source_map.variant_map.insert(variant.ast_ptr.clone(), variant_id);
+            module_source_map
+                .variant_map
+                .insert(variant.ast_ptr.clone(), variant_id);
             scope.values.insert(name.clone(), def.clone());
 
             //use visibility of adt
@@ -96,7 +105,7 @@ impl ModuleSourceMap {
         let src = AstPtr::new(node);
         self.function_map.get(&src).copied()
     }
- 
+
     pub fn node_to_adt(&self, node: &ast::Adt) -> Option<AdtId> {
         let src = AstPtr::new(node);
         self.adt_map.get(&src).copied()
@@ -256,14 +265,19 @@ impl ExprScopes {
             } => {
                 self.traverse_expr(body, *container, scope);
             }
-            Expr::Case { subject, clauses } => {
-                self.traverse_expr(body, *subject, scope);
-                clauses.into_iter().for_each(|Clause { pattern, expr }| {
+            Expr::Case { subjects, clauses } => {
+                for s in subjects.iter() {
+                    self.traverse_expr(body, *s, scope);
+                }
+
+                clauses.into_iter().for_each(|Clause { patterns, expr }| {
                     let clause_scope = self.scopes.alloc(ScopeData {
                         parent: Some(scope),
                         entries: Vec::new(),
                     });
-                    self.add_bindings(body, clause_scope, &pattern);
+                    for pat in patterns.iter() {
+                        self.add_bindings(body, clause_scope, &pat);
+                    }
                     self.traverse_expr(body, *expr, clause_scope);
                 });
             }
@@ -284,7 +298,7 @@ impl ExprScopes {
                 for field in fields.into_iter() {
                     self.traverse_expr(body, *field, scope);
                 }
-            },
+            }
             Expr::List { elements } => {
                 for elem in elements.into_iter() {
                     self.traverse_expr(body, *elem, scope);
@@ -328,7 +342,7 @@ impl ExprScopes {
 
     fn add_bindings(&mut self, body: &Body, scope: ScopeId, pattern_id: &PatternId) {
         let pattern = &body[*pattern_id];
-        match &pattern.pattern {
+        match &pattern {
             Pattern::Variable { name } => {
                 self.scopes[scope].entries.push(ScopeEntry {
                     name: name.clone(),
@@ -342,12 +356,12 @@ impl ExprScopes {
                 }
             }
             Pattern::Spread { name } => {
-                name.clone().map(|name| 
+                name.clone().map(|name| {
                     self.scopes[scope].entries.push(ScopeEntry {
                         name,
                         pat: *pattern_id,
-                    }
-                ));
+                    })
+                });
             }
             Pattern::AlternativePattern { patterns } => {
                 for pattern in patterns {
@@ -370,6 +384,10 @@ impl ExprScopes {
                 }
             }
             Pattern::Literal { kind: _ } => {}
+            Pattern::AsPattern { pattern, as_name } => {
+                self.add_bindings(body, scope, pattern);
+                as_name.map(|as_name| self.add_bindings(body, scope, &as_name));
+            }
         }
     }
 }

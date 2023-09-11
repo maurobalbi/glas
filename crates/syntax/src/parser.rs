@@ -541,7 +541,6 @@ fn param(p: &mut Parser, is_anon: bool) {
         p.expect(IDENT);
         p.finish_node(n, LABEL);
     }
-    let as_pat = p.start_node();
     if p.at(IDENT) {
         let pat = p.start_node();
         p.bump();
@@ -553,8 +552,6 @@ fn param(p: &mut Parser, is_anon: bool) {
     } else {
         p.error(ErrorKind::ExpectedIdentifier);
     }
-    p.finish_node(as_pat, AS_PATTERN);
-
     if p.eat(T![":"]) {
         type_expr(p);
     }
@@ -882,8 +879,7 @@ fn alternative_pattern(p: &mut Parser) {
 }
 
 fn pattern(p: &mut Parser) {
-    let m_pat = p.start_node();
-    let _res = match p.nth(0) {
+    let pat = match p.nth(0) {
         // variable definition or qualified constructor type
         IDENT => {
             let m = p.start_node();
@@ -893,7 +889,6 @@ fn pattern(p: &mut Parser) {
                 // p.finish_node(n, NAME);
                 p.finish_node(m, PATTERN_VARIABLE);
 
-                p.finish_node(m_pat, AS_PATTERN);
                 return;
             }
 
@@ -941,7 +936,6 @@ fn pattern(p: &mut Parser) {
             p.finish_node(spread, PATTERN_SPREAD)
         }
         _ => {
-            p.finish_node(m_pat, ERROR);
             p.error(ErrorKind::ExpectedPattern);
             return;
         }
@@ -950,9 +944,10 @@ fn pattern(p: &mut Parser) {
         let var = p.start_node();
         p.expect(IDENT);
         p.finish_node(var, PATTERN_VARIABLE);
+        let as_pat = p.start_node_before(pat);
+        p.finish_node(as_pat, AS_PATTERN);
     }
 
-    p.finish_node(m_pat, AS_PATTERN);
 }
 
 fn pattern_list(p: &mut Parser<'_>) -> MarkClosed {

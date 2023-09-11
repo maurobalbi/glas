@@ -152,7 +152,7 @@ pub struct Local {
 }
 
 impl Local {
-    pub fn source(&self, db: &dyn DefDatabase) -> ast::AsPattern {
+    pub fn source(&self, db: &dyn DefDatabase) -> ast::Pattern {
         let (_body, source_map) = db.body_with_source_map(self.parent);
         let src = source_map
             .node_for_pattern(self.pat_id)

@@ -204,7 +204,7 @@ impl<'a> LowerCtx<'a> {
         let mut params = Vec::new();
         if let Some(param_list) = fun.param_list() {
             for param in param_list.params() {
-                match param.pattern().and_then(|p| p.pattern()) {
+                match param.pattern() {
                     Some(Pattern::PatternVariable(it)) => {
                         it.text().map(|t| {
                             params.push(Param {

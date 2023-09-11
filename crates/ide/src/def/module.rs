@@ -93,7 +93,7 @@ pub enum Visibility {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Clause {
     // patterns are lowered into #(pat, pat) tuples to make type inference easier
-    pub pattern: PatternId,
+    pub patterns: Vec<PatternId>,
     // pub guard: Option<ExprId>,
     pub expr: ExprId,
 }
@@ -153,26 +153,20 @@ pub enum Expr {
     },
     Lambda {
         body: ExprId,
-        params: IdxRange<AsPattern>,
+        params: IdxRange<Pattern>,
     },
     Spread {
         expr: ExprId,
     },
     Case {
         // subjects are lowered into tuple to make type inference easier
-        subject: ExprId,
+        subjects: Vec<ExprId>,
         clauses: Vec<Clause>,
     },
     Variable(SmolStr),
 }
 
-pub type PatternId = Idx<AsPattern>;
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct AsPattern {
-    pub pattern: Pattern,
-    pub as_name: Option<Pattern>,
-}
+pub type PatternId = Idx<Pattern>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Pattern {
@@ -201,6 +195,10 @@ pub enum Pattern {
     AlternativePattern {
         patterns: Vec<PatternId>,
     },
+    AsPattern {
+        pattern: PatternId,
+        as_name: Option<PatternId>,
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
