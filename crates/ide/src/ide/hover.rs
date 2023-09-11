@@ -113,7 +113,7 @@ mod tests {
     #[test]
     fn pattern_variant() {
         check(
-            "type Dog(a) {Dog(a)} fn main(a, b) { let Dog(a) = Dog(1) $0a }",
+            "fn main(a, b) { let Dog(a) = Dog(1) $0a }",
             "a",
             expect![[r#"
                 ```gleam

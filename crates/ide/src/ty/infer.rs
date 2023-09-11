@@ -691,14 +691,13 @@ impl<'db> InferCtx<'db> {
                 let (pat_ty, mut field_tys) = self.resolve_variant(name);
 
                 // Tried with reserve / fill_with, but that didnt seem to work
-                // while field_tys.len() < fields.len() {
-                //     field_tys.push(self.new_ty_var());
-                // }
+                while field_tys.len() < fields.len() {
+                    field_tys.push((None, self.new_ty_var()));
+                }
                 tracing::info!("inferring fields {:?} {:?}", field_tys.capacity(), fields);
                 for (field, field_ty) in fields.iter().zip(field_tys.clone().iter()) {
                     // Unify fields with patterns
-                    // self.unify_var_ty(ty, Ty::Int);
-                    field_tys.push((field_ty.0.clone(), self.new_ty_var()));
+
                     self.infer_pattern(*field, field_ty.1);
                 }
                 self.unify_var(pat_ty, pat_var);
