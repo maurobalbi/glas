@@ -280,6 +280,11 @@ impl ExprScopes {
                 }
                 self.traverse_expr(body, *lam_body, body_scope);
             }
+            Expr::Tuple { fields } => {
+                for field in fields.into_iter() {
+                    self.traverse_expr(body, *field, scope);
+                }
+            },
             Expr::List { elements } => {
                 for elem in elements.into_iter() {
                     self.traverse_expr(body, *elem, scope);

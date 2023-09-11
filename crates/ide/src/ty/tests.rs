@@ -297,6 +297,18 @@ fn case_infer() {
 }
 
 #[test]
+fn tuple() {
+    check_all(
+        "fn tuple(a) {
+        case a {
+            #(1, a) -> #(a, 5)
+        }
+      }",
+        expect!["tuple: fn(#(Int, a)) -> #(a, Int)"],
+    )
+}
+
+#[test]
 fn pattern_spread() {
     check_all(
         "fn spread() {

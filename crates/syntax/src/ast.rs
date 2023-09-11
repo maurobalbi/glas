@@ -193,6 +193,7 @@ enums! {
         Lambda,
         BinaryOp,
         Hole,
+        Tuple,
         Pipe,
         UnaryOp,
         List,
@@ -393,6 +394,9 @@ asts! {
     FIELD_ACCESS = FieldAccessExpr {
         base: Expr,
         label: NameRef,
+    },
+    TUPLE = Tuple {
+        fields: [Expr],
     },
     TUPLE_INDEX = TupleIndex {
         index: Literal,

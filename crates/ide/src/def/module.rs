@@ -128,6 +128,9 @@ pub enum Expr {
         right: ExprId,
         op: Option<BinaryOpKind>,
     },
+    Tuple {
+        fields: Vec<ExprId>,
+    },
     FieldAccess {
         base_string: SmolStr,
         base: ExprId,

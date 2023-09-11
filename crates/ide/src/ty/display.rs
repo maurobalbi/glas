@@ -213,7 +213,11 @@ impl TyDisplay for Ty {
                 // }
                 write!(f, "{}", name)
             }
-            Ty::Tuple { fields: _ } => todo!(),
+            Ty::Tuple { fields } => {
+                write!(f, "#(")?;
+                f.write_joined(fields.as_ref().clone().into_iter(), ", ")?;
+                write!(f, ")")
+            },
             Ty::Adt { name, params } => {
                 // let adt = db.lookup_intern_adt(*adt_id);
                 // let adt = &db.module_items(adt.file_id)[adt.value];

@@ -45,7 +45,6 @@ enum Ty {
     Function {
         params: Vec<(Option<SmolStr>, TyVar)>,
         return_: TyVar,
-        // This is needed for labelled arguments
     },
     Tuple {
         fields: Vec<TyVar>,
@@ -427,6 +426,13 @@ impl<'db> InferCtx<'db> {
                     }
                 }
             }
+            Expr::Tuple {fields} => {
+                let mut field_ty = Vec::new();
+                for field in fields.into_iter() {
+                    field_ty.push(self.infer_expr(*field));
+                };
+                Ty::Tuple { fields: field_ty }.intern(self)
+            }
             Expr::Spread { expr } => {
                 let sp_ty = self.infer_expr(*expr);
                 let of = self.new_ty_var();
@@ -716,6 +722,15 @@ impl<'db> InferCtx<'db> {
                     },
                 );
                 return pat_var;
+            }, 
+            Pattern::Tuple { fields } => {
+                let mut field_ty = Vec::new();
+                for field in fields.into_iter() {
+                    let new_ty = self.new_ty_var();
+                    self.infer_pattern(*field, new_ty);
+                    field_ty.push(new_ty);
+                }
+                self.unify_var_ty(pat_var, Ty::Tuple { fields: field_ty})
             }
             Pattern::List { elements } => {
                 let of = self.new_ty_var();
@@ -837,6 +852,12 @@ impl<'db> InferCtx<'db> {
                     params: params1,
                     return_: ret1,
                 }
+            }
+            (Ty::Tuple { fields: fields1}, Ty::Tuple { fields: fields2 }) => {
+                for (f1, f2) in fields1.clone().into_iter().zip(fields2.into_iter()) {
+                    self.unify_var(f1, f2)
+                };
+                Ty::Tuple { fields: fields1 }
             }
             (lhs, rhs) => {
                 if lhs != rhs {
@@ -961,7 +982,13 @@ impl<'a> Collector<'a> {
                     return_: Arc::new(super_return),
                 }
             }
-            Ty::Tuple { fields: _ } => todo!(),
+            Ty::Tuple { fields } => {
+               let mut super_fields = Vec::new();
+                for field in fields {
+                    super_fields.push(self.collect(*field));
+                } ;
+                super::Ty::Tuple { fields: Arc::new(super_fields) }
+            },
             Ty::Adt {
                 adt_id,
                 generic_params,
