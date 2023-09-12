@@ -608,7 +608,7 @@ asts! {
         field_patterns: [Pattern],
     },
     PATTERN_SPREAD = PatternSpread {
-       name: Name, 
+       name: Name,
     },
     PATTERN_LIST = PatternList {
         elements: [Pattern],
@@ -692,8 +692,9 @@ mod tests {
 
     #[test]
     fn module() {
-        let e =
-            parse::<SourceFile>("@target(erlang)\nconst a = 1 const b = 2 @target(javascript) const c = 3");
+        let e = parse::<SourceFile>(
+            "@target(erlang)\nconst a = 1 const b = 2 @target(javascript) const c = 3",
+        );
         let mut iter = e.statements();
         iter.next()
             .unwrap()
@@ -712,20 +713,17 @@ mod tests {
         iter.next().unwrap().syntax().should_eq("Int");
         iter.next().unwrap().syntax().should_eq("String");
     }
-    
+
     #[test]
     fn pattern_spread() {
         let e = parse::<Pattern>("fn spread() { case [] { [..name] -> name } }");
         e.syntax().should_eq("[..name]");
         match e {
-            Pattern::PatternList(list) => {
-                match list.elements().next().unwrap() {
-                    Pattern::PatternSpread(spread) => spread.name().unwrap().syntax().should_eq("name"),
-                    _ => unreachable!()
-                }
-                
+            Pattern::PatternList(list) => match list.elements().next().unwrap() {
+                Pattern::PatternSpread(spread) => spread.name().unwrap().syntax().should_eq("name"),
+                _ => unreachable!(),
             },
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 
@@ -1053,7 +1051,7 @@ mod tests {
         }",
         );
     }
-       
+
     #[test]
     fn as_pattern() {
         let p = parse::<AsPattern>(
@@ -1061,16 +1059,14 @@ mod tests {
             case 1 {
                 5 as b -> b
             }
-        }"
+        }",
         );
         p.as_name().unwrap().syntax().should_eq("b")
     }
 
     #[test]
     fn adt_generic_params() {
-        let adt = parse::<Adt>(
-            "type List(a) { Cons(a) Nil }",
-        );
+        let adt = parse::<Adt>("type List(a) { Cons(a) Nil }");
 
         let params = adt.generic_params().unwrap();
         params.syntax().should_eq("(a)");

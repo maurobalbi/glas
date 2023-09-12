@@ -1,12 +1,14 @@
 Features for 1.0:
 
   ✓ Finish parser: attribute syntax, pattern guards, record spread 
-  - Finish inference for Result, Tuple, Case multiple subjects
+  ✓ Finish inference for Result, Tuple, Case multiple subjects
+  ✓ finish type_from_ast
   - Fix function label / Record label lowering + inference (Unsaturated Constructors are inferred as fn (...) -> Constr)
-  - Finish hover for names
+  - Finish hover for names (e.g. Adt, Variant, etc)
   - Add signature help
   - Add Inlay - Hints ?
   - Fix magic completion in pipes
+  - Types completion (additional trigger char ':')
   - Reimplement target based compiliation
   - Find references, highlight related
   - Add rename assists!
@@ -16,6 +18,8 @@ Features for 1.0:
 After
   - Add some more diagnostics
     - Double declaration
+    - wrong labelling
     - Unexpected spreads
     - Error reporting: 
       https://www.reddit.com/r/ProgrammingLanguages/comments/i2hfti/strategies_for_displaying_type_errors_with_global/
+    - experiment with type-inference diagnostics

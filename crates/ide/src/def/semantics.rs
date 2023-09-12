@@ -3,7 +3,7 @@ use std::{cell::RefCell, collections::HashMap};
 use smol_str::SmolStr;
 use syntax::{
     ast::{self, AstNode},
-    match_ast, AstPtr, SyntaxNode, GleamLanguage,
+    match_ast, AstPtr, GleamLanguage, SyntaxNode,
 };
 
 use crate::{
@@ -13,7 +13,7 @@ use crate::{
 };
 
 use super::{
-    hir::{Adt, Function, Local, Module, Variant, BuiltIn},
+    hir::{Adt, BuiltIn, Function, Local, Module, Variant},
     hir_def::ModuleDefId,
     module::{Field, Pattern},
     resolver::{resolver_for_toplevel, ResolveResult},
@@ -27,7 +27,7 @@ pub enum Definition {
     Field(Field),
     Local(Local),
     Module(Module),
-    BuiltIn(BuiltIn)
+    BuiltIn(BuiltIn),
 }
 
 impl_from!(

@@ -11,7 +11,7 @@ use crate::{
 
 use super::{
     hir_def::{AdtId, LocalVariantId},
-    module::{Field, FunctionData, Param, PatternId, VariantData, AdtData},
+    module::{AdtData, Field, FunctionData, Param, PatternId, VariantData},
     scope::ExprScopes,
     FunctionId, InternDatabase,
 };

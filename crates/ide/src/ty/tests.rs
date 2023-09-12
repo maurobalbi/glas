@@ -404,9 +404,12 @@ fn annotations() {
 
 #[test]
 fn list_spread() {
-    check_all("pub fn prepend(list, this item) {
+    check_all(
+        "pub fn prepend(list, this item) {
         [item, ..list]
-      }", expect!["prepend: fn(List(a), a) -> List(a)"])
+      }",
+        expect!["prepend: fn(List(a), a) -> List(a)"],
+    )
 }
 
 #[test]

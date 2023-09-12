@@ -97,7 +97,7 @@ mod tests {
     use crate::tests::TestDB;
     use expect_test::{expect, Expect};
     use tracing_test::traced_test;
-    
+
     #[track_caller]
     fn check_no(fixture: &str) {
         let (db, f) = TestDB::from_fixture(fixture).unwrap();
@@ -175,7 +175,7 @@ mod tests {
             expect!["<Mogie(name: Int)>"],
         );
     }
-    
+
     #[traced_test]
     #[test]
     fn pattern_spread() {
@@ -210,7 +210,8 @@ fn main() {
 fn bla() {
     $0main()
 }
-"#);
+"#,
+        );
     }
 
     #[test]

@@ -198,7 +198,7 @@ pub enum Pattern {
     AsPattern {
         pattern: PatternId,
         as_name: Option<PatternId>,
-    }
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

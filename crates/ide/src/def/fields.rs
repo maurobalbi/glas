@@ -1,7 +1,7 @@
 // use itertools::Itertools;
 use smol_str::SmolStr;
-use syntax::Error;
 use std::collections::{HashMap, HashSet};
+use syntax::Error;
 
 pub trait HasLabel {
     fn label(self) -> Option<SmolStr>;

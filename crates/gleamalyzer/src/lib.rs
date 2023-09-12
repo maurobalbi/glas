@@ -15,7 +15,7 @@ use async_lsp::stdio::{PipeStdin, PipeStdout};
 use async_lsp::tracing::TracingLayer;
 use ide::VfsPath;
 use lsp_types::{MessageType, ShowMessageParams, Url};
-use tokio::io::BufReader;
+
 use tower::ServiceBuilder;
 
 pub(crate) use server::{Server, StateSnapshot};

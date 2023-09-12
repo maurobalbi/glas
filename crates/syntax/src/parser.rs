@@ -4,7 +4,7 @@ use crate::ast::{AstNode, SourceFile};
 use crate::lexer::{GleamLexer, LexToken};
 use crate::token_set::TokenSet;
 use crate::SyntaxKind::{self, *};
-use crate::{Error, ErrorKind, SyntaxNode, SyntaxToken};
+use crate::{Error, ErrorKind, SyntaxNode};
 use rowan::{GreenNode, GreenNodeBuilder, TextRange, TextSize};
 
 const STMT_RECOVERY: TokenSet = TokenSet::new(&[
@@ -38,7 +38,7 @@ const PATTERN_FIRST: TokenSet = TokenSet::new(&[
     T!["["],
     T!["#"],
     T!["-"],
-    T![".."]
+    T![".."],
 ]);
 const TYPE_FIRST: TokenSet = TokenSet::new(&[T!["fn"], T!["#"], IDENT, U_IDENT]);
 const CONST_FIRST: TokenSet = TokenSet::new(&[IDENT, T!["#"], T!["["], INTEGER, FLOAT, STRING]);
@@ -61,7 +61,7 @@ const EXPR_FIRST: TokenSet = TokenSet::new(&[
     T!["True"],
     T!["False"],
     T!["fn"],
-    T![".."]
+    T![".."],
 ]);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -949,7 +949,6 @@ fn pattern(p: &mut Parser) {
         let as_pat = p.start_node_before(pat);
         p.finish_node(as_pat, AS_PATTERN);
     }
-
 }
 
 fn pattern_list(p: &mut Parser<'_>) -> MarkClosed {
@@ -959,7 +958,6 @@ fn pattern_list(p: &mut Parser<'_>) -> MarkClosed {
     p.expect(T!["["]);
     while !p.at(T!["]"]) && !p.eof() {
         if p.at_any(PATTERN_FIRST) {
-      
             pattern(p);
             if !p.at(T!["]"]) {
                 p.expect(T![","]);

@@ -181,13 +181,13 @@ impl TyDisplay for Ty {
             Ty::Int => write!(f, "Int"),
             Ty::Float => write!(f, "Float"),
             Ty::String => write!(f, "String"),
-            Ty::Result{ok, err} => {
+            Ty::Result { ok, err } => {
                 write!(f, "Result(")?;
                 ok.ty_fmt(f)?;
                 write!(f, ", ")?;
                 err.ty_fmt(f)?;
                 write!(f, ")")
-            },
+            }
             Ty::Function { params, return_ } => {
                 write!(f, "fn(")?;
                 f.write_joined(params.as_ref().clone().into_iter(), ", ")?;
@@ -217,8 +217,12 @@ impl TyDisplay for Ty {
                 write!(f, "#(")?;
                 f.write_joined(fields.as_ref().clone().into_iter(), ", ")?;
                 write!(f, ")")
-            },
-            Ty::Adt { module, name, params } => {
+            }
+            Ty::Adt {
+                module,
+                name,
+                params,
+            } => {
                 // let adt = db.lookup_intern_adt(*adt_id);
                 // let adt = &db.module_items(adt.file_id)[adt.value];
                 // if params.len() > 0 {

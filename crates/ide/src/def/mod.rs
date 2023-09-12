@@ -1,7 +1,7 @@
 pub mod body;
+mod fields;
 pub mod hir;
 pub mod hir_def;
-mod fields;
 mod lower;
 pub mod module;
 pub mod resolver;
@@ -25,7 +25,9 @@ use self::body::{Body, BodySourceMap};
 use self::hir_def::{AdtId, AdtLoc, FunctionId, FunctionLoc};
 use self::lower::lower_module;
 pub use self::lower::ModuleItemData;
-use self::scope::{dependency_order_query, ExprScopes, ModuleScope, ModuleSourceMap, module_scope_with_map_query};
+use self::scope::{
+    dependency_order_query, module_scope_with_map_query, ExprScopes, ModuleScope, ModuleSourceMap,
+};
 pub use resolver::resolver_for_expr;
 
 #[salsa::query_group(InternDatabaseStorage)]
@@ -54,7 +56,7 @@ pub trait DefDatabase: SourceDatabase + InternDatabase {
 
     #[salsa::invoke(module_scope_with_map_query)]
     fn module_scope_with_map(&self, file_id: FileId) -> (Arc<ModuleScope>, Arc<ModuleSourceMap>);
-    
+
     fn module_scope(&self, file_id: FileId) -> Arc<ModuleScope>;
 
     fn module_source_map(&self, file_id: FileId) -> Arc<ModuleSourceMap>;

@@ -152,7 +152,7 @@ pub(super) fn lower(db: &dyn DefDatabase, function_id: FunctionId) -> (Body, Bod
 
     let return_ = ast.return_type().map(|ty| ty::ty_from_ast(ty));
     ctx.body.return_ = return_;
-    
+
     let expr_id = ctx.lower_expr_opt(ast.body().map(|b| ast::Expr::Block(b)));
     ctx.body.body_expr = expr_id;
 

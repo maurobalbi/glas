@@ -152,7 +152,6 @@ pub(crate) fn completions(
 }
 
 fn complete_at(acc: &mut Vec<CompletionItem>, ctx: CompletionContext<'_>) {
-    
     acc.push(CompletionItem {
         label: "target(javscript)".into(),
         source_range: ctx.source_range,
@@ -331,7 +330,6 @@ fn complete_expr(acc: &mut Vec<CompletionItem>, ctx: &CompletionContext<'_>) -> 
             ResolveResult::Function(_) => CompletionItemKind::Function,
             ResolveResult::Variant(_) => CompletionItemKind::Variant,
             ResolveResult::BuiltIn(_) => CompletionItemKind::Variant,
-            
         };
         let replace = match def {
             ResolveResult::Function(it) => {

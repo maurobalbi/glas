@@ -7,7 +7,7 @@ use syntax::ast::{BinaryOpKind, LiteralKind};
 use crate::{
     def::{
         body::Body,
-        hir::{self, ModuleDef, Function, Adt},
+        hir::{self, Adt, Function, ModuleDef},
         hir_def::{AdtId, FunctionId},
         module::{Expr, ExprId, Field, Pattern, PatternId, Statement},
         resolver::{resolver_for_toplevel, ResolveResult, Resolver},
@@ -224,15 +224,19 @@ impl<'db> InferCtx<'db> {
                     return_: ret,
                 }
             }
-            super::Ty::Tuple { fields  } =>  {
+            super::Ty::Tuple { fields } => {
                 let mut field_tys = Vec::new();
                 for field in fields.deref().iter() {
                     let field_ty = self.make_type(field.clone(), env);
                     field_tys.push(field_ty)
-                };
+                }
                 Ty::Tuple { fields: field_tys }
-            },
-            super::Ty::Adt { module, name, params } => {
+            }
+            super::Ty::Adt {
+                module,
+                name,
+                params,
+            } => {
                 let mut pars = Vec::new();
 
                 for param in params.deref().into_iter() {
@@ -268,7 +272,10 @@ impl<'db> InferCtx<'db> {
             }
             param_tys.push((label.clone(), pat_ty));
         }
-        let return_ = body.return_.as_ref().map(|r| self.make_type(r.clone(), &mut env));
+        let return_ = body
+            .return_
+            .as_ref()
+            .map(|r| self.make_type(r.clone(), &mut env));
         let body_ty = self.infer_expr(body.body_expr);
         if let Some(ret) = return_ {
             self.unify_var(ret, body_ty);
@@ -318,11 +325,11 @@ impl<'db> InferCtx<'db> {
                             let mut arg_tys = Vec::new();
                             for (label, arg) in args {
                                 let param_ty = self.new_ty_var();
-                                arg_tys.push((None,param_ty));
+                                arg_tys.push((None, param_ty));
                                 let arg_ty = self.infer_expr(*arg);
                                 self.unify_var(arg_ty, param_ty)
                             }
-                            arg_tys.push((None,cb_tyvar));
+                            arg_tys.push((None, cb_tyvar));
                             let ret_ty = self.new_ty_var();
                             let fun_ty = self.infer_expr(*func);
 
@@ -338,7 +345,7 @@ impl<'db> InferCtx<'db> {
                         _ => {
                             let mut arg_tys = Vec::new();
 
-                            arg_tys.push((None,cb_tyvar));
+                            arg_tys.push((None, cb_tyvar));
                             let ret_ty = self.new_ty_var();
                             let fun_ty = self.infer_expr(expr);
 
@@ -438,11 +445,11 @@ impl<'db> InferCtx<'db> {
                     }
                 }
             }
-            Expr::Tuple {fields} => {
+            Expr::Tuple { fields } => {
                 let mut field_ty = Vec::new();
                 for field in fields.into_iter() {
                     field_ty.push(self.infer_expr(*field));
-                };
+                }
                 Ty::Tuple { fields: field_ty }.intern(self)
             }
             Expr::Spread { expr } => {
@@ -480,7 +487,7 @@ impl<'db> InferCtx<'db> {
                             arg_tys.push((None, var));
                         }
                         _ => {
-                            arg_tys.push((None,self.infer_expr(*arg)));
+                            arg_tys.push((None, self.infer_expr(*arg)));
                         }
                     }
                 }
@@ -544,10 +551,10 @@ impl<'db> InferCtx<'db> {
                     subject_tys.push(self.infer_expr(*subject));
                 }
                 let ret = self.new_ty_var();
-                
+
                 for clause in clauses.iter() {
                     for (pat, ty) in clause.patterns.iter().zip(subject_tys.iter()) {
-                        self.infer_pattern(*pat,* ty);
+                        self.infer_pattern(*pat, *ty);
                     }
                     let expr_ty = self.infer_expr(clause.expr);
                     self.unify_var(expr_ty, ret);
@@ -735,7 +742,7 @@ impl<'db> InferCtx<'db> {
                     },
                 );
                 return pat_var;
-            }, 
+            }
             Pattern::Tuple { fields } => {
                 let mut field_ty = Vec::new();
                 for field in fields.into_iter() {
@@ -743,7 +750,7 @@ impl<'db> InferCtx<'db> {
                     self.infer_pattern(*field, new_ty);
                     field_ty.push(new_ty);
                 }
-                self.unify_var_ty(pat_var, Ty::Tuple { fields: field_ty})
+                self.unify_var_ty(pat_var, Ty::Tuple { fields: field_ty })
             }
             Pattern::List { elements } => {
                 let of = self.new_ty_var();
@@ -766,7 +773,12 @@ impl<'db> InferCtx<'db> {
                 let params = variant
                     .fields(self.db.upcast())
                     .iter()
-                    .map(|l| (l.label.clone(), self.make_type(l.type_ref.clone(), &mut ty_env)))
+                    .map(|l| {
+                        (
+                            l.label.clone(),
+                            self.make_type(l.type_ref.clone(), &mut ty_env),
+                        )
+                    })
                     .collect();
 
                 let adt_data = Adt::from(variant.parent).data(self.db.upcast());
@@ -804,7 +816,7 @@ impl<'db> InferCtx<'db> {
                             err,
                         }
                         .intern(self),
-                        vec![(None,err)],
+                        vec![(None, err)],
                     )
                 }
             },
@@ -840,7 +852,10 @@ impl<'db> InferCtx<'db> {
                 for (p1, p2) in params1.clone().into_iter().zip(params2.into_iter()) {
                     self.unify_var(p1, p2)
                 }
-                Ty::Adt { adt_id: id1, generic_params: params1 }
+                Ty::Adt {
+                    adt_id: id1,
+                    generic_params: params1,
+                }
             }
             (Ty::List { of: of1 }, Ty::List { of: of2 }) => {
                 self.unify_var(of1, of2);
@@ -866,10 +881,10 @@ impl<'db> InferCtx<'db> {
                     return_: ret1,
                 }
             }
-            (Ty::Tuple { fields: fields1}, Ty::Tuple { fields: fields2 }) => {
+            (Ty::Tuple { fields: fields1 }, Ty::Tuple { fields: fields2 }) => {
                 for (f1, f2) in fields1.clone().into_iter().zip(fields2.into_iter()) {
                     self.unify_var(f1, f2)
-                };
+                }
                 Ty::Tuple { fields: fields1 }
             }
             (lhs, rhs) => {
@@ -996,12 +1011,14 @@ impl<'a> Collector<'a> {
                 }
             }
             Ty::Tuple { fields } => {
-               let mut super_fields = Vec::new();
+                let mut super_fields = Vec::new();
                 for field in fields {
                     super_fields.push(self.collect(*field));
-                } ;
-                super::Ty::Tuple { fields: Arc::new(super_fields) }
-            },
+                }
+                super::Ty::Tuple {
+                    fields: Arc::new(super_fields),
+                }
+            }
             Ty::Adt {
                 adt_id,
                 generic_params,
