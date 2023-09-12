@@ -45,6 +45,7 @@ pub enum Ty {
         return_: Arc<Ty>,
     },
     Adt {
+        module: Option<SmolStr>,
         name: SmolStr,
         params: Arc<Vec<Ty>>,
     },
@@ -63,8 +64,28 @@ pub fn ty_from_ast_opt(type_ast: Option<ast::TypeExpr>) -> Option<Ty> {
 pub fn ty_from_ast(ast_expr: ast::TypeExpr) -> Ty {
     tracing::info!("{:?}", ast_expr);
     match ast_expr {
-        ast::TypeExpr::FnType(_fn_type) => Ty::Unknown,
-        ast::TypeExpr::TupleType(_) => Ty::Unknown,
+        ast::TypeExpr::FnType(it) => {
+            let mut fn_params = Vec::new();
+            if let Some(params) = it.param_list() {
+                for ty in params.params() {
+                    fn_params.push(ty_from_ast(ty));
+                }
+            };
+            let ret = it.return_().map_or_else(|| Ty::Unknown, |r| ty_from_ast(r));
+            Ty::Function {
+                params: Arc::new(fn_params),
+                return_: Arc::new(ret),
+            }
+        }
+        ast::TypeExpr::TupleType(it) => {
+            let mut fields = Vec::new();
+            for ty in it.field_types() {
+                fields.push(ty_from_ast(ty));
+            }
+            Ty::Tuple {
+                fields: Arc::new(fields),
+            }
+        }
         ast::TypeExpr::TypeNameRef(t) => {
             if let Some((ty, token)) = t
                 .constructor_name()
@@ -77,6 +98,7 @@ pub fn ty_from_ast(ast_expr: ast::TypeExpr) -> Ty {
                     // ToDo: Diagnostics
                     a if token.kind() == syntax::SyntaxKind::U_IDENT => {
                         return Ty::Adt {
+                            module: t.module().map(|m| m.text().into()),
                             name: a.into(),
                             params: Arc::new(Vec::new()),
                         }
@@ -87,8 +109,9 @@ pub fn ty_from_ast(ast_expr: ast::TypeExpr) -> Ty {
             Ty::Unknown
         }
         ast::TypeExpr::TypeApplication(ty) => {
-            let name = ty
-                .type_constructor()
+            let type_constr = ty.type_constructor();
+            let name = type_constr
+                .clone()
                 .and_then(|t| t.constructor_name())
                 .and_then(|c| c.text());
             let Some(name) = name else {
@@ -104,6 +127,9 @@ pub fn ty_from_ast(ast_expr: ast::TypeExpr) -> Ty {
                 }
             }
             Ty::Adt {
+                module: type_constr
+                    .and_then(|t| t.module())
+                    .and_then(|m| m.text().into()),
                 name,
                 params: Arc::new(arguments),
             }

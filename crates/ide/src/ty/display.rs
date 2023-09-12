@@ -218,7 +218,7 @@ impl TyDisplay for Ty {
                 f.write_joined(fields.as_ref().clone().into_iter(), ", ")?;
                 write!(f, ")")
             },
-            Ty::Adt { name, params } => {
+            Ty::Adt { module, name, params } => {
                 // let adt = db.lookup_intern_adt(*adt_id);
                 // let adt = &db.module_items(adt.file_id)[adt.value];
                 // if params.len() > 0 {

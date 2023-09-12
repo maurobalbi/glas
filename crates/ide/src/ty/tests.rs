@@ -97,7 +97,7 @@ fn let_infer_pattern() {
 fn unsaturated_constructor() {
     check_all(
         "type Snow { Snow(Int) } fn snow() {Snow}",
-        expect!["snow: fn() -> fn(Int) -> Snow"]
+        expect!["snow: fn() -> fn(Int) -> Snow"],
     )
 }
 
@@ -119,7 +119,8 @@ fn generic_params() {
 
 #[test]
 fn generic_adt() {
-    check_all(r#"type Animal(a, b) {
+    check_all(
+        r#"type Animal(a, b) {
         Dog(a, String)
         Cat(b)
       }
@@ -128,7 +129,9 @@ fn generic_adt() {
           Cat(a) -> Cat("kitty")
           Dog(1, "goofy") -> Dog(a, "goofy")
         }
-      }"#, expect!["animais: fn(Animal(Int, a)) -> Animal(b, String)"])
+      }"#,
+        expect!["animais: fn(Animal(Int, a)) -> Animal(b, String)"],
+    )
 }
 
 #[test]
@@ -321,12 +324,15 @@ fn tuple() {
 
 #[test]
 fn case_multiple_subjects() {
-    check_all("type Dog(a, a) { Dog(a, a) } fn subjects(a, b) {
+    check_all(
+        "type Dog(a, a) { Dog(a, a) } fn subjects(a, b) {
         case a, b {
             #(1, more), Dog(2.5, d) -> Dog(more, d)
         }
     }
-    ", expect!["subjects: fn(#(Int, Float), Dog(Float, Float)) -> Dog(Float, Float)"])
+    ",
+        expect!["subjects: fn(#(Int, Float), Dog(Float, Float)) -> Dog(Float, Float)"],
+    )
 }
 
 #[test]
@@ -386,6 +392,21 @@ fn lambda_shorthand() {
         test2: fn() -> fn(Int) -> Float"#
         ],
     )
+}
+
+#[test]
+fn annotations() {
+    check_all(
+        "fn ann(a: #(Int), b: fn(Int, Float) -> Int) -> Int { \"123\" } ",
+        expect!["ann: fn(#(Int), fn(Int, Float) -> Int) -> Int"],
+    )
+}
+
+#[test]
+fn list_spread() {
+    check_all("pub fn prepend(list, this item) {
+        [item, ..list]
+      }", expect!["prepend: fn(List(a), a) -> List(a)"])
 }
 
 #[test]

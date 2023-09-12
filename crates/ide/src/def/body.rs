@@ -28,6 +28,8 @@ pub struct Body {
 
     pub params: Vec<(PatternId, Option<ty::Ty>, Option<SmolStr>)>,
 
+    pub return_: Option<ty::Ty>,
+
     pub body_expr: ExprId,
 }
 
@@ -37,6 +39,7 @@ impl Default for Body {
             patterns: Arena::default(),
             exprs: Arena::default(),
             params: Vec::default(),
+            return_: None,
             body_expr: dummy_expr_id(),
         }
     }
@@ -147,6 +150,9 @@ pub(super) fn lower(db: &dyn DefDatabase, function_id: FunctionId) -> (Body, Bod
         }
     }
 
+    let return_ = ast.return_type().map(|ty| ty::ty_from_ast(ty));
+    ctx.body.return_ = return_;
+    
     let expr_id = ctx.lower_expr_opt(ast.body().map(|b| ast::Expr::Block(b)));
     ctx.body.body_expr = expr_id;
 

@@ -224,8 +224,15 @@ impl<'db> InferCtx<'db> {
                     return_: ret,
                 }
             }
-            super::Ty::Tuple { fields: _ } => todo!(),
-            super::Ty::Adt { name, params } => {
+            super::Ty::Tuple { fields  } =>  {
+                let mut field_tys = Vec::new();
+                for field in fields.deref().iter() {
+                    let field_ty = self.make_type(field.clone(), env);
+                    field_tys.push(field_ty)
+                };
+                Ty::Tuple { fields: field_tys }
+            },
+            super::Ty::Adt { module, name, params } => {
                 let mut pars = Vec::new();
 
                 for param in params.deref().into_iter() {
@@ -261,7 +268,12 @@ impl<'db> InferCtx<'db> {
             }
             param_tys.push((label.clone(), pat_ty));
         }
+        let return_ = body.return_.as_ref().map(|r| self.make_type(r.clone(), &mut env));
         let body_ty = self.infer_expr(body.body_expr);
+        if let Some(ret) = return_ {
+            self.unify_var(ret, body_ty);
+        }
+
         Ty::Function {
             params: param_tys,
             return_: body_ty,
@@ -1003,6 +1015,8 @@ impl<'a> Collector<'a> {
                 }
 
                 super::Ty::Adt {
+                    // try to use module from adt
+                    module: None,
                     name: adt_data.name.clone(),
                     params: Arc::new(params),
                 }
