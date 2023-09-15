@@ -442,6 +442,19 @@ bla: fn() -> Bla"#
 }
 
 #[test]
+fn spread_call() {
+    check_all(
+        "fn unique(list) {
+            case list {
+              [] -> []
+              [x] -> [x, ..unique([])]
+            }
+          }",
+        expect!["unique: fn(List(a)) -> List(a)"],
+    )
+}
+
+#[test]
 fn generic_params_naming() {
     check_all(
         "fn do_filter_map(

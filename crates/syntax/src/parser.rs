@@ -764,10 +764,8 @@ fn expr_unit(p: &mut Parser) -> Option<MarkClosed> {
         T![".."] => {
             let m = p.start_node();
             p.expect(T![".."]);
-            if p.at(IDENT) {
-                let var = p.start_node();
-                name_ref(p);
-                p.finish_node(var, VARIABLE);
+            if p.at_any(EXPR_FIRST) {
+                expr(p);
             }
             p.finish_node(m, EXPR_SPREAD)
         }
