@@ -9733,55 +9733,55 @@ SOURCE_FILE@0..45079
                   IDENT@23955..23956 "x"
               COMMA@23956..23957 ","
               WHITESPACE@23957..23958 " "
-              EXPR_CALL@23958..23998
-                EXPR_SPREAD@23958..23966
-                  DOT_DOT@23958..23960 ".."
+              EXPR_SPREAD@23958..23998
+                DOT_DOT@23958..23960 ".."
+                EXPR_CALL@23960..23998
                   VARIABLE@23960..23966
                     NAME_REF@23960..23966
                       IDENT@23960..23966 "unique"
-                ARG_LIST@23966..23998
-                  L_PAREN@23966..23967 "("
-                  ARG@23967..23997
-                    EXPR_CALL@23967..23997
-                      VARIABLE@23967..23973
-                        NAME_REF@23967..23973
-                          IDENT@23967..23973 "filter"
-                      ARG_LIST@23973..23997
-                        L_PAREN@23973..23974 "("
-                        ARG@23974..23979
-                          VARIABLE@23974..23978
-                            NAME_REF@23974..23978
-                              IDENT@23974..23978 "rest"
-                          COMMA@23978..23979 ","
-                        WHITESPACE@23979..23980 " "
-                        ARG@23980..23996
-                          LAMBDA@23980..23996
-                            FN_KW@23980..23982 "fn"
-                            PARAM_LIST@23982..23985
-                              L_PAREN@23982..23983 "("
-                              PARAM@23983..23984
-                                PATTERN_VARIABLE@23983..23984
-                                  IDENT@23983..23984 "y"
-                              R_PAREN@23984..23985 ")"
-                            WHITESPACE@23985..23986 " "
-                            BLOCK@23986..23996
-                              L_BRACE@23986..23987 "{"
-                              WHITESPACE@23987..23988 " "
-                              STMT_EXPR@23988..23994
-                                BINARY_OP@23988..23994
-                                  VARIABLE@23988..23989
-                                    NAME_REF@23988..23989
-                                      IDENT@23988..23989 "y"
-                                  WHITESPACE@23989..23990 " "
-                                  NOT_EQ@23990..23992 "!="
-                                  WHITESPACE@23992..23993 " "
-                                  VARIABLE@23993..23994
-                                    NAME_REF@23993..23994
-                                      IDENT@23993..23994 "x"
-                              WHITESPACE@23994..23995 " "
-                              R_BRACE@23995..23996 "}"
-                        R_PAREN@23996..23997 ")"
-                  R_PAREN@23997..23998 ")"
+                  ARG_LIST@23966..23998
+                    L_PAREN@23966..23967 "("
+                    ARG@23967..23997
+                      EXPR_CALL@23967..23997
+                        VARIABLE@23967..23973
+                          NAME_REF@23967..23973
+                            IDENT@23967..23973 "filter"
+                        ARG_LIST@23973..23997
+                          L_PAREN@23973..23974 "("
+                          ARG@23974..23979
+                            VARIABLE@23974..23978
+                              NAME_REF@23974..23978
+                                IDENT@23974..23978 "rest"
+                            COMMA@23978..23979 ","
+                          WHITESPACE@23979..23980 " "
+                          ARG@23980..23996
+                            LAMBDA@23980..23996
+                              FN_KW@23980..23982 "fn"
+                              PARAM_LIST@23982..23985
+                                L_PAREN@23982..23983 "("
+                                PARAM@23983..23984
+                                  PATTERN_VARIABLE@23983..23984
+                                    IDENT@23983..23984 "y"
+                                R_PAREN@23984..23985 ")"
+                              WHITESPACE@23985..23986 " "
+                              BLOCK@23986..23996
+                                L_BRACE@23986..23987 "{"
+                                WHITESPACE@23987..23988 " "
+                                STMT_EXPR@23988..23994
+                                  BINARY_OP@23988..23994
+                                    VARIABLE@23988..23989
+                                      NAME_REF@23988..23989
+                                        IDENT@23988..23989 "y"
+                                    WHITESPACE@23989..23990 " "
+                                    NOT_EQ@23990..23992 "!="
+                                    WHITESPACE@23992..23993 " "
+                                    VARIABLE@23993..23994
+                                      NAME_REF@23993..23994
+                                        IDENT@23993..23994 "x"
+                                WHITESPACE@23994..23995 " "
+                                R_BRACE@23995..23996 "}"
+                          R_PAREN@23996..23997 ")"
+                    R_PAREN@23997..23998 ")"
               R_SQUARE@23998..23999 "]"
           WHITESPACE@23999..24002 "\n  "
           R_BRACE@24002..24003 "}"
@@ -14432,31 +14432,31 @@ SOURCE_FILE@0..45079
                   IDENT@33601..33606 "first"
               COMMA@33606..33607 ","
               WHITESPACE@33607..33608 " "
-              EXPR_CALL@33608..33635
-                EXPR_SPREAD@33608..33617
-                  DOT_DOT@33608..33610 ".."
+              EXPR_SPREAD@33608..33635
+                DOT_DOT@33608..33610 ".."
+                EXPR_CALL@33610..33635
                   VARIABLE@33610..33617
                     NAME_REF@33610..33617
                       IDENT@33610..33617 "key_set"
-                ARG_LIST@33617..33635
-                  L_PAREN@33617..33618 "("
-                  ARG@33618..33623
-                    VARIABLE@33618..33622
-                      NAME_REF@33618..33622
-                        IDENT@33618..33622 "rest"
-                    COMMA@33622..33623 ","
-                  WHITESPACE@33623..33624 " "
-                  ARG@33624..33628
-                    VARIABLE@33624..33627
-                      NAME_REF@33624..33627
-                        IDENT@33624..33627 "key"
-                    COMMA@33627..33628 ","
-                  WHITESPACE@33628..33629 " "
-                  ARG@33629..33634
-                    VARIABLE@33629..33634
-                      NAME_REF@33629..33634
-                        IDENT@33629..33634 "value"
-                  R_PAREN@33634..33635 ")"
+                  ARG_LIST@33617..33635
+                    L_PAREN@33617..33618 "("
+                    ARG@33618..33623
+                      VARIABLE@33618..33622
+                        NAME_REF@33618..33622
+                          IDENT@33618..33622 "rest"
+                      COMMA@33622..33623 ","
+                    WHITESPACE@33623..33624 " "
+                    ARG@33624..33628
+                      VARIABLE@33624..33627
+                        NAME_REF@33624..33627
+                          IDENT@33624..33627 "key"
+                      COMMA@33627..33628 ","
+                    WHITESPACE@33628..33629 " "
+                    ARG@33629..33634
+                      VARIABLE@33629..33634
+                        NAME_REF@33629..33634
+                          IDENT@33629..33634 "value"
+                    R_PAREN@33634..33635 ")"
               R_SQUARE@33635..33636 "]"
           WHITESPACE@33636..33639 "\n  "
           R_BRACE@33639..33640 "}"
@@ -18782,19 +18782,19 @@ SOURCE_FILE@0..45079
                       IDENT@42723..42741 "first_combinations"
                   COMMA@42741..42742 ","
                   WHITESPACE@42742..42743 " "
-                  EXPR_CALL@42743..42769
-                    EXPR_SPREAD@42743..42765
-                      DOT_DOT@42743..42745 ".."
+                  EXPR_SPREAD@42743..42769
+                    DOT_DOT@42743..42745 ".."
+                    EXPR_CALL@42745..42769
                       VARIABLE@42745..42765
                         NAME_REF@42745..42765
                           IDENT@42745..42765 "do_combination_pairs"
-                    ARG_LIST@42765..42769
-                      L_PAREN@42765..42766 "("
-                      ARG@42766..42768
-                        VARIABLE@42766..42768
-                          NAME_REF@42766..42768
-                            IDENT@42766..42768 "xs"
-                      R_PAREN@42768..42769 ")"
+                      ARG_LIST@42765..42769
+                        L_PAREN@42765..42766 "("
+                        ARG@42766..42768
+                          VARIABLE@42766..42768
+                            NAME_REF@42766..42768
+                              IDENT@42766..42768 "xs"
+                        R_PAREN@42768..42769 ")"
                   R_SQUARE@42769..42770 "]"
               WHITESPACE@42770..42775 "\n    "
               R_BRACE@42775..42776 "}"
