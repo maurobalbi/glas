@@ -455,6 +455,16 @@ fn spread_call() {
 }
 
 #[test]
+fn pipe_infer() {
+    check_all("fn pipe(a: Int, b: Float) -> Int { 1 } 
+            fn unique(a) {
+            a |> pipe(1.1)
+          }",
+        expect!["pipe: fn(Int, Float) -> Int\nunique: fn(Int) -> Int"],
+    )
+}
+
+#[test]
 fn generic_params_naming() {
     check_all(
         "fn do_filter_map(

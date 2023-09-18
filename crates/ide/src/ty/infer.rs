@@ -1,4 +1,4 @@
-use std::{cmp::min, collections::HashMap, hash::Hash, mem, ops::Deref, sync::Arc};
+use std::{cmp::{min, max}, collections::HashMap, hash::Hash, mem, ops::Deref, sync::Arc};
 
 use la_arena::ArenaMap;
 use smol_str::SmolStr;
@@ -462,6 +462,30 @@ impl<'db> InferCtx<'db> {
                 let arg_ty = self.infer_expr(*left);
 
                 let ret_ty = self.new_ty_var();
+
+                // Ugly hack to notify Expr call of 
+                match &self.body[*right] {
+                    Expr::Call { func, args } => {
+                        let func_ty = self.infer_expr(*func);
+                        let ty = self.table.get_mut(func_ty.0).clone();
+                        match ty {
+                            Ty::Function { params, return_ } => {
+                                if params.len() > args.len() && params.len() > 0 {
+                                    self.unify_var(arg_ty, params[0].1)
+                                }
+                                return return_.clone()
+                            }
+                            _ => {
+                                //ToDo: Diagnostics
+                            }
+                        }
+                        //infer func expr, check if amount of params is the same as args, then unify left
+                    },
+                    _ => {
+                        //infer right, and unify like int he old times
+                    }
+                }
+
                 let fun_ty = self.infer_expr(*right);
 
                 self.unify_var_ty(
@@ -495,6 +519,7 @@ impl<'db> InferCtx<'db> {
                 // add(_, 1) => fn(_hole) { add(_hole, 1) }
                 let ret_ty = self.new_ty_var();
                 let fun_ty = self.infer_expr(*func);
+                let len = arg_tys.len();
 
                 self.unify_var_ty(
                     fun_ty,
