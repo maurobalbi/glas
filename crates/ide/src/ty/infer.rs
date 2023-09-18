@@ -310,7 +310,6 @@ impl<'db> InferCtx<'db> {
                     for pat in patterns {
                         let new_var = self.new_ty_var();
                         let pat_ty = self.infer_pattern(pat, new_var);
-                        self.unify_var(last, pat_ty);
                         params.push((None, pat_ty));
                     }
                     let cb_tail = self.infer_stmts(stmts.collect());
