@@ -472,11 +472,8 @@ impl Server {
 
         let gleam_toml = gleam_src.parse::<Table>().unwrap();
 
-        let target = gleam_toml["target"]
-            .as_str()
-            .context("Only the strings (\"javascript\", \"erlang\") are valid targets")?
-            .into();
-        let name = gleam_toml["name"].as_str().context("No valid name")?.into();
+        let target = gleam_toml.get("target").and_then(|v| v.as_str()).unwrap_or_else(|| "erlang").into();
+        let name = gleam_toml.get("name").and_then(|n| n.as_str()).context("No valid name")?.into();
 
         let mut package_roots = vec![config.root_path.clone()];
         let package_dir = config.root_path.join("build/packages");
