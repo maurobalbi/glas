@@ -442,6 +442,11 @@ impl<'db> InferCtx<'db> {
                         self.unify_var(lhs_ty, rhs_ty);
                         bool
                     }
+                    BinaryOpKind::Concat => {
+                        self.unify_var_ty(lhs_ty, Ty::String);
+                        self.unify_var(lhs_ty, rhs_ty);
+                        lhs_ty
+                    }
                 }
             }
             Expr::Tuple { fields } => {

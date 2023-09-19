@@ -26,6 +26,9 @@ pub enum BinaryOpKind {
     FloatGTE,
     FloatLTE,
     Eq,
+
+    //String
+    Concat,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -302,6 +305,7 @@ asts! {
                     T![">=."] => BinaryOpKind::FloatGTE,
                     T!["<=."] => BinaryOpKind::FloatGTE,
                     T!["=="] => BinaryOpKind::Eq,
+                    T!["<>"] => BinaryOpKind::Concat,
                     _ => return None,
                 };
                 Some((tok, op))
