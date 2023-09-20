@@ -1,5 +1,8 @@
 28..29: ExpectToken(L_BRACE)
-SOURCE_FILE@0..46
+49..50: ExpectedExpression
+50..51: ExpectedExpression
+52..53: ExpectToken(L_BRACE)
+SOURCE_FILE@0..74
   FUNCTION@0..29
     PUB_KW@0..3 "pub"
     WHITESPACE@3..4 " "
@@ -28,16 +31,42 @@ SOURCE_FILE@0..46
       WHITESPACE@26..28 " \n"
       R_BRACE@28..29 "}"
   WHITESPACE@29..31 "\n\n"
-  FUNCTION@31..46
+  FUNCTION@31..53
     FN_KW@31..33 "fn"
     WHITESPACE@33..34 " "
-    NAME@34..37
-      IDENT@34..37 "bla"
-    PARAM_LIST@37..39
-      L_PAREN@37..38 "("
-      R_PAREN@38..39 ")"
-    WHITESPACE@39..40 " "
-    BLOCK@40..46
-      L_BRACE@40..41 "{"
-      WHITESPACE@41..45 "\n  \n"
-      R_BRACE@45..46 "}"
+    NAME@34..38
+      IDENT@34..38 "main"
+    PARAM_LIST@38..40
+      L_PAREN@38..39 "("
+      R_PAREN@39..40 ")"
+    WHITESPACE@40..41 " "
+    BLOCK@41..53
+      L_BRACE@41..42 "{"
+      WHITESPACE@42..45 "\n  "
+      STMT_EXPR@45..51
+        CASE@45..51
+          CASE_KW@45..49 "case"
+          ERROR@49..50
+            L_PAREN@49..50 "("
+          ERROR@50..51
+            R_PAREN@50..51 ")"
+      WHITESPACE@51..52 "\n"
+      R_BRACE@52..53 "}"
+  WHITESPACE@53..55 "\n\n"
+  FUNCTION@55..74
+    FN_KW@55..57 "fn"
+    WHITESPACE@57..58 " "
+    NAME@58..61
+      IDENT@58..61 "bla"
+    PARAM_LIST@61..63
+      L_PAREN@61..62 "("
+      R_PAREN@62..63 ")"
+    WHITESPACE@63..64 " "
+    BLOCK@64..74
+      L_BRACE@64..65 "{"
+      WHITESPACE@65..68 "\n  "
+      STMT_EXPR@68..72
+        MISSING@68..72
+          TODO_KW@68..72 "todo"
+      WHITESPACE@72..73 "\n"
+      R_BRACE@73..74 "}"

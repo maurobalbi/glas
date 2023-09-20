@@ -803,7 +803,7 @@ fn case(p: &mut Parser) -> MarkClosed {
             if p.at_any(STMT_EXPR_RECOVERY) {
                 break;
             }
-            p.error(ErrorKind::ExpectedExpression);
+            p.bump_with_error(ErrorKind::ExpectedExpression);
         }
     }
 
