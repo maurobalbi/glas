@@ -755,6 +755,9 @@ fn expr_unit(p: &mut Parser) -> Option<MarkClosed> {
         T!["panic"] | T!["todo"] => {
             let m = p.start_node();
             p.bump();
+            if p.eat(T!["as"]) {
+                p.expect(STRING);
+            }
             p.finish_node(m, MISSING)
         }
         T!["fn"] => {
