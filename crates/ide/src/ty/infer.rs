@@ -660,8 +660,8 @@ impl<'db> InferCtx<'db> {
                                     );
                                     return var;
                                 }
-                                ResolveResult::BuiltIn(_) => todo!(),
-                                ResolveResult::Module(_) => todo!(),
+                                ResolveResult::BuiltIn(_) => {},
+                                ResolveResult::Module(_) => {},
                             }
                         }
                         self.new_ty_var()
@@ -788,7 +788,14 @@ impl<'db> InferCtx<'db> {
                 }
                 self.unify_var_ty(pat_var, Ty::List { of });
             }
-            _ => {}
+            Pattern::Concat { pattern } => {
+                let expected_ty = self.new_ty_var();
+                self.unify_var_ty(expected_ty, Ty::String);
+                self.infer_pattern(*pattern, expected_ty);
+            },
+            Pattern::Missing => {},
+            Pattern::Hole => {},
+            Pattern::Variable { name } => {}, 
         }
         self.unify_var(expected_ty_var, pat_var);
         pat_var

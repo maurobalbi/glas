@@ -221,6 +221,7 @@ enums! {
         Hole,
         PatternSpread,
         AsPattern,
+        PatternConcat,
     },
     TypeNameOrName {
         Name,
@@ -619,6 +620,10 @@ asts! {
     },
     PATTERN_GUARD = PatternGuard {
         expr: Expr,
+    },
+    PATTERN_CONCAT = PatternConcat {
+        string: Literal,
+        name[1]: Pattern,
     },
 }
 
@@ -1075,5 +1080,15 @@ mod tests {
         let params = adt.generic_params().unwrap();
         params.syntax().should_eq("(a)");
         params.params().next().unwrap().syntax().should_eq("a");
+    }
+
+    #[test]
+    fn pattern_concat() {
+        let conc = parse::<PatternConcat>(r#"fn main() {
+            case "" {
+              "abc" <> asdf -> asdf
+            }
+          }"#);
+        conc.name().unwrap().syntax().should_eq("asdf");
     }
 }

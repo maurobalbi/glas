@@ -917,10 +917,20 @@ fn pattern(p: &mut Parser) {
             p.bump();
             p.finish_node(m, HOLE)
         }
-        INTEGER | FLOAT | STRING | T!["False"] | T!["True"] => {
+        s @ (INTEGER | FLOAT | STRING | T!["False"] | T!["True"]) => {
+            
             let m = p.start_node();
             p.bump();
-            p.finish_node(m, LITERAL)
+            let mut literal = p.finish_node(m, LITERAL);
+            if s == STRING && p.at(T!["<>"]) {
+                let concat = p.start_node_before(literal);
+                p.expect(T!["<>"]);
+                let var = p.start_node();
+                p.expect(IDENT);
+                p.finish_node(var, PATTERN_VARIABLE);
+                literal = p.finish_node(concat, PATTERN_CONCAT);
+            }
+            literal
         }
         T!["<<"] => bit_string(p),
         T!["["] => pattern_list(p),

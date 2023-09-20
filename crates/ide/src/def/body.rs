@@ -437,6 +437,10 @@ impl BodyLowerCtx<'_> {
                 let as_name = it.as_name().map(|p| self.lower_pattern(p));
                 Pattern::AsPattern { pattern, as_name }
             }
+            ast::Pattern::PatternConcat(it) => {
+                let pattern = self.lower_pattern_opt(it.name());
+                Pattern::Concat { pattern }
+            }
         };
         self.alloc_pattern(pat, ptr)
     }

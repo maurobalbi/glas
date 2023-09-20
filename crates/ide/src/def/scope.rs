@@ -388,6 +388,9 @@ impl ExprScopes {
                 self.add_bindings(body, scope, pattern);
                 as_name.map(|as_name| self.add_bindings(body, scope, &as_name));
             }
+            Pattern::Concat { pattern } => {
+                self.add_bindings(body, scope, pattern);
+            },
         }
     }
 }

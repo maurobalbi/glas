@@ -199,6 +199,9 @@ pub enum Pattern {
         pattern: PatternId,
         as_name: Option<PatternId>,
     },
+    Concat {
+        pattern: PatternId,
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
