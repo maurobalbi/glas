@@ -140,7 +140,6 @@ impl<'a> LowerCtx<'a> {
     fn lower_module_statement(&mut self, stmnt: &ast::ModuleStatement) {
         match stmnt {
             // ast::ModuleStatement::ModuleConstant(_) => todo!(),
-            // ast::ModuleStatement::Import(_) => todo!(),
             ast::ModuleStatement::Function(f) => {
                 self.lower_function(f);
             }
@@ -167,18 +166,19 @@ impl<'a> LowerCtx<'a> {
             .join("/")
             .into();
 
-        let accessor: SmolStr = i
+        let Some(accessor) = i
             .module_path()
             .into_iter()
             .flat_map(|m| m.path())
             .filter_map(|t| Some(format!("{}", t.token()?.text())))
             .last()
-            .expect("This is a compiler bug")
-            .into();
+        else {
+            return
+        };
 
         let module_id = self.alloc_module_import(ModuleImport {
             name: module_name,
-            accessor,
+            accessor: accessor.into(),
             ast_ptr,
         });
 

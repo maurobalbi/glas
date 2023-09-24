@@ -5,6 +5,7 @@ use ide::{
     VfsPath,
 };
 use lsp_types::Url;
+use rustc_hash::FxHashMap;
 use slab::Slab;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -149,7 +150,7 @@ pub struct LineMap {
     /// - Have at least one element.
     /// - The first must be 0.
     line_starts: Vec<u32>,
-    char_diffs: HashMap<u32, Vec<(u32, CodeUnitsDiff)>>,
+    char_diffs: FxHashMap<u32, Vec<(u32, CodeUnitsDiff)>>,
     len: u32,
 }
 
@@ -178,7 +179,7 @@ impl LineMap {
             )
             .collect::<Vec<_>>();
 
-        let mut char_diffs = HashMap::new();
+        let mut char_diffs = FxHashMap::default();
 
         let start_pos_iter = line_starts.iter().copied();
         let end_pos_iter = line_starts[1..].iter().copied().chain(Some(text_len));
@@ -295,7 +296,7 @@ mod tests {
         assert_eq!(&map.line_starts, &[0]);
         assert_eq!(
             &map.char_diffs,
-            &HashMap::from([(
+            &HashMap::from_iter([(
                 0u32,
                 vec![
                     (3u32, CodeUnitsDiff::One),

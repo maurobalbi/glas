@@ -588,6 +588,7 @@ dependencies = [
  "ide",
  "log",
  "lsp-types",
+ "rustc-hash",
  "rustix 0.38.3",
  "serde",
  "serde_json",

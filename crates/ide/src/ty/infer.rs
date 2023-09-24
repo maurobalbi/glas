@@ -1,4 +1,11 @@
-use std::{cmp::{min, max}, collections::HashMap, hash::Hash, mem, ops::Deref, sync::Arc};
+use std::{
+    cmp::{max, min},
+    collections::HashMap,
+    hash::Hash,
+    mem,
+    ops::Deref,
+    sync::Arc,
+};
 
 use la_arena::ArenaMap;
 use smol_str::SmolStr;
@@ -467,7 +474,7 @@ impl<'db> InferCtx<'db> {
 
                 let ret_ty = self.new_ty_var();
 
-                // Ugly hack to notify Expr call of 
+                // Ugly hack to notify Expr call of
                 match &self.body[*right] {
                     Expr::Call { func, args } => {
                         let func_ty = self.infer_expr(*func);
@@ -477,14 +484,14 @@ impl<'db> InferCtx<'db> {
                                 if params.len() > args.len() && params.len() > 0 {
                                     self.unify_var(arg_ty, params[0].1)
                                 }
-                                return return_.clone()
+                                return return_.clone();
                             }
                             _ => {
                                 //ToDo: Diagnostics
                             }
                         }
                         //infer func expr, check if amount of params is the same as args, then unify left
-                    },
+                    }
                     _ => {
                         //infer right, and unify like int he old times
                     }
@@ -615,54 +622,49 @@ impl<'db> InferCtx<'db> {
                     }
                     _ => {
                         tracing::info!("INFERRING FIELD_RESOLUTION NON ADT");
-                        let map = self.db.module_map();
-                        let file = map.iter().find(|(_, name)| {
-                            name.split('/').last().eq(&Some(base_string.as_str()))
-                        });
-                        tracing::info!("fileid for modulename {:?} {}", file, base_string);
-                        if let Some(res) = file
-                            .map(|f| resolver_for_toplevel(self.db.upcast(), f.0))
-                            .and_then(|r| r.resolve_name(label_name))
-                        {
-                            match res {
-                                ResolveResult::Local(_) => {
-                                    unreachable!("This is a compiler bug")
-                                }
-                                ResolveResult::Function(it) => {
-                                    let fn_ty = it.ty(self.db);
-                                    let mut env = HashMap::new();
+                        // ToDo: This yields nonsensical result! need to resolve the full import name first and then find the module!
+                        match self.resolver.resolve_module(base_string) {
+                            Some(file) => {
+                                self.body_ctx.module_resolution.insert(*container, file);
+                                let resolver = resolver_for_toplevel(self.db.upcast(), file);
+                                if let Some(res) = resolver.resolve_name(label_name) {
+                                    match res {
+                                        ResolveResult::Local(_) => {
+                                            unreachable!("This is a compiler bug")
+                                        }
+                                        ResolveResult::Function(it) => {
+                                            let fn_ty = it.ty(self.db);
+                                            let mut env = HashMap::new();
 
-                                    self.body_ctx.field_resolution.insert(
-                                        tgt_expr,
-                                        FieldResolution::ModuleDef(ModuleDef::Function(it)),
-                                    );
-                                    self.body_ctx
-                                        .module_resolution
-                                        .insert(*container, file.unwrap().0.clone());
-                                    return self.make_type(fn_ty.clone(), &mut env);
+                                            self.body_ctx.field_resolution.insert(
+                                                tgt_expr,
+                                                FieldResolution::ModuleDef(ModuleDef::Function(it)),
+                                            );
+
+                                            return self.make_type(fn_ty.clone(), &mut env);
+                                        }
+                                        // ToDo: Add type to adt in hir and fix this.
+                                        ResolveResult::Variant(it) => {
+                                            let var = self.new_ty_var();
+                                            self.unify_var_ty(
+                                                var,
+                                                Ty::Adt {
+                                                    generic_params: Vec::new(),
+                                                    adt_id: it.parent,
+                                                },
+                                            );
+                                            self.body_ctx.field_resolution.insert(
+                                                tgt_expr,
+                                                FieldResolution::ModuleDef(ModuleDef::Variant(it)),
+                                            );
+                                            return var;
+                                        }
+                                        ResolveResult::BuiltIn(_) => {}
+                                        ResolveResult::Module(_) => {}
+                                    }
                                 }
-                                // ToDo: Add type to adt in hir and fix this.
-                                ResolveResult::Variant(it) => {
-                                    let var = self.new_ty_var();
-                                    self.unify_var_ty(
-                                        var,
-                                        Ty::Adt {
-                                            generic_params: Vec::new(),
-                                            adt_id: it.parent,
-                                        },
-                                    );
-                                    self.body_ctx
-                                        .module_resolution
-                                        .insert(*container, file.unwrap().0.clone());
-                                    self.body_ctx.field_resolution.insert(
-                                        tgt_expr,
-                                        FieldResolution::ModuleDef(ModuleDef::Variant(it)),
-                                    );
-                                    return var;
-                                }
-                                ResolveResult::BuiltIn(_) => {},
-                                ResolveResult::Module(_) => {},
                             }
+                            _ => {}
                         }
                         self.new_ty_var()
                     }
@@ -792,10 +794,10 @@ impl<'db> InferCtx<'db> {
                 let expected_ty = self.new_ty_var();
                 self.unify_var_ty(expected_ty, Ty::String);
                 self.infer_pattern(*pattern, expected_ty);
-            },
-            Pattern::Missing => {},
-            Pattern::Hole => {},
-            Pattern::Variable { name } => {}, 
+            }
+            Pattern::Missing => {}
+            Pattern::Hole => {}
+            Pattern::Variable { name } => {}
         }
         self.unify_var(expected_ty_var, pat_var);
         pat_var

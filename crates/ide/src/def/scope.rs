@@ -25,6 +25,15 @@ pub fn module_scope_with_map_query(
 
     let mut scope = ModuleScope::default();
     let mut module_source_map = ModuleSourceMap::default();
+    
+    for (_, imported_module) in module_data.module_imports() {
+        let Some(file) = db.module_map().file_for_module_name(&imported_module.name) else {
+            // report diagnostics
+            continue
+        };
+
+        scope.modules.insert(imported_module.accessor.clone(), file);
+    }
 
     for (_, import) in module_data.unqualified_imports() {
         if let Some(val) = scope.resolve_import(db, &module_data, import) {
@@ -123,17 +132,23 @@ pub struct ModuleScope {
     values: IndexMap<SmolStr, ModuleDefId>,
     types: IndexMap<SmolStr, ModuleDefId>,
 
+    modules: IndexMap<SmolStr, FileId>,
+
     /// The defs declared in this module which can potentially be imported in another module
     declarations: IndexMap<SmolStr, (ModuleDefId, Visibility)>,
 }
 
 impl ModuleScope {
-    pub fn resolve_name_locally(&self, name: SmolStr) -> Option<&ModuleDefId> {
-        self.values.get(&name)
+    pub fn resolve_name_locally(&self, name: &SmolStr) -> Option<&ModuleDefId> {
+        self.values.get(name)
     }
 
     pub fn resovlve_type(&self, name: SmolStr) -> Option<&ModuleDefId> {
         self.types.get(&name)
+    }
+
+    pub fn resolve_module(&self, name: &SmolStr) -> Option<&FileId> {
+        self.modules.get(name)
     }
 
     pub fn values(
@@ -164,7 +179,7 @@ impl ModuleScope {
             ..
         } = import;
         let module = &module_items[*module];
-        let file_id = db.module_map().file_for_module_name(module.name.clone())?;
+        let file_id = db.module_map().file_for_module_name(&module.name)?;
         let scope = db.module_scope(file_id);
         let Some((item, Visibility::Public)) = scope.declarations.get(unqualifed_name) else {
             return None

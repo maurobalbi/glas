@@ -108,6 +108,10 @@ impl Resolver {
         }
     }
 
+    pub fn resolve_module(&self, name: &SmolStr) -> Option<FileId> {
+        self.module_scope.resolve_module(name).cloned()
+    }
+
     pub fn resolve_name(&self, name: &SmolStr) -> Option<ResolveResult> {
         for scope in self.scopes() {
             match scope {
@@ -126,7 +130,7 @@ impl Resolver {
             }
         }
 
-        if let Some(res) = self.module_scope.resolve_name_locally(name.clone()) {
+        if let Some(res) = self.module_scope.resolve_name_locally(name) {
             match *res {
                 super::hir_def::ModuleDefId::FunctionId(it) => {
                     return Some(ResolveResult::Function(Function::from(it)))
@@ -137,6 +141,7 @@ impl Resolver {
                 }
             }
         }
+
 
         if let Some(val) = BuiltIn::values().get(name) {
             return Some(ResolveResult::BuiltIn(val.clone()));

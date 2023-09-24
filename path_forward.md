@@ -4,7 +4,7 @@ Features for 1.0:
   ✓ Finish inference for Result, Tuple, Case multiple subjects
   ✓ finish type_from_ast
   - type alias
-  - fix parsing for panic, <>
+  ✓ fix parsing for panic, <>
   - fix make_ast for types with module def, e.g. wisp.Response
   - Fix Record Spread
   - Fix function label / Record label lowering + inference (Unsaturated Constructors are inferred as fn (...) -> Constr)

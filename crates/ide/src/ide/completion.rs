@@ -195,18 +195,16 @@ fn complete_at(acc: &mut Vec<CompletionItem>, ctx: CompletionContext<'_>) {
 }
 
 fn complete_dot(acc: &mut Vec<CompletionItem>, ctx: CompletionContext<'_>) -> Option<()> {
+    tracing::info!("COMPLETE DOT FOR {:?} {:?}", ctx.tok, ctx.tok.parent());
     match_ast! {
         match (ctx.tok.parent()?) {
             ast::FieldAccessExpr(it) => {
                 // let receiver = find_opt_node_in_file(&ctx.original_file, it.base())?;
                 // let ty = ctx.sema.ty_of_expr(&receiver);
-                let text = it.base()?.syntax().to_string();
+                tracing::info!("COMPLEETING");
+                let file = ctx.sema.resolve_module(it.base()?)?;
 
-                let map = ctx.db.module_map();
-                let file = map
-                    .iter()
-                    .find(|(_, name)| name.split('/').last().eq(&Some(text.as_str())))?;
-                let module_items = ctx.db.module_scope(file.0);
+                let module_items = ctx.db.module_scope(file);
 
                 for (def, _) in module_items.declarations() {
                     let kind = match def {

@@ -279,7 +279,6 @@ impl BodyLowerCtx<'_> {
                             patterns.push(self.lower_pattern_opt(pat.patterns().next()));
                         }
 
-                        // ToDo: Make tuple type of pattern
                         Clause {
                             expr: self.lower_expr_opt(clause.body()),
                             patterns,

@@ -113,8 +113,8 @@ impl ModuleMap {
         self.files.insert(module_name, file)
     }
 
-    pub fn file_for_module_name(&self, name: SmolStr) -> Option<FileId> {
-        self.files.get(&name).copied()
+    pub fn file_for_module_name(&self, name: &SmolStr) -> Option<FileId> {
+        self.files.get(name).copied()
     }
 
     pub fn module_name_for_file(&self, file: FileId) -> Option<SmolStr> {

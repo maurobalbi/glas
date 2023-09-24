@@ -119,6 +119,10 @@ impl<'db> Semantics<'db> {
         self.analyze(field.syntax())?.resolve_field(&field)
     }
 
+    pub fn resolve_module(&self, expr: ast::Expr) -> Option<FileId> {
+       self.analyze(expr.syntax())?.resolve_module(&expr)
+    }
+
     pub fn resolve_name(&self, name: ast::NameRef) -> Option<ResolveResult> {
         let analyzer = self.analyze(name.syntax())?;
         if let Some(module) = name
