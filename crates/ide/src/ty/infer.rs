@@ -512,6 +512,9 @@ impl<'db> InferCtx<'db> {
                 let mut arg_tys = Vec::new();
                 let mut hole = None;
                 let mut count = 0;
+                // add(_, 1) => fn(_hole) { add(_hole, 1) }
+                let ret_ty = self.new_ty_var();
+                let fun_ty = self.infer_expr(*func);
 
                 for (label, arg) in args {
                     match self.body[*arg] {
@@ -521,15 +524,17 @@ impl<'db> InferCtx<'db> {
                             hole = Some(var);
                             arg_tys.push((None, var));
                         }
+                        // ..object
+                        Expr::Spread { expr } => {
+                            let expr = self.infer_expr(expr);
+                            self.unify_var(ret_ty, expr);
+                        }
                         _ => {
                             arg_tys.push((None, self.infer_expr(*arg)));
                         }
                     }
                 }
 
-                // add(_, 1) => fn(_hole) { add(_hole, 1) }
-                let ret_ty = self.new_ty_var();
-                let fun_ty = self.infer_expr(*func);
                 let len = arg_tys.len();
 
                 self.unify_var_ty(

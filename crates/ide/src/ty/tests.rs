@@ -277,6 +277,16 @@ fn use_() {
 }
 
 #[test]
+fn record_spread() {
+    check_all("type Alias {
+        Bla(name, dodo)
+      }
+      fn main(a) {
+        Bla(..a)
+      }", expect!["main: fn(Alias) -> Alias"])
+}
+
+#[test]
 fn use_pattern() {
     check_all(
         "type BlaT { Bla(Int) } fn main(a) { 
