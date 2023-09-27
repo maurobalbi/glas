@@ -11,7 +11,7 @@ use crate::{DefDatabase, FileId};
 
 use super::{
     body::Body,
-    hir_def::{AdtId, AdtLoc, FunctionLoc, ModuleDefId, VariantId, TypeAliasLoc, TypeAliasId},
+    hir_def::{AdtId, AdtLoc, FunctionLoc, ModuleDefId, TypeAliasId, TypeAliasLoc, VariantId},
     module::{Clause, Expr, ExprId, ImportData, Pattern, PatternId, Statement, Visibility},
     resolver::ResolveResult,
     resolver_for_expr, FunctionId, ModuleItemData,
@@ -25,7 +25,7 @@ pub fn module_scope_with_map_query(
 
     let mut scope = ModuleScope::default();
     let mut module_source_map = ModuleSourceMap::default();
-    
+
     for (_, imported_module) in module_data.module_imports() {
         let Some(file) = db.module_map().file_for_module_name(&imported_module.name) else {
             // report diagnostics
@@ -36,9 +36,10 @@ pub fn module_scope_with_map_query(
     }
 
     for (_, import) in module_data.unqualified_imports() {
-        if let Some(val) = scope.resolve_import(db, &module_data, import) {
+        for val in scope.resolve_import(db, &module_data, import) {
             match val {
                 ModuleDefId::AdtId(_) => scope.types.insert(import.local_name(), val),
+                ModuleDefId::TypeAliasId(_) => scope.types.insert(import.local_name(), val),
                 _ => scope.values.insert(import.local_name(), val),
             };
         }
@@ -58,7 +59,9 @@ pub fn module_scope_with_map_query(
         scope.values.insert(name.clone(), def.clone());
         scope
             .declarations
-            .insert(name.clone(), (def, func.visibility.clone()));
+            .entry(name.clone())
+            .or_default()
+            .push((def, func.visibility.clone()));
     }
 
     for (alias_id, alias) in module_data.type_alias() {
@@ -69,8 +72,15 @@ pub fn module_scope_with_map_query(
         });
         let def = ModuleDefId::TypeAliasId(alias_loc);
 
-        module_source_map.type_alias_map.insert(alias.ast_ptr.clone(), alias_loc);
+        module_source_map
+            .type_alias_map
+            .insert(alias.ast_ptr.clone(), alias_loc);
         scope.types.insert(name.clone(), def.clone());
+        scope
+            .declarations
+            .entry(name.clone())
+            .or_default()
+            .push((def, alias.visibility.clone()));
     }
 
     for (adt_id, adt) in module_data.adts() {
@@ -87,7 +97,9 @@ pub fn module_scope_with_map_query(
         scope.types.insert(name.clone(), def.clone());
         scope
             .declarations
-            .insert(name.clone(), (def, adt.visibility.clone()));
+            .entry(name.clone())
+            .or_default()
+            .push((def, adt.visibility.clone()));
 
         for variant_id in adt.variants.clone() {
             let variant = &module_data[variant_id];
@@ -107,7 +119,9 @@ pub fn module_scope_with_map_query(
             //use visibility of adt
             scope
                 .declarations
-                .insert(name.clone(), (def, adt.visibility.clone()));
+                .entry(name.clone())
+                .or_default()
+                .push((def, adt.visibility.clone()));
         }
     }
 
@@ -137,7 +151,7 @@ impl ModuleSourceMap {
         let src = AstPtr::new(node);
         self.variant_map.get(&src).copied()
     }
-    
+
     pub fn node_to_type_alias(&self, node: &ast::TypeAlias) -> Option<TypeAliasId> {
         let src = AstPtr::new(node);
         self.type_alias_map.get(&src).copied()
@@ -153,7 +167,7 @@ pub struct ModuleScope {
     modules: IndexMap<SmolStr, FileId>,
 
     /// The defs declared in this module which can potentially be imported in another module
-    declarations: IndexMap<SmolStr, (ModuleDefId, Visibility)>,
+    declarations: IndexMap<SmolStr, Vec<(ModuleDefId, Visibility)>>,
 }
 
 impl ModuleScope {
@@ -181,7 +195,7 @@ impl ModuleScope {
 
     pub fn declarations(
         &self,
-    ) -> impl Iterator<Item = &(ModuleDefId, Visibility)> + ExactSizeIterator + '_ {
+    ) -> impl Iterator<Item = &Vec<(ModuleDefId, Visibility)>> + ExactSizeIterator + '_ {
         self.declarations.iter().map(|v| v.1)
     }
 
@@ -190,19 +204,26 @@ impl ModuleScope {
         db: &dyn DefDatabase,
         module_items: &ModuleItemData,
         import: &ImportData,
-    ) -> Option<ModuleDefId> {
+    ) -> Vec<ModuleDefId> {
         let ImportData {
             unqualified_name: unqualifed_name,
             module,
             ..
         } = import;
         let module = &module_items[*module];
-        let file_id = db.module_map().file_for_module_name(&module.name)?;
-        let scope = db.module_scope(file_id);
-        let Some((item, Visibility::Public)) = scope.declarations.get(unqualifed_name) else {
-            return None
+        let Some(file_id) = db.module_map().file_for_module_name(&module.name) else {
+            return Vec::new();
         };
-        Some(item.clone())
+        let scope = db.module_scope(file_id);
+        let Some(items) = scope.declarations.get(unqualifed_name) else {
+            return Vec::new();
+        };
+        items
+            .iter()
+            .filter(|i| i.1 == Visibility::Public)
+            .map(|i| i.0.clone())
+            .clone()
+            .collect()
     }
 }
 
@@ -423,7 +444,7 @@ impl ExprScopes {
             }
             Pattern::Concat { pattern } => {
                 self.add_bindings(body, scope, pattern);
-            },
+            }
         }
     }
 }
@@ -456,7 +477,7 @@ pub(crate) fn dependency_order_query(
 ) -> Vec<Vec<FunctionId>> {
     let scopes = db.module_scope(file_id);
     let mut edges = Vec::new();
-    for (func, _) in scopes.declarations() {
+    for (func, _) in scopes.declarations().into_iter().flatten() {
         match func {
             ModuleDefId::FunctionId(owner_id) => {
                 let body = db.body(owner_id.clone());

@@ -206,7 +206,7 @@ fn complete_dot(acc: &mut Vec<CompletionItem>, ctx: CompletionContext<'_>) -> Op
 
                 let module_items = ctx.db.module_scope(file);
 
-                for (def, _) in module_items.declarations() {
+                for (def, _) in module_items.declarations().flatten() {
                     let kind = match def {
                         ModuleDefId::FunctionId(_) => CompletionItemKind::Function,
                         ModuleDefId::AdtId(_) => CompletionItemKind::Adt,

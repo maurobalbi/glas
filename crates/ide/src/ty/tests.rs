@@ -12,7 +12,7 @@ fn check_all(src: &str, expect: Expect) {
     let (db, file) = TestDB::single_file(src).unwrap();
     let scope = db.module_scope(file);
     let mut output = Vec::new();
-    for fun in scope.declarations() {
+    for fun in scope.declarations().flatten() {
         match fun.0 {
             crate::def::hir_def::ModuleDefId::FunctionId(fn_id) => {
                 let infer = db.infer_function(fn_id);
@@ -36,7 +36,7 @@ fn check_fix(src: &str, expect: Expect) {
     tracing::info!("{:#?}", f);
     let scope = db.module_scope(f[0].file_id);
     let mut output = Vec::new();
-    for fun in scope.declarations() {
+    for fun in scope.declarations().flatten() {
         match fun.0 {
             crate::def::hir_def::ModuleDefId::FunctionId(fn_id) => {
                 let infer = db.infer_function(fn_id);
@@ -506,4 +506,38 @@ fn alias_infer() {
     }",
         expect!["main: fn() -> String"],
     )
+}
+
+#[test]
+fn aliased_import() {
+    check_fix(r#"#- /test.gleam
+pub type Bla = String
+
+#- /test2.gleam
+import test.{Bla, main as dodo}
+
+fn test(a: String) -> Bla { $0 }"#, expect!["test: fn(String) -> String"])
+}
+
+#[test]
+fn generic_alias() {
+    check_fix(r#"#- /test.gleam
+pub type Wobble(name) {
+    Wobble(name)
+}
+
+#- /test2.gleam
+import test.{Wobble as Bobo, main as dodo}
+pub opaque type Nasty {
+    Nasty
+}
+type Alias = Bobo(Nasty)
+
+fn test(a: String) -> Alias { $0 }"#, expect!["test: fn(String) -> Wobble(Nasty)"])
+}
+
+#[test]
+fn fn_signature() {
+    check_all(r#"
+    fn main() -> Nil {} "#, expect![""])
 }

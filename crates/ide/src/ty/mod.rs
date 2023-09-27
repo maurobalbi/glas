@@ -95,6 +95,8 @@ pub fn ty_from_ast(ast_expr: ast::TypeExpr) -> Ty {
                     "Int" => return Ty::Int,
                     "Float" => return Ty::Float,
                     "String" => return Ty::String,
+                    "Bool" => return Ty::Bool,
+                    "Nil" => return Ty::Nil,
                     // ToDo: Diagnostics
                     a if token.kind() == syntax::SyntaxKind::U_IDENT => {
                         return Ty::Adt {
@@ -117,6 +119,7 @@ pub fn ty_from_ast(ast_expr: ast::TypeExpr) -> Ty {
             let Some(name) = name else {
                     return Ty::Unknown
                 };
+
             let mut arguments = Vec::new();
             if let Some(args) = ty.arg_list() {
                 for arg in args.args() {
@@ -126,6 +129,19 @@ pub fn ty_from_ast(ast_expr: ast::TypeExpr) -> Ty {
                     }
                 }
             }
+            match name.as_str() {
+                "List" => {
+                    return Ty::List {
+                        of: Arc::new(arguments.get(0).unwrap_or(&Ty::Unknown).clone()),
+                    }
+                }
+                "Result" => {
+                    let ok = Arc::new(arguments.get(0).unwrap_or(&Ty::Unknown).clone());
+                    let err = Arc::new(arguments.get(1).unwrap_or(&Ty::Unknown).clone());
+                    return Ty::Result { ok, err };
+                }
+                _ => {}
+            };
             Ty::Adt {
                 module: type_constr
                     .and_then(|t| t.module())
