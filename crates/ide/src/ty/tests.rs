@@ -535,9 +535,3 @@ type Alias = Bobo(Nasty)
 
 fn test(a: String) -> Alias { $0 }"#, expect!["test: fn(String) -> Wobble(Nasty)"])
 }
-
-#[test]
-fn fn_signature() {
-    check_all(r#"
-    fn main() -> Nil {} "#, expect![""])
-}

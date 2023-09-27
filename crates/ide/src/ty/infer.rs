@@ -495,6 +495,11 @@ impl<'db> InferCtx<'db> {
                     Expr::Call { func, args } => {
                         let func_ty = self.infer_expr(*func);
                         let ty = self.table.get_mut(func_ty.0).clone();
+
+                        for (label, arg) in args {
+                            self.infer_expr(*arg); 
+                        }
+
                         match ty {
                             Ty::Function { params, return_ } => {
                                 if params.len() > args.len() && params.len() > 0 {

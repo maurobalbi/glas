@@ -59,6 +59,7 @@ pub struct CompletionContext<'db> {
     source_range: TextRange,
     expr_ptr: Option<InFile<SyntaxNode>>,
     tok: SyntaxToken,
+    trigger_tok: Option<SyntaxToken>,
     original_file: SyntaxNode,
 }
 
@@ -68,6 +69,8 @@ impl<'db> CompletionContext<'db> {
         let original_file = sema.parse(position.file_id);
         let tok = best_token_at_offset(original_file.syntax(), position.pos)?;
 
+        let trigger_tok = original_file.syntax().token_at_offset(position.pos).left_biased();
+
         let mut ctx = CompletionContext {
             db,
             sema,
@@ -76,6 +79,7 @@ impl<'db> CompletionContext<'db> {
             expr_ptr: None,
             original_file: original_file.syntax().clone(),
             tok,
+            trigger_tok,
         };
 
         ctx.source_range = match ctx.tok.kind() {
@@ -195,13 +199,12 @@ fn complete_at(acc: &mut Vec<CompletionItem>, ctx: CompletionContext<'_>) {
 }
 
 fn complete_dot(acc: &mut Vec<CompletionItem>, ctx: CompletionContext<'_>) -> Option<()> {
-    tracing::info!("COMPLETE DOT FOR {:?} {:?}", ctx.tok, ctx.tok.parent());
+    let trigger_tok = ctx.trigger_tok?;
     match_ast! {
-        match (ctx.tok.parent()?) {
+        match (trigger_tok.parent()?) {
             ast::FieldAccessExpr(it) => {
                 // let receiver = find_opt_node_in_file(&ctx.original_file, it.base())?;
                 // let ty = ctx.sema.ty_of_expr(&receiver);
-                tracing::info!("COMPLEETING");
                 let file = ctx.sema.resolve_module(it.base()?)?;
 
                 let module_items = ctx.db.module_scope(file);
