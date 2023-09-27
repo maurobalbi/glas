@@ -14,8 +14,8 @@ use syntax::ast::{BinaryOpKind, LiteralKind};
 use crate::{
     def::{
         body::Body,
-        hir::{self, Adt, Function, ModuleDef},
-        hir_def::{AdtId, FunctionId},
+        hir::{self, Adt, Function, ModuleDef, TypeAlias},
+        hir_def::{AdtId, FunctionId, ModuleDefId},
         module::{Expr, ExprId, Field, Pattern, PatternId, Statement},
         resolver::{resolver_for_toplevel, ResolveResult, Resolver},
         resolver_for_expr,
@@ -253,9 +253,25 @@ impl<'db> InferCtx<'db> {
                     pars.push(par_var);
                 }
                 match self.resolver.resolve_type(&name) {
-                    Some(adt_id) => Ty::Adt {
-                        generic_params: pars,
-                        adt_id,
+                    Some(type_) => match type_ {
+                        ModuleDefId::AdtId(adt_id) => Ty::Adt {
+                            generic_params: pars,
+                            adt_id,
+                        },
+                        ModuleDefId::TypeAliasId(alias) => {
+                            tracing::info!("INFERRING ALIAS");
+                            let data = TypeAlias{ id: alias}.data(self.db.upcast());
+                            tracing::info!("{:?}", data.body);
+                            if let Some(ty) = data.body {
+                                return self.make_type(ty, env);
+                            }
+                            self.idx += 1;
+                            Ty::Unknown { idx: self.idx }
+                        },
+                        _ => {
+                            self.idx += 1;
+                            Ty::Unknown { idx: self.idx }
+                        }
                     },
                     None => {
                         self.idx += 1;

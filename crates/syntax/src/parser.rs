@@ -435,7 +435,7 @@ fn custom_type(p: &mut Parser, m: MarkOpened) {
             if p.at_any(TYPE_FIRST) && p.nth(1) != IDENT {
                 type_expr(p);
             }
-            p.finish_node(m, CUSTOM_TYPE_ALIAS);
+            p.finish_node(m, TYPE_ALIAS);
         }
         _ => {
             p.finish_node(m, ADT);

@@ -22,6 +22,7 @@ fn check_all(src: &str, expect: Expect) {
             }
             crate::def::hir_def::ModuleDefId::AdtId(_) => {}
             crate::def::hir_def::ModuleDefId::VariantId(_) => {}
+            crate::def::hir_def::ModuleDefId::TypeAliasId(_) => {},
         }
     }
 
@@ -45,6 +46,7 @@ fn check_fix(src: &str, expect: Expect) {
             }
             crate::def::hir_def::ModuleDefId::AdtId(_) => {}
             crate::def::hir_def::ModuleDefId::VariantId(_) => {}
+            crate::def::hir_def::ModuleDefId::TypeAliasId(_) => {},
         }
     }
 
@@ -346,7 +348,6 @@ fn case_multiple_subjects() {
 }
 
 #[test]
-#[traced_test]
 fn pattern_spread() {
     check_all(
         "fn spread() {
@@ -494,5 +495,15 @@ fn generic_params_naming() {
             }
           }",
         expect!["do_filter_map: fn(List(a), fn(a) -> b, List(b)) -> List(b)"],
+    )
+}
+
+#[test]
+#[traced_test]
+fn alias_infer() {
+    check_all("type Alias = String 
+    fn main() -> Alias {
+    }",
+        expect!["main: fn() -> String"],
     )
 }

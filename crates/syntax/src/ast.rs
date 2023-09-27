@@ -176,6 +176,7 @@ enums! {
         Import,
         Function,
         Adt,
+        TypeAlias,
     },
     ConstantExpr {
         Literal,
@@ -349,9 +350,10 @@ asts! {
     GENERIC_PARAM_LIST = GenericParamList {
         params: [TypeExpr],
     },
-    CUSTOM_TYPE_ALIAS = CustomTypeAlias {
+    TYPE_ALIAS = TypeAlias {
         name: TypeName,
-        constructors: [Variant],
+        type_: TypeExpr,
+        generic_params: GenericParamList,
 
         pub fn is_public(&self) -> bool {
             self.syntax().children_with_tokens().find(|it| it.kind() == T!["pub"]).is_some()
@@ -770,7 +772,7 @@ mod tests {
 
     #[test]
     fn opaque_type() {
-        let e = parse::<CustomTypeAlias>("pub type Bla = Bla");
+        let e = parse::<TypeAlias>("pub type Bla = Bla");
         e.name().unwrap().syntax().should_eq("Bla");
     }
 
@@ -1090,5 +1092,12 @@ mod tests {
             }
           }"#);
         conc.name().unwrap().syntax().should_eq("asdf");
+    }
+    
+    #[test]
+    fn alias_body() {
+        let alias = parse::<TypeAlias>(r#"type Alias = String"#);
+        alias.name().unwrap().syntax().should_eq("Alias");
+        alias.type_().unwrap().syntax().should_eq("String");
     }
 }

@@ -2,7 +2,7 @@ use syntax::ast;
 
 use crate::{DefDatabase, InFile};
 
-use super::hir::{Adt, Function, Variant};
+use super::{hir::{Adt, Function, Variant, TypeAlias}, hir_def::TypeAliasId};
 
 pub trait HasSource {
     type Ast;
@@ -26,6 +26,16 @@ impl HasSource for Adt {
     type Ast = ast::Adt;
     fn source(self, db: &dyn DefDatabase) -> Option<InFile<Self::Ast>> {
         let loc = db.lookup_intern_adt(self.id);
+        let adt_data = &db.module_items(loc.file_id)[loc.value];
+        let root = db.parse(loc.file_id);
+        Some(loc.map(|_| adt_data.ast_ptr.to_node(&root.syntax_node())))
+    }
+}
+
+impl HasSource for TypeAlias {
+    type Ast = ast::TypeAlias;
+    fn source(self, db: &dyn DefDatabase) -> Option<InFile<Self::Ast>> {
+        let loc = db.lookup_intern_type_alias(self.id);
         let adt_data = &db.module_items(loc.file_id)[loc.value];
         let root = db.parse(loc.file_id);
         Some(loc.map(|_| adt_data.ast_ptr.to_node(&root.syntax_node())))

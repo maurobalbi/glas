@@ -11,7 +11,7 @@ use crate::{DefDatabase, FileId};
 
 use super::{
     body::Body,
-    hir_def::{AdtId, AdtLoc, FunctionLoc, ModuleDefId, VariantId},
+    hir_def::{AdtId, AdtLoc, FunctionLoc, ModuleDefId, VariantId, TypeAliasLoc, TypeAliasId},
     module::{Clause, Expr, ExprId, ImportData, Pattern, PatternId, Statement, Visibility},
     resolver::ResolveResult,
     resolver_for_expr, FunctionId, ModuleItemData,
@@ -61,6 +61,18 @@ pub fn module_scope_with_map_query(
             .insert(name.clone(), (def, func.visibility.clone()));
     }
 
+    for (alias_id, alias) in module_data.type_alias() {
+        let name = &alias.name;
+        let alias_loc = db.intern_type_alias(TypeAliasLoc {
+            file_id,
+            value: alias_id,
+        });
+        let def = ModuleDefId::TypeAliasId(alias_loc);
+
+        module_source_map.type_alias_map.insert(alias.ast_ptr.clone(), alias_loc);
+        scope.types.insert(name.clone(), def.clone());
+    }
+
     for (adt_id, adt) in module_data.adts() {
         let name = &adt.name;
         let adt_loc = db.intern_adt(AdtLoc {
@@ -107,6 +119,7 @@ pub struct ModuleSourceMap {
     function_map: HashMap<AstPtr<ast::Function>, FunctionId>,
     adt_map: HashMap<AstPtr<ast::Adt>, AdtId>,
     variant_map: HashMap<AstPtr<ast::Variant>, VariantId>,
+    type_alias_map: HashMap<AstPtr<ast::TypeAlias>, TypeAliasId>,
 }
 
 impl ModuleSourceMap {
@@ -123,6 +136,11 @@ impl ModuleSourceMap {
     pub fn node_to_variant(&self, node: &ast::Variant) -> Option<VariantId> {
         let src = AstPtr::new(node);
         self.variant_map.get(&src).copied()
+    }
+    
+    pub fn node_to_type_alias(&self, node: &ast::TypeAlias) -> Option<TypeAliasId> {
+        let src = AstPtr::new(node);
+        self.type_alias_map.get(&src).copied()
     }
 }
 

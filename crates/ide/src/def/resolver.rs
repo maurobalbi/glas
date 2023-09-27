@@ -91,19 +91,20 @@ impl Resolver {
                 super::hir_def::ModuleDefId::FunctionId(it) => {
                     map.add(name, ResolveResult::Function(Function::from(*it).clone()))
                 }
-                super::hir_def::ModuleDefId::AdtId(_) => {}
                 super::hir_def::ModuleDefId::VariantId(it) => {
                     map.add(name, ResolveResult::Variant(Variant::from(*it).clone()))
                 }
+                super::hir_def::ModuleDefId::AdtId(_) | super::hir_def::ModuleDefId::TypeAliasId(_) => {}
             }
         }
 
         map.map
     }
 
-    pub fn resolve_type(&self, name: &SmolStr) -> Option<AdtId> {
-        match self.module_scope.resovlve_type(name.clone()) {
-            Some(ModuleDefId::AdtId(t)) => Some(t.clone()),
+    pub fn resolve_type(&self, name: &SmolStr) -> Option<ModuleDefId> {
+        let resolved = self.module_scope.resovlve_type(name.clone());
+        match resolved {
+            Some(ModuleDefId::AdtId(_) | ModuleDefId::TypeAliasId(_)) => resolved.cloned(),
             _ => None,
         }
     }
@@ -135,10 +136,10 @@ impl Resolver {
                 super::hir_def::ModuleDefId::FunctionId(it) => {
                     return Some(ResolveResult::Function(Function::from(it)))
                 }
-                super::hir_def::ModuleDefId::AdtId(_) => {}
                 super::hir_def::ModuleDefId::VariantId(it) => {
                     return Some(ResolveResult::Variant(Variant::from(it)))
                 }
+                super::hir_def::ModuleDefId::AdtId(_) | super::hir_def::ModuleDefId::TypeAliasId(_) => {}
             }
         }
 

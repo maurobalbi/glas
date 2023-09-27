@@ -5,7 +5,7 @@ use crate::{ty, Diagnostic};
 use super::{
     fields::FieldMap,
     module::{
-        AdtData, Field, FunctionData, ImportData, ModuleImport, Param, VariantData, Visibility,
+        AdtData, Field, FunctionData, ImportData, ModuleImport, Param, VariantData, Visibility, TypeAliasData,
     },
     AstPtr, DefDatabase,
 };
@@ -21,6 +21,7 @@ pub struct ModuleItemData {
     functions: Arena<FunctionData>,
     unqualified_imports: Arena<ImportData>,
     adts: Arena<AdtData>,
+    type_alias: Arena<TypeAliasData>,
 
     module_imports: Arena<ModuleImport>,
 
@@ -37,6 +38,10 @@ impl ModuleItemData {
 
     pub fn adts(&self) -> impl Iterator<Item = (Idx<AdtData>, &AdtData)> + ExactSizeIterator + '_ {
         self.adts.iter()
+    }
+
+    pub fn type_alias(&self) -> impl Iterator<Item = (Idx<TypeAliasData>, &TypeAliasData)> + ExactSizeIterator + '_ {
+        self.type_alias.iter()
     }
 
     pub fn variants(
@@ -82,6 +87,14 @@ impl Index<Idx<FunctionData>> for ModuleItemData {
     }
 }
 
+impl Index<Idx<TypeAliasData>> for ModuleItemData {
+    type Output = TypeAliasData;
+
+    fn index(&self, index: Idx<TypeAliasData>) -> &Self::Output {
+        &self.type_alias[index]
+    }
+}
+
 impl Index<Idx<ModuleImport>> for ModuleItemData {
     type Output = ModuleImport;
 
@@ -111,6 +124,11 @@ impl<'a> LowerCtx<'a> {
 
     fn alloc_custom_type(&mut self, custom_type: AdtData) -> Idx<AdtData> {
         let id = self.module_items.adts.alloc(custom_type);
+        id
+    }
+    
+    fn alloc_type_alias(&mut self, custom_type: TypeAliasData) -> Idx<TypeAliasData> {
+        let id = self.module_items.type_alias.alloc(custom_type);
         id
     }
 
@@ -148,6 +166,9 @@ impl<'a> LowerCtx<'a> {
             }
             ast::ModuleStatement::Adt(ct) => {
                 self.lower_custom_type(ct);
+            }
+            ast::ModuleStatement::TypeAlias(it) => {
+                self.lower_type_alias(it);
             }
             _ => return,
         };
@@ -243,6 +264,28 @@ impl<'a> LowerCtx<'a> {
         Some(self.alloc_custom_type(AdtData {
             name,
             variants: constructors,
+            params: generic_params,
+            visibility,
+            ast_ptr,
+        }))
+    }
+    
+    fn lower_type_alias(&mut self, alias: &ast::TypeAlias) -> Option<Idx<TypeAliasData>> {
+        let ast_ptr = AstPtr::new(alias);
+        let name = alias.name()?.text()?;
+        let mut generic_params = Vec::new();
+        if let Some(params) = alias.generic_params() {
+            for param in params.params() {
+                generic_params.push(ty::ty_from_ast(param));
+            }
+        }
+
+        let visibility = Visibility::Public;
+
+        let body = ty::ty_from_ast_opt(alias.type_());
+        Some(self.alloc_type_alias(TypeAliasData {
+            name,
+            body,
             params: generic_params,
             visibility,
             ast_ptr,

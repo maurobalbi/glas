@@ -22,6 +22,18 @@ pub struct AdtData {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub struct TypeAliasData {
+    pub name: SmolStr,
+
+    pub body: Option<ty::Ty>,
+
+    pub params: Vec<ty::Ty>,
+    pub visibility: Visibility,
+
+    pub ast_ptr: AstPtr<ast::TypeAlias>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct VariantData {
     pub name: SmolStr,
 

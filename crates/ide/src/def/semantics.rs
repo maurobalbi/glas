@@ -13,7 +13,7 @@ use crate::{
 };
 
 use super::{
-    hir::{Adt, BuiltIn, Function, Local, Module, Variant},
+    hir::{Adt, BuiltIn, Function, Local, Module, Variant, TypeAlias},
     hir_def::ModuleDefId,
     module::{Field, Pattern},
     resolver::{resolver_for_toplevel, ResolveResult},
@@ -28,10 +28,11 @@ pub enum Definition {
     Local(Local),
     Module(Module),
     BuiltIn(BuiltIn),
+    TypeAlias(TypeAlias),
 }
 
 impl_from!(
-    Adt, Local, Function, Field, Variant, Module, BuiltIn
+    Adt, Local, Function, Field, Variant, Module, BuiltIn, TypeAlias
     for Definition
 );
 
@@ -43,7 +44,8 @@ impl From<FieldResolution> for Definition {
                 super::hir::ModuleDef::Function(it) => it.into(),
                 super::hir::ModuleDef::Variant(it) => it.into(),
                 super::hir::ModuleDef::Adt(it) => it.into(),
-            },
+                super::hir::ModuleDef::TypeAlias(it) => it.into(),
+                       },
         }
     }
 }

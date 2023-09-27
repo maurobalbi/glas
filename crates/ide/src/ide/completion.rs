@@ -211,6 +211,7 @@ fn complete_dot(acc: &mut Vec<CompletionItem>, ctx: CompletionContext<'_>) -> Op
                         ModuleDefId::FunctionId(_) => CompletionItemKind::Function,
                         ModuleDefId::AdtId(_) => CompletionItemKind::Adt,
                         ModuleDefId::VariantId(_) => CompletionItemKind::Variant,
+                        ModuleDefId::TypeAliasId(_) => CompletionItemKind::Adt,
                     };
                     let (name, replace) = match def {
                         // ToDo: Extract to function because it's also used in complete_expr

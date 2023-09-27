@@ -87,6 +87,19 @@ pub(crate) fn goto_definition(
             }]))
         }
         semantics::Definition::BuiltIn(_) => None,
+        semantics::Definition::TypeAlias(it) => {  
+            let src = it.source(db.upcast())?;
+            let full_range = src.value.syntax().text_range();
+            let focus_range = src
+                .value
+                .name()
+                .map(|n| n.syntax().text_range())
+                .unwrap_or_else(|| full_range);
+            Some(GotoDefinitionResult::Targets(vec![NavigationTarget {
+                file_id: src.file_id,
+                focus_range,
+                full_range,
+            }]))},
     }
 }
 
