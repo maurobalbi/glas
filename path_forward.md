@@ -3,16 +3,16 @@ Features for 1.0:
   ✓ Finish parser: attribute syntax, pattern guards, record spread 
   ✓ Finish inference for Result, Tuple, Case multiple subjects
   ✓ finish type_from_ast
-  - type alias
+  ✓ type alias
   ✓ fix parsing for panic, <>
   - Optimization: if function is annotated, skip inferring!
   - fix make_ast for types with module def, e.g. wisp.Response
-  - Fix Record Spread
+  ✓ Fix Record Spread
   - Fix function label / Record label lowering + inference (Unsaturated Constructors are inferred as fn (...) -> Constr)
   - Finish hover for names (e.g. Adt, Variant, docs, etc)
   - Add signature help
   - Add Inlay - Hints ?
-  - Fix magic completion in pipes
+  - Fix call completion in pipes
   - Types completion (additional trigger char ':')
   - Reimplement target based compiliation
   - Find references, highlight related
