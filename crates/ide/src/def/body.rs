@@ -350,7 +350,6 @@ impl BodyLowerCtx<'_> {
         match ast {
             StatementExpr::StmtLet(stmt) => {
                 if let (Some(expr), Some(pattern)) = (stmt.body(), stmt.pattern()) {
-                    tracing::info!("lowering let");
                     let expr_id = self.lower_expr(expr);
                     let pattern = self.lower_pattern(pattern);
                     statements.push(Statement::Let {

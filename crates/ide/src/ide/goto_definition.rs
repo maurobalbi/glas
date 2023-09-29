@@ -121,7 +121,6 @@ mod tests {
     #[track_caller]
     fn check(fixture: &str, expect: Expect) {
         let (db, f) = TestDB::from_fixture(fixture).unwrap();
-        tracing::info!("{:#?}", f);
         assert_eq!(f.markers().len(), 1, "Missing markers");
         let mut got = match goto_definition(&db, f[0]).expect("No definition") {
             GotoDefinitionResult::Path(path) => format!("file://{}", path.display()),

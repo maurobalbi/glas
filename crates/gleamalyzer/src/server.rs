@@ -476,8 +476,6 @@ impl Server {
             true,
         );
 
-        tracing::info!("GRAAAAPH {:#?} {:#?}", graph, package_roots);
-
         for package in &package_roots {
             Self::load_package_files(vfs, &package.path);
         }
@@ -510,7 +508,6 @@ impl Server {
             let src = vfs.content_for_file(gleam_file);
             (gleam_file, src)
         };
-        tracing::info!("Assemblyyyy {:?} {:?}", root_path, gleam_src);
         let gleam_toml = gleam_src.parse::<Table>().unwrap();
         let name: SmolStr = gleam_toml
             .get("name")
@@ -531,7 +528,6 @@ impl Server {
 
         let package = graph.add_package(name, gleam_file);
 
-        tracing::info!("Assemblyyyy graph {:?}", graph);
         let package_dir = root_path.join("build/packages");
 
         for (name, dep) in direct_deps.iter() {
@@ -556,7 +552,6 @@ impl Server {
             {
                 Some(local_path) => {
                     let local_path = root_path.join(local_path);
-                    tracing::info!("LOCAL PATH{:?}", local_path);
                     let Ok(dep_id) = Self::assemble_graph(vfs, &local_path, graph, roots, seen, false) else {
                         continue;
                     };
@@ -578,8 +573,6 @@ impl Server {
             };
             graph.add_dep(package, dependency);
         }
-        // tracing::info!("Deps {:#?}", transitive_deps);
-
         graph.set_target(target);
 
         Ok(package)
@@ -593,7 +586,6 @@ impl Server {
                 if !entry.file_type().is_dir() {
                     return true;
                 }
-                tracing::info!("walking dir {:?}", entry.path());
                 root_path == entry.path()
                     || ((entry.path().ends_with("src")) || entry.path().ends_with("test"))
                     || entry.depth() > 1

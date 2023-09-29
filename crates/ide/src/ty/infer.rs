@@ -75,7 +75,6 @@ pub struct InferenceResult {
 
 impl InferenceResult {
     pub fn ty_for_pattern(&self, pattern: PatternId) -> super::Ty {
-        tracing::info!("{:#?} {:?}", self, pattern);
         self.pattern_ty_map[pattern].clone()
     }
 
@@ -190,7 +189,6 @@ impl<'db> InferCtx<'db> {
             super::Ty::Unknown => return self.new_ty_var(),
             // this is not correct, same name obviously doesnt have same type e.g fn a(a:a) {a} and fn b(b: a} {b} dont have the same type!
             super::Ty::Generic { name } => {
-                tracing::info!("making generic type: {}", name);
                 return match env.get(&name) {
                     Some(var) => *var,
                     None => {
@@ -259,9 +257,7 @@ impl<'db> InferCtx<'db> {
                             adt_id,
                         },
                         ModuleDefId::TypeAliasId(alias) => {
-                            tracing::info!("INFERRING ALIAS");
                             let data = TypeAlias{ id: alias}.data(self.db.upcast());
-                            tracing::info!("{:?}", data.body);
                             if let Some(ty) = data.body {
                                 return self.make_type(ty, env);
                             }
@@ -288,7 +284,6 @@ impl<'db> InferCtx<'db> {
         let mut env = HashMap::new();
         for (param, ty, label) in &body.params {
             let pat_ty = self.ty_for_pattern(*param);
-            tracing::info!("inferring function param ty {:?}", ty);
             if let Some(ty) = ty {
                 let param_ty = self.make_type(ty.clone(), &mut env);
                 self.unify_var(pat_ty, param_ty);
@@ -397,7 +392,6 @@ impl<'db> InferCtx<'db> {
     }
 
     fn infer_expr_inner(&mut self, tgt_expr: ExprId) -> TyVar {
-        tracing::info!("inferring {:?}", &self.body[tgt_expr]);
         match &self.body[tgt_expr] {
             Expr::Missing => self.new_ty_var(),
             Expr::Hole => self.new_ty_var(),
@@ -647,7 +641,6 @@ impl<'db> InferCtx<'db> {
                         }
                     }
                     _ => {
-                        tracing::info!("INFERRING FIELD_RESOLUTION NON ADT");
                         // ToDo: This yields nonsensical result! need to resolve the full import name first and then find the module!
                         match self.resolver.resolve_module(base_string) {
                             Some(file) => {
@@ -747,11 +740,6 @@ impl<'db> InferCtx<'db> {
     }
 
     fn infer_pattern(&mut self, pattern: PatternId, expected_ty_var: TyVar) -> TyVar {
-        tracing::info!(
-            "Inferring pattern {:?} {:?}",
-            &self.body[pattern],
-            self.table.get_mut(expected_ty_var.0)
-        );
         let pat_var = self.ty_for_pattern(pattern);
         match &self.body[pattern] {
             Pattern::VariantRef {
@@ -765,7 +753,6 @@ impl<'db> InferCtx<'db> {
                 while field_tys.len() < fields.len() {
                     field_tys.push((None, self.new_ty_var()));
                 }
-                tracing::info!("inferring fields {:?} {:?}", field_tys.capacity(), fields);
                 for (field, field_ty) in fields.iter().zip(field_tys.clone().iter()) {
                     // Unify fields with patterns
 
@@ -846,7 +833,6 @@ impl<'db> InferCtx<'db> {
                     .collect();
 
                 let adt_data = Adt::from(variant.parent).data(self.db.upcast());
-                tracing::info!("ADT DATA {:?}", adt_data);
                 let mut generic_params = Vec::new();
                 for param in adt_data.params.iter() {
                     generic_params.push(self.make_type(param.clone(), &mut ty_env));

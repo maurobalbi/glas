@@ -62,7 +62,6 @@ pub fn ty_from_ast_opt(type_ast: Option<ast::TypeExpr>) -> Option<Ty> {
 }
 
 pub fn ty_from_ast(ast_expr: ast::TypeExpr) -> Ty {
-    tracing::info!("{:?}", ast_expr);
     match ast_expr {
         ast::TypeExpr::FnType(it) => {
             let mut fn_params = Vec::new();

@@ -33,7 +33,6 @@ fn check_all(src: &str, expect: Expect) {
 #[track_caller]
 fn check_fix(src: &str, expect: Expect) {
     let (db, f) = TestDB::from_fixture(src).unwrap();
-    tracing::info!("{:#?}", f);
     let scope = db.module_scope(f[0].file_id);
     let mut output = Vec::new();
     for fun in scope.declarations().flatten() {

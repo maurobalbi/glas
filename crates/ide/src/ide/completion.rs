@@ -121,7 +121,6 @@ impl<'db> CompletionContext<'db> {
     fn fill(&mut self, original_file: SourceFile, offset: TextSize) {
         if let Some(name_ref) = find_node_at_offset::<ast::NameRef>(original_file.syntax(), offset)
         {
-            tracing::info!("im filling");
             self.classify_name_ref(original_file, &name_ref);
         }
     }
@@ -134,7 +133,6 @@ pub(crate) fn completions(
     fpos @ FilePos { file_id, pos: _ }: FilePos,
     trigger_char: Option<char>,
 ) -> Option<Vec<CompletionItem>> {
-    tracing::info!("Completeing complk {:?}", fpos);
     let ctx = CompletionContext::new(db, fpos)?;
 
     let mut acc = Vec::default();
