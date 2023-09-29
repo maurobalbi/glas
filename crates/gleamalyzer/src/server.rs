@@ -6,9 +6,10 @@ use async_lsp::router::Router;
 use async_lsp::{ClientSocket, ErrorCode, LanguageClient, ResponseError};
 use gleam_interop;
 use ide::{
-    module_name, Analysis, AnalysisHost, Cancelled, FileSet, ModuleMap, PackageInfo, SourceRoot,
-    VfsPath,
+    module_name, Analysis, AnalysisHost, Cancelled, Dependency, FileSet, ModuleMap, PackageGraph,
+    PackageId, PackageInfo, PackageRoot, SourceRoot, Target, VfsPath,
 };
+use la_arena::Idx;
 use lsp_types::notification::Notification;
 use lsp_types::request::{self as req, Request};
 use lsp_types::{
@@ -22,6 +23,7 @@ use lsp_types::{
     WorkDoneProgressBegin, WorkDoneProgressCreateParams, WorkDoneProgressEnd,
     WorkDoneProgressReport,
 };
+use smol_str::SmolStr;
 use tokio::sync::oneshot;
 
 use std::backtrace::Backtrace;
@@ -46,7 +48,7 @@ use walkdir::WalkDir;
 type NotifyResult = ControlFlow<async_lsp::Result<()>>;
 
 struct UpdateConfigEvent(serde_json::Value);
-struct SetPackageInfoEvent(Option<(PackageInfo, Vec<PathBuf>)>);
+struct SetPackageGraphEvent(Option<(PackageGraph, Vec<PackageRoot>)>);
 
 const LSP_SERVER_NAME: &str = "gleamalyzer";
 pub const GLEAM_TOML: &str = "gleam.toml";
@@ -67,7 +69,6 @@ pub struct Server {
     load_gleam_workspace_fut: Option<JoinHandle<()>>,
     init_channel: Option<oneshot::Sender<()>>,
 
-    source_root_config: Vec<PathBuf>,
     client: ClientSocket,
     capabilities: NegotiatedCapabilities,
     /// Messages to show once initialized.
@@ -121,7 +122,6 @@ impl Server {
             load_gleam_workspace_fut: None,
             init_channel: None,
 
-            source_root_config: Vec::new(),
             client,
             init_messages,
             capabilities: NegotiatedCapabilities::default(),
@@ -151,8 +151,6 @@ impl Server {
             None => std::env::current_dir().expect("Failed to the current directory"),
         };
 
-        self.source_root_config = vec![root_path.clone()];
-
         let mut cfg = Config::new(root_path.clone());
         if let Some(options) = params.initialization_options {
             let (errors, _updated_diagnostics) = cfg.update(options);
@@ -180,8 +178,6 @@ impl Server {
         };
 
         self.on_did_change_watched_files(gleam_toml_changed_event);
-        
-
 
         async {
             let _ = rx.await;
@@ -204,7 +200,6 @@ impl Server {
         // FIXME: This is still racy since `on_did_open` can also trigger reloading and would
         // read uninitialized configs.
         self.spawn_reload_config();
-
 
         ControlFlow::Continue(())
     }
@@ -437,8 +432,8 @@ impl Server {
             Ok(ret) => {
                 let ret_info = ret
                     .as_ref()
-                    .map(|r: &(PackageInfo, Vec<PathBuf>)| r.0.clone());
-                let _: Result<_, _> = client.emit(SetPackageInfoEvent(ret));
+                    .map(|r: &(PackageGraph, Vec<PackageRoot>)| r.0.clone());
+                let _: Result<_, _> = client.emit(SetPackageGraphEvent(ret));
                 if let Some(channel) = channel {
                     let _ = channel.send(());
                 }
@@ -458,69 +453,136 @@ impl Server {
     async fn load_packages(
         vfs: &RwLock<Vfs>,
         config: &Config,
-    ) -> Result<Option<(PackageInfo, Vec<PathBuf>)>> {
+    ) -> Result<Option<(PackageGraph, Vec<PackageRoot>)>> {
+        let mut graph = PackageGraph::default();
         tracing::info!("Downloading deps and loading package info");
 
         let _: () = gleam_interop::load_package_info()
             .await
             .context("Could not load dependencies")?;
 
+        let mut package_roots = Vec::new();
+        package_roots.push(PackageRoot {
+            is_local: true,
+            path: config.root_path.clone(),
+        });
+        let mut seen = HashMap::new();
+        let _ = Self::assemble_graph(
+            vfs,
+            &config.root_path,
+            &mut graph,
+            &mut package_roots,
+            &mut seen,
+            true,
+        );
+
+        tracing::info!("GRAAAAPH {:#?} {:#?}", graph, package_roots);
+
+        for package in &package_roots {
+            Self::load_package_files(vfs, &package.path);
+        }
+
+        Ok(Some((graph, package_roots)))
+    }
+
+    fn assemble_graph(
+        vfs: &RwLock<Vfs>,
+        root_path: &PathBuf,
+        graph: &mut PackageGraph,
+        roots: &mut Vec<PackageRoot>,
+        seen: &mut HashMap<SmolStr, PackageId>,
+        is_local: bool,
+    ) -> Result<PackageId> {
+
+        roots.push(PackageRoot {
+            path: root_path.to_path_buf(),
+            is_local,
+        });
+
         let (gleam_file, gleam_src) = {
-            let vfs = vfs.read().unwrap();
+            let mut vfs = vfs.write().unwrap();
 
-            let manifest_toml_vpath = VfsPath::new(config.root_path.join(GLEAM_TOML));
+            let gleam_path = root_path.join(GLEAM_TOML);
+            let gleam_toml_src = std::fs::read_to_string(&gleam_path)?;
+            let gleam_toml_vpath = VfsPath::new(gleam_path);
+            let gleam_file = vfs.set_path_content(gleam_toml_vpath, gleam_toml_src);
 
-            let Ok(gleam_file) = vfs.file_for_path(&manifest_toml_vpath) else { return Ok(None) };
             let src = vfs.content_for_file(gleam_file);
             (gleam_file, src)
         };
-
-        let manifest_src = std::fs::read_to_string(config.root_path.join(MANIFEST_TOML));
-
+        tracing::info!("Assemblyyyy {:?} {:?}", root_path, gleam_src);
         let gleam_toml = gleam_src.parse::<Table>().unwrap();
-
-        let target = gleam_toml
-            .get("target")
-            .and_then(|v| v.as_str())
-            .unwrap_or_else(|| "erlang")
-            .into();
-        let name = gleam_toml
+        let name: SmolStr = gleam_toml
             .get("name")
             .and_then(|n| n.as_str())
             .context("No valid name")?
             .into();
 
-        let mut package_roots = vec![config.root_path.clone()];
-        let package_dir = config.root_path.join("build/packages");
-        if let Some(deps) = &manifest_src
-            .ok()
-            .and_then(|src| src.parse::<Table>().ok())
-            .and_then(|t| {
-                let p = t["packages"].clone();
-                p.as_array().cloned()
-            })
-        {
-            for dep in deps {
-                if let Some(name) = dep["name"].as_str() {
-                    package_roots.push(package_dir.join(name));
-                }
+        let direct_deps = gleam_toml
+            .get("dependencies")
+            .and_then(|d| d.as_table().cloned())
+            .unwrap_or_default();
+
+        let target: Target = gleam_toml
+            .get("target")
+            .and_then(|v| v.as_str())
+            .unwrap_or_else(|| "erlang")
+            .into();
+
+        let package = graph.add_package(name, gleam_file);
+
+        tracing::info!("Assemblyyyy graph {:?}", graph);
+        let package_dir = root_path.join("build/packages");
+
+        for (name, dep) in direct_deps.iter() {
+            if let Some(dep_id) = seen.get(name.as_str()) {
+                let dependency = Dependency {
+                    package: dep_id.clone(),
+                    name: name.to_string(),
+                };
+                graph.add_dep(package, dependency);
+                continue;
             }
-            // tracing::info!("{:#?}", deps);
-        };
+            let path = if is_local {
+ 
+                package_dir.join(name)
+            } else {
+                root_path.parent().unwrap().join(name)
+            };
+            let dep_id = match dep
+                .as_table()
+                .and_then(|t| t.get("path"))
+                .and_then(|v| v.as_str())
+            {
+                Some(local_path) => {
+                    let local_path = root_path.join(local_path);
+                    tracing::info!("LOCAL PATH{:?}", local_path);
+                    let Ok(dep_id) = Self::assemble_graph(vfs, &local_path, graph, roots, seen, false) else {
+                        continue;
+                    };
+                    dep_id
+                },
+                None => {
+                    let Ok(dep_id) = Self::assemble_graph(vfs, &path, graph, roots, seen, false) else {
+                        continue;
+                    };
+                    dep_id
+                }
+            };
 
-        for package in &package_roots {
-            Self::load_package_files(vfs, package);
+            seen.insert(name.into(), dep_id.clone());
+
+            let dependency = Dependency {
+                package: dep_id,
+                name: name.to_string(),
+            };
+            graph.add_dep(package, dependency);
         }
+        // tracing::info!("Deps {:#?}", transitive_deps);
 
-        Ok(Some((
-            PackageInfo {
-                root_manifest: gleam_file,
-                display_name: name,
-                target,
-                dependencies: Vec::new(),
-            },
-            package_roots,
-        )))
+        graph.set_target(target);
+
+        Ok(package)
     }
 
     fn load_package_files(vfs: &RwLock<Vfs>, root_path: &std::path::PathBuf) {
@@ -531,9 +593,9 @@ impl Server {
                 if !entry.file_type().is_dir() {
                     return true;
                 }
+                tracing::info!("walking dir {:?}", entry.path());
                 root_path == entry.path()
-                    || (entry.depth() == 1 && (entry.path().ends_with("src"))
-                        || entry.path().ends_with("test"))
+                    || ((entry.path().ends_with("src")) || entry.path().ends_with("test"))
                     || entry.depth() > 1
             });
         let files = walkdir.filter_map(|it| it.ok()).filter_map(|entry| {
@@ -557,19 +619,20 @@ impl Server {
         }
     }
 
-    fn on_set_package_info(&mut self, info: SetPackageInfoEvent) -> NotifyResult {
+    fn on_set_package_info(&mut self, info: SetPackageGraphEvent) -> NotifyResult {
         tracing::debug!("Set package info: {:#?}", info.0);
         let mut vfs = self.vfs.write().unwrap();
 
-        vfs.set_package_info(info.0.as_ref().map(|i| i.0.clone()));
+        vfs.set_package_graph(info.0.as_ref().map(|i| i.0.clone()));
 
-        let roots = info
-            .0
-            .map(|i| i.1.clone())
-            .unwrap_or_else(|| vec![self.config.root_path.clone()]);
-        self.source_root_config = roots;
+        let roots = info.0.map(|i| i.1.clone()).unwrap_or_else(|| {
+            vec![PackageRoot {
+                path: self.config.root_path.clone(),
+                is_local: true,
+            }]
+        });
 
-        let (root_sets, module_map) = Self::lower_vfs(&mut vfs, self.source_root_config.clone());
+        let (root_sets, module_map) = Self::lower_vfs(&mut vfs, &roots);
         vfs.set_roots_and_map(root_sets, module_map);
 
         drop(vfs);
@@ -715,15 +778,18 @@ impl Server {
         self.host.apply_change(changes);
     }
 
-    fn lower_vfs(vfs: &mut Vfs, source_root_config: Vec<PathBuf>) -> (Vec<SourceRoot>, ModuleMap) {
+    fn lower_vfs(
+        vfs: &mut Vfs,
+        source_root_config: &Vec<PackageRoot>,
+    ) -> (Vec<SourceRoot>, ModuleMap) {
         let mut module_map = ModuleMap::default();
 
         let mut prefix_to_paths = HashMap::new();
 
         let mut prefix_components = Vec::new();
 
-        for prefix in &source_root_config {
-            prefix_components.push(prefix.components().collect::<Vec<_>>())
+        for prefix in source_root_config {
+            prefix_components.push(prefix.path.components().collect::<Vec<_>>())
         }
 
         //sorting by length matches the longest prefix first

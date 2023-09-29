@@ -1,10 +1,14 @@
+use la_arena::{Arena, Idx};
 use salsa::Durability;
 use smol_str::SmolStr;
 use std::collections::HashMap;
+use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::{fmt, iter};
 use syntax::{SyntaxNode, TextRange, TextSize};
+
+use crate::def::hir::Package;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct FileId(pub u32);
@@ -164,6 +168,13 @@ impl fmt::Debug for FileSet {
     }
 }
 
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PackageRoot {
+    pub is_local: bool,
+    pub path: PathBuf,
+}
+
 /// A workspace unit, typically a Gleam package.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SourceRoot {
@@ -226,15 +237,36 @@ pub fn module_name(root_path: &PathBuf, module_path: &Path) -> Option<SmolStr> {
 
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct PackageGraph {
-    pub nodes: HashMap<SourceRootId, PackageInfo>,
+    target: Target,
+    pub arena: Arena<PackageInfo>,
 }
+
+impl PackageGraph {
+    pub fn set_target(&mut self, target: Target) {
+        self.target = target;
+    }
+
+    pub fn add_package(&mut self, display_name: SmolStr, gleam_toml: FileId) -> PackageId {
+        let info = PackageInfo {
+            gleam_toml,
+            display_name,
+            dependencies: Vec::new(),
+        };
+        self.arena.alloc(info)
+    }
+
+    pub fn add_dep(&mut self, from: PackageId, dep: Dependency) {
+        self.arena[from].dependencies.push(dep)
+    }
+}
+
+pub type PackageId = Idx<PackageInfo>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PackageInfo {
-    pub root_manifest: FileId,
+    pub gleam_toml: FileId,
     // pub version: Option<String>,
-    pub target: Target,
-    pub display_name: String,
+    pub display_name: SmolStr,
     pub dependencies: Vec<Dependency>,
 }
 
@@ -256,7 +288,7 @@ impl From<&str> for Target {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Dependency {
-    pub package_root: SourceRootId,
+    pub package: PackageId,
     pub name: String,
 }
 
@@ -343,7 +375,7 @@ pub trait SourceDatabase {
     #[salsa::input]
     fn source_root(&self, sid: SourceRootId) -> Arc<SourceRoot>;
 
-    fn source_root_package_info(&self, sid: SourceRootId) -> Option<Arc<PackageInfo>>;
+    // fn source_root_package_info(&self, sid: SourceRootId) -> Option<Arc<PackageInfo>>;
 
     #[salsa::input]
     fn file_source_root(&self, file_id: FileId) -> SourceRootId;
@@ -355,12 +387,12 @@ pub trait SourceDatabase {
     fn module_map(&self) -> Arc<ModuleMap>;
 }
 
-fn source_root_package_info(
-    db: &dyn SourceDatabase,
-    sid: SourceRootId,
-) -> Option<Arc<PackageInfo>> {
-    db.package_graph().nodes.get(&sid).cloned().map(Arc::new)
-}
+// fn source_root_package_info(
+//     db: &dyn SourceDatabase,
+//     sid: SourceRootId,
+// ) -> Option<Arc<PackageInfo>> {
+//     db.package_graph().nodes.get(&sid).cloned().map(Arc::new)
+// }
 
 #[derive(Default, Clone, PartialEq, Eq)]
 pub struct Change {

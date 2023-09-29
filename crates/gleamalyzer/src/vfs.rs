@@ -4,6 +4,7 @@ use ide::{
     Change, FileId, FileSet, ModuleMap, PackageGraph, PackageInfo, SourceRoot, SourceRootId,
     VfsPath,
 };
+use la_arena::Arena;
 use lsp_types::Url;
 use rustc_hash::FxHashMap;
 use slab::Slab;
@@ -11,6 +12,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::{fmt, mem};
 use text_size::{TextRange, TextSize};
+
 
 /// Vfs stores file contents with line mapping, and a mapping between
 /// filesystem paths and `FileId`s.
@@ -39,10 +41,8 @@ impl Vfs {
         }
     }
 
-    pub fn set_package_info(&mut self, package_info: Option<PackageInfo>) {
-        self.change.set_package_graph(PackageGraph {
-            nodes: HashMap::from_iter(package_info.map(|info| (SourceRootId(0), info))),
-        });
+    pub fn set_package_graph(&mut self, graph: Option<PackageGraph>) {
+        self.change.set_package_graph(graph.unwrap_or_default());
     }
 
     pub fn set_roots_and_map(&mut self, roots: Vec<SourceRoot>, module_map: ModuleMap) {

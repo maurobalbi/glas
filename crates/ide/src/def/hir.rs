@@ -26,10 +26,10 @@ impl Package {
         Vec::new()
     }
 
-    pub fn target(self, db: &dyn DefDatabase) -> crate::base::Target {
-        db.source_root_package_info(SourceRootId(0))
-            .map_or(crate::base::Target::default(), |s| s.target.clone())
-    }
+    // pub fn target(self, db: &dyn DefDatabase) -> crate::base::Target {
+    //     db.source_root_package_info(SourceRootId(0))
+    //         .map_or(crate::base::Target::default(), |s| s.target.clone())
+    // }
 }
 
 #[derive(Debug)]

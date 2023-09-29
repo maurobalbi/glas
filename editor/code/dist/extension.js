@@ -4180,12 +4180,12 @@ function createLanguageClient() {
         },
     };
     let serverOptions = {
-        command: "/users/maurobalbi/Documents/repos/gleamalyzer/target/release/gleamalyzer",
+        command: "/users/maurobalbi/Documents/repos/gleamalyzer/target/debug/gleamalyzer",
         // args: ["lsp"],
         transport: node_1.TransportKind.stdio,
         options: {
             env: Object.assign(process.env, {
-                GLEAM_LOG: "ERROR",
+                GLEAM_LOG: "info",
                 GLEAM_LOG_PATH: "/Users/maurobalbi/Documents/repos/gleamalyzer/log.log",
                 GLEAM_LOG_NOCOLOUR: "1",
             }),

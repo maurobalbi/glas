@@ -8,6 +8,8 @@ use crate::{
 };
 use anyhow::{bail, ensure, Context, Result};
 use indexmap::IndexMap;
+use la_arena::Arena;
+use smol_str::SmolStr;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::{mem, ops};
@@ -38,7 +40,8 @@ impl Upcast<dyn DefDatabase> for TestDB {
 impl TestDB {
     pub fn single_file(fixture: &str) -> Result<(Self, FileId)> {
         let (db, f) = Self::from_fixture(fixture)?;
-        ensure!(f.files().len() == 1, "Fixture contains multiple files");
+        // gleam.toml is always added aswell
+        ensure!(f.files().len() == 2, "Fixture contains multiple files");
         let file_id = f.files()[0];
         Ok((db, file_id))
     }
@@ -67,9 +70,9 @@ impl TestDB {
             vec![SourceRoot::new_local(file_set, "/".into())],
             module_map,
         );
-        let package_graph = PackageGraph {
-            nodes: HashMap::from_iter(f.package_info.clone().map(|info| (SourceRootId(0), info))),
-        };
+        let mut package_graph = PackageGraph::default();
+        package_graph.add_package(SmolStr::from("test"), FileId(f.files.len() as u32));
+
         change.set_package_graph(package_graph);
         change.apply(&mut db);
         Ok((db, f))
@@ -140,12 +143,6 @@ impl Fixture {
                         .and_then(|input| input.split_once('='))
                     {
                         let _target = VfsPath::new(target);
-                        this.package_info.get_or_insert_with(|| PackageInfo {
-                            root_manifest: cur_file,
-                            dependencies: Default::default(),
-                            target: Target::default(),
-                            display_name: "Test".into(),
-                        });
                     } else {
                         bail!("Unknow property {prop}");
                     }
@@ -182,6 +179,13 @@ impl Fixture {
             }
         }
         this.insert_file(cur_path.context("Empty fixture")?, cur_text)?;
+
+        let _: std::result::Result<(), anyhow::Error> = this.insert_file(VfsPath::new("gleam.toml"), "".to_string());
+        this.package_info.get_or_insert_with(|| PackageInfo {
+            gleam_toml: FileId(this.files.len() as u32 - 1),
+            dependencies: Default::default(),
+            display_name: "Test".into(),
+        });
 
         let marker_len = markers
             .iter()

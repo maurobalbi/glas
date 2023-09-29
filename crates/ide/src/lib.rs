@@ -15,7 +15,7 @@ pub use self::ide::{
 };
 pub use base::{
     module_name, Change, FileId, FilePos, FileRange, FileSet, InFile, ModuleMap, PackageGraph,
-    PackageInfo, SourceDatabase, SourceRoot, SourceRootId, VfsPath,
+    PackageInfo, PackageRoot, PackageId, Dependency, Target, SourceDatabase, SourceRoot, SourceRootId, VfsPath,
 };
 pub use def::DefDatabase;
 pub use diagnostic::{Diagnostic, DiagnosticKind, Severity};

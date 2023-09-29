@@ -586,6 +586,7 @@ dependencies = [
  "crossbeam-channel",
  "gleam-interop",
  "ide",
+ "la-arena",
  "log",
  "lsp-types",
  "rustc-hash",

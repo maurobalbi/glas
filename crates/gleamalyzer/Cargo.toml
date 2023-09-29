@@ -9,6 +9,7 @@ rust-version.workspace = true
 
 [dependencies]
 anyhow = "1.0.68"
+la-arena = "0.3.0"
 argh = "0.1.10"
 atty = "0.2.14"
 async-process = "1.7.0"
