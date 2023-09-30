@@ -1223,6 +1223,7 @@ fn name_ref(p: &mut Parser) {
         p.finish_node(n, NAME_REF);
         return;
     }
+    p.finish_node(n, NAME_REF);
     p.error(ErrorKind::ExpectedIdentifier);
 }
 

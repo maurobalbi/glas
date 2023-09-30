@@ -1,72 +1,109 @@
-28..29: ExpectToken(L_BRACE)
-49..50: ExpectedExpression
-50..51: ExpectedExpression
-52..53: ExpectToken(L_BRACE)
-SOURCE_FILE@0..74
-  FUNCTION@0..29
+31..32: ExpectToken(L_BRACE)
+80..81: ExpectedIdentifier
+80..81: ExpectToken(R_ARROW)
+80..81: ExpectedExpression
+112..113: ExpectedExpression
+113..114: ExpectedExpression
+115..116: ExpectToken(L_BRACE)
+SOURCE_FILE@0..141
+  FUNCTION@0..32
     PUB_KW@0..3 "pub"
     WHITESPACE@3..4 " "
     FN_KW@4..6 "fn"
     WHITESPACE@6..7 " "
-    NAME@7..11
-      IDENT@7..11 "main"
-    PARAM_LIST@11..17
-      L_PAREN@11..12 "("
-      PARAM@12..14
-        PATTERN_VARIABLE@12..13
-          IDENT@12..13 "a"
-        COMMA@13..14 ","
-      WHITESPACE@14..15 " "
-      PARAM@15..16
+    NAME@7..14
+      IDENT@7..14 "case_kw"
+    PARAM_LIST@14..20
+      L_PAREN@14..15 "("
+      PARAM@15..17
         PATTERN_VARIABLE@15..16
-          IDENT@15..16 "b"
-      R_PAREN@16..17 ")"
-    WHITESPACE@17..18 " "
-    BLOCK@18..29
-      L_BRACE@18..19 "{"
-      WHITESPACE@19..22 "\n  "
-      STMT_EXPR@22..26
-        CASE@22..26
-          CASE_KW@22..26 "case"
-      WHITESPACE@26..28 " \n"
-      R_BRACE@28..29 "}"
-  WHITESPACE@29..31 "\n\n"
-  FUNCTION@31..53
-    FN_KW@31..33 "fn"
-    WHITESPACE@33..34 " "
-    NAME@34..38
-      IDENT@34..38 "main"
-    PARAM_LIST@38..40
-      L_PAREN@38..39 "("
-      R_PAREN@39..40 ")"
-    WHITESPACE@40..41 " "
-    BLOCK@41..53
-      L_BRACE@41..42 "{"
-      WHITESPACE@42..45 "\n  "
-      STMT_EXPR@45..51
-        CASE@45..51
-          CASE_KW@45..49 "case"
-          ERROR@49..50
-            L_PAREN@49..50 "("
-          ERROR@50..51
-            R_PAREN@50..51 ")"
-      WHITESPACE@51..52 "\n"
-      R_BRACE@52..53 "}"
-  WHITESPACE@53..55 "\n\n"
-  FUNCTION@55..74
-    FN_KW@55..57 "fn"
-    WHITESPACE@57..58 " "
-    NAME@58..61
-      IDENT@58..61 "bla"
-    PARAM_LIST@61..63
-      L_PAREN@61..62 "("
-      R_PAREN@62..63 ")"
-    WHITESPACE@63..64 " "
-    BLOCK@64..74
-      L_BRACE@64..65 "{"
-      WHITESPACE@65..68 "\n  "
-      STMT_EXPR@68..72
-        MISSING@68..72
-          TODO_KW@68..72 "todo"
-      WHITESPACE@72..73 "\n"
-      R_BRACE@73..74 "}"
+          IDENT@15..16 "a"
+        COMMA@16..17 ","
+      WHITESPACE@17..18 " "
+      PARAM@18..19
+        PATTERN_VARIABLE@18..19
+          IDENT@18..19 "b"
+      R_PAREN@19..20 ")"
+    WHITESPACE@20..21 " "
+    BLOCK@21..32
+      L_BRACE@21..22 "{"
+      WHITESPACE@22..25 "\n  "
+      STMT_EXPR@25..29
+        CASE@25..29
+          CASE_KW@25..29 "case"
+      WHITESPACE@29..31 " \n"
+      R_BRACE@31..32 "}"
+  WHITESPACE@32..34 "\n\n"
+  FUNCTION@34..83
+    FN_KW@34..36 "fn"
+    WHITESPACE@36..37 " "
+    NAME@37..51
+      IDENT@37..51 "pattern_module"
+    PARAM_LIST@51..53
+      L_PAREN@51..52 "("
+      R_PAREN@52..53 ")"
+    WHITESPACE@53..54 " "
+    BLOCK@54..83
+      L_BRACE@54..55 "{"
+      WHITESPACE@55..58 "\n  "
+      STMT_EXPR@58..81
+        CASE@58..81
+          CASE_KW@58..62 "case"
+          WHITESPACE@62..63 " "
+          VARIABLE@63..64
+            NAME_REF@63..64
+              IDENT@63..64 "a"
+          WHITESPACE@64..65 " "
+          L_BRACE@65..66 "{"
+          WHITESPACE@66..71 "\n    "
+          CLAUSE@71..80
+            ALTERNATIVE_PATTERN@71..80
+              VARIANT_REF@71..80
+                MODULE_NAME@71..76
+                  IDENT@71..76 "local"
+                DOT@76..77 "."
+                WHITESPACE@77..80 "\n  "
+                NAME_REF@80..80
+          R_BRACE@80..81 "}"
+      WHITESPACE@81..82 "\n"
+      R_BRACE@82..83 "}"
+  WHITESPACE@83..85 "\n\n"
+  FUNCTION@85..116
+    FN_KW@85..87 "fn"
+    WHITESPACE@87..88 " "
+    NAME@88..101
+      IDENT@88..101 "case_nonsense"
+    PARAM_LIST@101..103
+      L_PAREN@101..102 "("
+      R_PAREN@102..103 ")"
+    WHITESPACE@103..104 " "
+    BLOCK@104..116
+      L_BRACE@104..105 "{"
+      WHITESPACE@105..108 "\n  "
+      STMT_EXPR@108..114
+        CASE@108..114
+          CASE_KW@108..112 "case"
+          ERROR@112..113
+            L_PAREN@112..113 "("
+          ERROR@113..114
+            R_PAREN@113..114 ")"
+      WHITESPACE@114..115 "\n"
+      R_BRACE@115..116 "}"
+  WHITESPACE@116..118 "\n\n"
+  FUNCTION@118..141
+    FN_KW@118..120 "fn"
+    WHITESPACE@120..121 " "
+    NAME@121..128
+      IDENT@121..128 "todo_kw"
+    PARAM_LIST@128..130
+      L_PAREN@128..129 "("
+      R_PAREN@129..130 ")"
+    WHITESPACE@130..131 " "
+    BLOCK@131..141
+      L_BRACE@131..132 "{"
+      WHITESPACE@132..135 "\n  "
+      STMT_EXPR@135..139
+        MISSING@135..139
+          TODO_KW@135..139 "todo"
+      WHITESPACE@139..140 "\n"
+      R_BRACE@140..141 "}"

@@ -1,11 +1,17 @@
-pub fn main(a, b) {
+pub fn case_kw(a, b) {
   case 
 }
 
-fn main() {
+fn pattern_module() {
+  case a {
+    local.
+  }
+}
+
+fn case_nonsense() {
   case()
 }
 
-fn bla() {
+fn todo_kw() {
   todo
 }
