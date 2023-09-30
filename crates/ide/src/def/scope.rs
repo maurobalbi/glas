@@ -28,7 +28,7 @@ pub fn module_scope_with_map_query(
 
     for (_, imported_module) in module_data.module_imports() {
         let Some(file) = db.module_map().file_for_module_name(&imported_module.name) else {
-            // report diagnostics
+            // ToDo: report diagnostics
             continue
         };
 

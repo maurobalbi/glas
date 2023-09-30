@@ -257,13 +257,13 @@ impl<'db> InferCtx<'db> {
                             adt_id,
                         },
                         ModuleDefId::TypeAliasId(alias) => {
-                            let data = TypeAlias{ id: alias}.data(self.db.upcast());
+                            let data = TypeAlias { id: alias }.data(self.db.upcast());
                             if let Some(ty) = data.body {
                                 return self.make_type(ty, env);
                             }
                             self.idx += 1;
                             Ty::Unknown { idx: self.idx }
-                        },
+                        }
                         _ => {
                             self.idx += 1;
                             Ty::Unknown { idx: self.idx }
@@ -491,7 +491,7 @@ impl<'db> InferCtx<'db> {
                         let ty = self.table.get_mut(func_ty.0).clone();
 
                         for (label, arg) in args {
-                            self.infer_expr(*arg); 
+                            self.infer_expr(*arg);
                         }
 
                         match ty {
@@ -641,7 +641,7 @@ impl<'db> InferCtx<'db> {
                         }
                     }
                     _ => {
-                        // ToDo: This yields nonsensical result! need to resolve the full import name first and then find the module!
+                        // ToDo: This yields nonsensical result! need to resolve the local import name first and then find the module!
                         match self.resolver.resolve_module(base_string) {
                             Some(file) => {
                                 self.body_ctx.module_resolution.insert(*container, file);
@@ -744,10 +744,22 @@ impl<'db> InferCtx<'db> {
         match &self.body[pattern] {
             Pattern::VariantRef {
                 name,
-                module: _,
+                module,
                 fields,
             } => {
-                let (pat_ty, mut field_tys) = self.resolve_variant(name);
+                let (pat_ty, mut field_tys) = match module {
+                    None => self.resolve_variant(name),
+                    Some(module) => self
+                        .resolver
+                        .resolve_module(module)
+                        .and_then(|file| {
+                            // ToDo: refactor to something nicer and more correct, e.g. FileId -> Moodule.exports().get(name)
+                            let resolver = resolver_for_toplevel(self.db.upcast(), file);
+                            resolver.resolve_name(name)
+                        })
+                        .map(|res| self.variant_from_resolve_result(res))
+                        .unwrap_or_else(|| (self.new_ty_var(), Vec::new())),
+                };
 
                 // Tried with reserve / fill_with, but that didnt seem to work
                 while field_tys.len() < fields.len() {
@@ -818,8 +830,17 @@ impl<'db> InferCtx<'db> {
 
     fn resolve_variant(&mut self, name: &SmolStr) -> (TyVar, Vec<(Option<SmolStr>, TyVar)>) {
         match self.resolver.resolve_name(name) {
-            // return field types aswell for unification
-            Some(ResolveResult::Variant(variant)) => {
+            Some(res) => self.variant_from_resolve_result(res),
+            None => (self.new_ty_var(), Vec::new()),
+        }
+    }
+
+    fn variant_from_resolve_result(
+        &mut self,
+        result: ResolveResult,
+    ) -> (TyVar, Vec<(Option<SmolStr>, TyVar)>) {
+        match result {
+            ResolveResult::Variant(variant) => {
                 let mut ty_env = HashMap::new();
                 let params = variant
                     .fields(self.db.upcast())
@@ -845,7 +866,7 @@ impl<'db> InferCtx<'db> {
                 .intern(self);
                 (ty, params)
             }
-            Some(ResolveResult::BuiltIn(it)) => match it {
+            ResolveResult::BuiltIn(it) => match it {
                 hir::BuiltIn::Nil => (Ty::Nil.intern(self), Vec::new()),
                 hir::BuiltIn::Ok => {
                     let ok = self.new_ty_var();
@@ -870,10 +891,7 @@ impl<'db> InferCtx<'db> {
                     )
                 }
             },
-            _ => {
-                // ToDo: Add diagnostics
-                (self.new_ty_var(), Vec::new())
-            }
+            _ => (self.new_ty_var(), Vec::new()),
         }
     }
 

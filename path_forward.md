@@ -7,6 +7,8 @@ Features for 1.0:
   ✓ fix parsing for panic, <>
   - Optimization: if function is annotated, skip inferring!
   - fix make_ast for types with module def, e.g. wisp.Response
+  - Fix pattern completion (e.g. only show constructors)
+  ✓  Fix pattern inference for module types (e.g. local.Wobbler)
   ✓ Fix Record Spread
   - Fix function label / Record label lowering + inference (Unsaturated Constructors are inferred as fn (...) -> Constr)
   - Finish hover for names (e.g. Adt, Variant, docs, etc)
