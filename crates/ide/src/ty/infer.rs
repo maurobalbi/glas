@@ -260,12 +260,12 @@ impl<'db> InferCtx<'db> {
                 };
                 match module_def {
                     Some(type_) => match type_ {
-                        ModuleDefId::AdtId(adt_id) => Ty::Adt {
+                        ResolveResult::Adt(adt) => Ty::Adt {
                             generic_params: pars,
-                            adt_id,
+                            adt_id: adt.id,
                         },
-                        ModuleDefId::TypeAliasId(alias) => {
-                            let data = TypeAlias { id: alias }.data(self.db.upcast());
+                        ResolveResult::TypeAlias(alias) => {
+                            let data = TypeAlias { id: alias.id }.data(self.db.upcast());
                             if let Some(ty) = data.body {
                                 return self.make_type(ty, env);
                             }
@@ -688,6 +688,8 @@ impl<'db> InferCtx<'db> {
                                         }
                                         ResolveResult::BuiltIn(_) => {}
                                         ResolveResult::Module(_) => {}
+                                        ResolveResult::Adt(_) => {},
+                                        ResolveResult::TypeAlias(_) => {},
                                     }
                                 }
                             }

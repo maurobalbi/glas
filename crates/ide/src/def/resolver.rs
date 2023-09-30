@@ -6,7 +6,7 @@ use smol_str::SmolStr;
 use crate::{DefDatabase, FileId};
 
 use super::{
-    hir::{BuiltIn, Function, Local, Module, Variant},
+    hir::{BuiltIn, Function, Local, Module, Variant, Adt, TypeAlias},
     hir_def::{AdtId, ModuleDefId},
     module::ExprId,
     scope::{ModuleScope, ScopeId},
@@ -53,11 +53,14 @@ impl ScopeNames {
     }
 }
 
+#[derive(Debug)]
 pub enum ResolveResult {
     Local(Local),
     Function(Function),
     Variant(Variant),
     Module(Module),
+    Adt(Adt),
+    TypeAlias(TypeAlias),
     BuiltIn(BuiltIn), // BuiltIn()
 }
 
@@ -102,10 +105,11 @@ impl Resolver {
         map.map
     }
 
-    pub fn resolve_type(&self, name: &SmolStr) -> Option<ModuleDefId> {
+    pub fn resolve_type(&self, name: &SmolStr) -> Option<ResolveResult> {
         let resolved = self.module_scope.resovlve_type(name.clone());
         match resolved {
-            Some(ModuleDefId::AdtId(_) | ModuleDefId::TypeAliasId(_)) => resolved.cloned(),
+            Some(ModuleDefId::AdtId(adt)) => Some(ResolveResult::Adt(adt.clone().into())),
+            Some(ModuleDefId::TypeAliasId(type_alias)) => Some(ResolveResult::TypeAlias(type_alias.clone().into())),
             _ => None,
         }
     }

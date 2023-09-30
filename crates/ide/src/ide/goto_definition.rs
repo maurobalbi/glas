@@ -252,4 +252,29 @@ fn <main>() {
             ],
         );
     }
+    
+    #[test]
+    fn qualified_type() {
+        check(
+            r#"
+#- /asdf/test.gleam
+pub type Wobble {
+    Some
+}
+
+#- /test2.gleam
+import asdf/test
+
+fn bla(a: test.$0Wobble) {
+}
+"#,
+            expect![
+                r#"
+pub type <Wobble> {
+    Some
+}
+"#
+            ],
+        );
+    }
 }

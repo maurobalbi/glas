@@ -58,6 +58,8 @@ impl From<ResolveResult> for Definition {
             ResolveResult::Variant(it) => it.into(),
             ResolveResult::Module(it) => it.into(),
             ResolveResult::BuiltIn(it) => it.into(),
+            ResolveResult::Adt(it) => it.into(),
+            ResolveResult::TypeAlias(it) => it.into(),
         }
     }
 }
@@ -67,6 +69,7 @@ pub fn classify_node(sema: Semantics, node: &SyntaxNode) -> Option<Definition> {
         match node {
             ast::NameRef(name_ref) => classify_name_ref(sema, &name_ref),
             ast::Name(name) => classify_name(sema, &name),
+            ast::TypeName(type_name) => classify_type_name(sema, &type_name),
             _ => None,
         }
     }
@@ -96,6 +99,24 @@ fn classify_name_ref(sema: Semantics, name_ref: &ast::NameRef) -> Option<Definit
     }
 
     return sema.resolve_name(name_ref.clone()).map(Into::into);
+}
+
+fn classify_type_name(sema: Semantics, type_name: &ast::TypeName) -> Option<Definition> {
+    let parent = type_name.syntax().parent()?;
+
+    ast::TypeNameRef::cast(parent)
+        .and_then(|t| {
+            let module: SmolStr = t.module()?.text();
+            let file_id = sema
+                .analyze(type_name.syntax())?
+                .resolver
+                .resolve_module(&module)?;
+            let res =
+                resolver_for_toplevel(sema.db.upcast(), file_id).resolve_type(&type_name.text()?);
+            return res?.into();
+        })
+        .or_else(|| sema.resolve_type(type_name))
+        .map(Into::into)
 }
 
 pub struct Semantics<'db> {
@@ -137,6 +158,12 @@ impl<'db> Semantics<'db> {
         }
 
         analyzer.resolver.resolve_name(&SmolStr::from(name.text()?))
+    }
+
+    pub fn resolve_type(&self, type_name: &ast::TypeName) -> Option<ResolveResult> {
+        self.analyze(type_name.syntax())?
+            .resolver
+            .resolve_type(&SmolStr::from(type_name.text()?))
     }
 
     pub fn ty_of_expr(&self, expr: &ast::Expr) -> Option<ty::Ty> {
