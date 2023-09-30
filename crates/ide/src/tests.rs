@@ -180,7 +180,8 @@ impl Fixture {
         }
         this.insert_file(cur_path.context("Empty fixture")?, cur_text)?;
 
-        let _: std::result::Result<(), anyhow::Error> = this.insert_file(VfsPath::new("gleam.toml"), "".to_string());
+        let _: std::result::Result<(), anyhow::Error> =
+            this.insert_file(VfsPath::new("gleam.toml"), "".to_string());
         this.package_info.get_or_insert_with(|| PackageInfo {
             gleam_toml: FileId(this.files.len() as u32 - 1),
             dependencies: Default::default(),

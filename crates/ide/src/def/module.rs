@@ -213,7 +213,7 @@ pub enum Pattern {
     },
     Concat {
         pattern: PatternId,
-    }
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

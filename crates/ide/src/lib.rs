@@ -14,8 +14,9 @@ pub use self::ide::{
     HoverResult,
 };
 pub use base::{
-    module_name, Change, FileId, FilePos, FileRange, FileSet, InFile, ModuleMap, PackageGraph,
-    PackageInfo, PackageRoot, PackageId, Dependency, Target, SourceDatabase, SourceRoot, SourceRootId, VfsPath,
+    module_name, Change, Dependency, FileId, FilePos, FileRange, FileSet, InFile, ModuleMap,
+    PackageGraph, PackageId, PackageInfo, PackageRoot, SourceDatabase, SourceRoot, SourceRootId,
+    Target, VfsPath,
 };
 pub use def::DefDatabase;
 pub use diagnostic::{Diagnostic, DiagnosticKind, Severity};

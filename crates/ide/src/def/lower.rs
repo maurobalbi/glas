@@ -5,7 +5,8 @@ use crate::{ty, Diagnostic};
 use super::{
     fields::FieldMap,
     module::{
-        AdtData, Field, FunctionData, ImportData, ModuleImport, Param, VariantData, Visibility, TypeAliasData,
+        AdtData, Field, FunctionData, ImportData, ModuleImport, Param, TypeAliasData, VariantData,
+        Visibility,
     },
     AstPtr, DefDatabase,
 };
@@ -40,7 +41,9 @@ impl ModuleItemData {
         self.adts.iter()
     }
 
-    pub fn type_alias(&self) -> impl Iterator<Item = (Idx<TypeAliasData>, &TypeAliasData)> + ExactSizeIterator + '_ {
+    pub fn type_alias(
+        &self,
+    ) -> impl Iterator<Item = (Idx<TypeAliasData>, &TypeAliasData)> + ExactSizeIterator + '_ {
         self.type_alias.iter()
     }
 
@@ -126,7 +129,7 @@ impl<'a> LowerCtx<'a> {
         let id = self.module_items.adts.alloc(custom_type);
         id
     }
-    
+
     fn alloc_type_alias(&mut self, custom_type: TypeAliasData) -> Idx<TypeAliasData> {
         let id = self.module_items.type_alias.alloc(custom_type);
         id
@@ -269,7 +272,7 @@ impl<'a> LowerCtx<'a> {
             ast_ptr,
         }))
     }
-    
+
     fn lower_type_alias(&mut self, alias: &ast::TypeAlias) -> Option<Idx<TypeAliasData>> {
         let ast_ptr = AstPtr::new(alias);
         let name = alias.name()?.text()?;

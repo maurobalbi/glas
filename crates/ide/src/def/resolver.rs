@@ -94,7 +94,8 @@ impl Resolver {
                 super::hir_def::ModuleDefId::VariantId(it) => {
                     map.add(name, ResolveResult::Variant(Variant::from(*it).clone()))
                 }
-                super::hir_def::ModuleDefId::AdtId(_) | super::hir_def::ModuleDefId::TypeAliasId(_) => {}
+                super::hir_def::ModuleDefId::AdtId(_)
+                | super::hir_def::ModuleDefId::TypeAliasId(_) => {}
             }
         }
 
@@ -139,10 +140,10 @@ impl Resolver {
                 super::hir_def::ModuleDefId::VariantId(it) => {
                     return Some(ResolveResult::Variant(Variant::from(it)))
                 }
-                super::hir_def::ModuleDefId::AdtId(_) | super::hir_def::ModuleDefId::TypeAliasId(_) => {}
+                super::hir_def::ModuleDefId::AdtId(_)
+                | super::hir_def::ModuleDefId::TypeAliasId(_) => {}
             }
         }
-
 
         if let Some(val) = BuiltIn::values().get(name) {
             return Some(ResolveResult::BuiltIn(val.clone()));

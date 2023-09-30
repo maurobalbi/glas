@@ -13,7 +13,7 @@ use crate::{
 };
 
 use super::{
-    hir::{Adt, BuiltIn, Function, Local, Module, Variant, TypeAlias},
+    hir::{Adt, BuiltIn, Function, Local, Module, TypeAlias, Variant},
     hir_def::ModuleDefId,
     module::{Field, Pattern},
     resolver::{resolver_for_toplevel, ResolveResult},
@@ -45,7 +45,7 @@ impl From<FieldResolution> for Definition {
                 super::hir::ModuleDef::Variant(it) => it.into(),
                 super::hir::ModuleDef::Adt(it) => it.into(),
                 super::hir::ModuleDef::TypeAlias(it) => it.into(),
-                       },
+            },
         }
     }
 }
@@ -122,7 +122,7 @@ impl<'db> Semantics<'db> {
     }
 
     pub fn resolve_module(&self, expr: ast::Expr) -> Option<FileId> {
-       self.analyze(expr.syntax())?.resolve_module(&expr)
+        self.analyze(expr.syntax())?.resolve_module(&expr)
     }
 
     pub fn resolve_name(&self, name: ast::NameRef) -> Option<ResolveResult> {

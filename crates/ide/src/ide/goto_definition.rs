@@ -87,7 +87,7 @@ pub(crate) fn goto_definition(
             }]))
         }
         semantics::Definition::BuiltIn(_) => None,
-        semantics::Definition::TypeAlias(it) => {  
+        semantics::Definition::TypeAlias(it) => {
             let src = it.source(db.upcast())?;
             let full_range = src.value.syntax().text_range();
             let focus_range = src
@@ -99,7 +99,8 @@ pub(crate) fn goto_definition(
                 file_id: src.file_id,
                 focus_range,
                 full_range,
-            }]))},
+            }]))
+        }
     }
 }
 

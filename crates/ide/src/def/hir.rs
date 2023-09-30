@@ -11,7 +11,7 @@ use crate::{
 
 use super::{
     hir_def::{AdtId, LocalVariantId, TypeAliasId},
-    module::{AdtData, Field, FunctionData, Param, PatternId, VariantData, TypeAliasData},
+    module::{AdtData, Field, FunctionData, Param, PatternId, TypeAliasData, VariantData},
     scope::ExprScopes,
     FunctionId, InternDatabase,
 };
@@ -56,9 +56,8 @@ pub enum ModuleDef {
     Function(Function),
     Variant(Variant),
     Adt(Adt),
-    TypeAlias(TypeAlias)
+    TypeAlias(TypeAlias),
 }
-
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TypeAlias {
@@ -71,7 +70,7 @@ impl TypeAlias {
         let type_alias_data = &db.module_items(type_alias.file_id)[type_alias.value];
         type_alias_data.name.clone()
     }
-    
+
     pub fn data(&self, db: &dyn DefDatabase) -> TypeAliasData {
         let type_alias = db.lookup_intern_type_alias(self.id);
         let module_items = db.module_items(type_alias.file_id);

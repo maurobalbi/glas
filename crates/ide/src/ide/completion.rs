@@ -69,7 +69,10 @@ impl<'db> CompletionContext<'db> {
         let original_file = sema.parse(position.file_id);
         let tok = best_token_at_offset(original_file.syntax(), position.pos)?;
 
-        let trigger_tok = original_file.syntax().token_at_offset(position.pos).left_biased();
+        let trigger_tok = original_file
+            .syntax()
+            .token_at_offset(position.pos)
+            .left_biased();
 
         let mut ctx = CompletionContext {
             db,

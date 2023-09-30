@@ -4,7 +4,7 @@ use crate::{impl_from, impl_intern, FileId, InFile};
 
 use super::{
     hir::{Adt, Function, Module, Variant},
-    module::{AdtData, FunctionData, VariantData, TypeAliasData},
+    module::{AdtData, FunctionData, TypeAliasData, VariantData},
     DefDatabase,
 };
 use crate::impl_intern_key;
@@ -53,8 +53,12 @@ impl_intern!(AdtId, AdtLoc, intern_adt, lookup_intern_adt);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TypeAliasId(pub salsa::InternId);
 pub type TypeAliasLoc = InFile<Idx<TypeAliasData>>;
-impl_intern!(TypeAliasId, TypeAliasLoc, intern_type_alias, lookup_intern_type_alias);
-
+impl_intern!(
+    TypeAliasId,
+    TypeAliasLoc,
+    intern_type_alias,
+    lookup_intern_type_alias
+);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct VariantId {

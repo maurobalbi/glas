@@ -1086,14 +1086,16 @@ mod tests {
 
     #[test]
     fn pattern_concat() {
-        let conc = parse::<PatternConcat>(r#"fn main() {
+        let conc = parse::<PatternConcat>(
+            r#"fn main() {
             case "" {
               "abc" <> asdf -> asdf
             }
-          }"#);
+          }"#,
+        );
         conc.name().unwrap().syntax().should_eq("asdf");
     }
-    
+
     #[test]
     fn alias_body() {
         let alias = parse::<TypeAlias>(r#"type Alias = String"#);

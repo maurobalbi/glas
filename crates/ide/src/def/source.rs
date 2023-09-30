@@ -2,7 +2,10 @@ use syntax::ast;
 
 use crate::{DefDatabase, InFile};
 
-use super::{hir::{Adt, Function, Variant, TypeAlias}, hir_def::TypeAliasId};
+use super::{
+    hir::{Adt, Function, TypeAlias, Variant},
+    hir_def::TypeAliasId,
+};
 
 pub trait HasSource {
     type Ast;

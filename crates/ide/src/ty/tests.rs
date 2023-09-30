@@ -22,7 +22,7 @@ fn check_all(src: &str, expect: Expect) {
             }
             crate::def::hir_def::ModuleDefId::AdtId(_) => {}
             crate::def::hir_def::ModuleDefId::VariantId(_) => {}
-            crate::def::hir_def::ModuleDefId::TypeAliasId(_) => {},
+            crate::def::hir_def::ModuleDefId::TypeAliasId(_) => {}
         }
     }
 
@@ -45,7 +45,7 @@ fn check_fix(src: &str, expect: Expect) {
             }
             crate::def::hir_def::ModuleDefId::AdtId(_) => {}
             crate::def::hir_def::ModuleDefId::VariantId(_) => {}
-            crate::def::hir_def::ModuleDefId::TypeAliasId(_) => {},
+            crate::def::hir_def::ModuleDefId::TypeAliasId(_) => {}
         }
     }
 
@@ -279,12 +279,15 @@ fn use_() {
 
 #[test]
 fn record_spread() {
-    check_all("type Alias {
+    check_all(
+        "type Alias {
         Bla(name, dodo)
       }
       fn main(a) {
         Bla(..a)
-      }", expect!["main: fn(Alias) -> Alias"])
+      }",
+        expect!["main: fn(Alias) -> Alias"],
+    )
 }
 
 #[test]
@@ -466,7 +469,8 @@ fn spread_call() {
 
 #[test]
 fn pipe_infer() {
-    check_all("fn pipe(a: Int, b: Float) -> Int { 1 } 
+    check_all(
+        "fn pipe(a: Int, b: Float) -> Int { 1 } 
             fn unique(a) {
             a |> pipe(1.1)
           }",
@@ -500,7 +504,8 @@ fn generic_params_naming() {
 #[test]
 #[traced_test]
 fn alias_infer() {
-    check_all("type Alias = String 
+    check_all(
+        "type Alias = String 
     fn main() -> Alias {
     }",
         expect!["main: fn() -> String"],
@@ -509,18 +514,22 @@ fn alias_infer() {
 
 #[test]
 fn aliased_import() {
-    check_fix(r#"#- /test.gleam
+    check_fix(
+        r#"#- /test.gleam
 pub type Bla = String
 
 #- /test2.gleam
 import test.{Bla, main as dodo}
 
-fn test(a: String) -> Bla { $0 }"#, expect!["test: fn(String) -> String"])
+fn test(a: String) -> Bla { $0 }"#,
+        expect!["test: fn(String) -> String"],
+    )
 }
 
 #[test]
 fn generic_alias() {
-    check_fix(r#"#- /test.gleam
+    check_fix(
+        r#"#- /test.gleam
 pub type Wobble(name) {
     Wobble(name)
 }
@@ -532,12 +541,15 @@ pub opaque type Nasty {
 }
 type Alias = Bobo(Nasty)
 
-fn test(a: String) -> Alias { $0 }"#, expect!["test: fn(String) -> Wobble(Nasty)"])
+fn test(a: String) -> Alias { $0 }"#,
+        expect!["test: fn(String) -> Wobble(Nasty)"],
+    )
 }
 
 #[test]
 fn qualified_pattern() {
-    check_fix(r#"#- /test.gleam
+    check_fix(
+        r#"#- /test.gleam
 pub type Wobble(name) {
     Wobble(name)
 }
@@ -547,12 +559,15 @@ import test
 
 fn test(a) { case a {
     test.Wobble(_) -> $0"23"
-} }"#, expect!["test: fn(Wobble(a)) -> String"])
+} }"#,
+        expect!["test: fn(Wobble(a)) -> String"],
+    )
 }
 
 #[test]
 fn qualified_type() {
-    check_fix(r#"#- /test.gleam
+    check_fix(
+        r#"#- /test.gleam
 pub type Wobble(name) {
     Wobble(name)
 }
@@ -560,5 +575,7 @@ pub type Wobble(name) {
 #- /test2.gleam
 import test
 
-fn test(a: test.Wobble(a)) { $0"" }"#, expect!["test: fn(Wobble(a)) -> String"])
+fn test(a: test.Wobble(a)) { $0"" }"#,
+        expect!["test: fn(Wobble(a)) -> String"],
+    )
 }

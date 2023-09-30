@@ -168,7 +168,6 @@ impl fmt::Debug for FileSet {
     }
 }
 
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PackageRoot {
     pub is_local: bool,

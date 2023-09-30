@@ -1,18 +1,14 @@
 use crate::UrlExt;
 use anyhow::{ensure, Context, Result};
-use ide::{
-    Change, FileId, FileSet, ModuleMap, PackageGraph, PackageInfo, SourceRoot, SourceRootId,
-    VfsPath,
-};
-use la_arena::Arena;
+use ide::{Change, FileId, FileSet, ModuleMap, PackageGraph, SourceRoot, VfsPath};
+
 use lsp_types::Url;
 use rustc_hash::FxHashMap;
 use slab::Slab;
-use std::collections::HashMap;
+
 use std::sync::Arc;
 use std::{fmt, mem};
 use text_size::{TextRange, TextSize};
-
 
 /// Vfs stores file contents with line mapping, and a mapping between
 /// filesystem paths and `FileId`s.

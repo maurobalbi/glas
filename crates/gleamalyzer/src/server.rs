@@ -7,9 +7,9 @@ use async_lsp::{ClientSocket, ErrorCode, LanguageClient, ResponseError};
 use gleam_interop;
 use ide::{
     module_name, Analysis, AnalysisHost, Cancelled, Dependency, FileSet, ModuleMap, PackageGraph,
-    PackageId, PackageInfo, PackageRoot, SourceRoot, Target, VfsPath,
+    PackageId, PackageRoot, SourceRoot, Target, VfsPath,
 };
-use la_arena::Idx;
+
 use lsp_types::notification::Notification;
 use lsp_types::request::{self as req, Request};
 use lsp_types::{
@@ -491,7 +491,6 @@ impl Server {
         seen: &mut HashMap<SmolStr, PackageId>,
         is_local: bool,
     ) -> Result<PackageId> {
-
         roots.push(PackageRoot {
             path: root_path.to_path_buf(),
             is_local,
@@ -540,7 +539,6 @@ impl Server {
                 continue;
             }
             let path = if is_local {
- 
                 package_dir.join(name)
             } else {
                 root_path.parent().unwrap().join(name)
@@ -556,7 +554,7 @@ impl Server {
                         continue;
                     };
                     dep_id
-                },
+                }
                 None => {
                     let Ok(dep_id) = Self::assemble_graph(vfs, &path, graph, roots, seen, false) else {
                         continue;

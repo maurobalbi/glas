@@ -921,7 +921,6 @@ fn pattern(p: &mut Parser) {
             p.finish_node(m, HOLE)
         }
         s @ (INTEGER | FLOAT | STRING | T!["False"] | T!["True"]) => {
-            
             let m = p.start_node();
             p.bump();
             let mut literal = p.finish_node(m, LITERAL);
