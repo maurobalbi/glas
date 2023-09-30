@@ -549,3 +549,16 @@ fn test(a) { case a {
     test.Wobble(_) -> $0"23"
 } }"#, expect!["test: fn(Wobble(a)) -> String"])
 }
+
+#[test]
+fn qualified_type() {
+    check_fix(r#"#- /test.gleam
+pub type Wobble(name) {
+    Wobble(name)
+}
+
+#- /test2.gleam
+import test
+
+fn test(a: test.Wobble(a)) { $0"" }"#, expect!["test: fn(Wobble(a)) -> String"])
+}

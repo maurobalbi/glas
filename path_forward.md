@@ -5,7 +5,6 @@ Features for 1.0:
   ✓ finish type_from_ast
   ✓ type alias
   ✓ fix parsing for panic, <>
-  - Optimization: if function is annotated, skip inferring!
   - fix make_ast for types with module def, e.g. wisp.Response
   - Fix pattern completion (e.g. only show constructors)
   ✓  Fix pattern inference for module types (e.g. local.Wobbler)
@@ -23,6 +22,7 @@ Features for 1.0:
   - improve documentation
 
 After
+  - Optimization: if function is annotated, skip inferring!
   - Add some more diagnostics
     - Double declaration
     - wrong labelling

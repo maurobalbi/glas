@@ -250,7 +250,15 @@ impl<'db> InferCtx<'db> {
                     self.unify_var(par_var, par_ty);
                     pars.push(par_var);
                 }
-                match self.resolver.resolve_type(&name) {
+                let module_def = match module {
+                    Some(module) => self.resolver.resolve_module(&module).and_then(|m| {
+                        // ToDo: use something like Module.exports().get instead
+                        let resolver = resolver_for_toplevel(self.db.upcast(), m);
+                        resolver.resolve_type(&name)
+                    }),
+                    None => self.resolver.resolve_type(&name),
+                };
+                match module_def {
                     Some(type_) => match type_ {
                         ModuleDefId::AdtId(adt_id) => Ty::Adt {
                             generic_params: pars,
