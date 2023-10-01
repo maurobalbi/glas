@@ -502,7 +502,6 @@ fn generic_params_naming() {
 }
 
 #[test]
-#[traced_test]
 fn alias_infer() {
     check_all(
         "type Alias = String 
@@ -577,5 +576,20 @@ import test
 
 fn test(a: test.Wobble(a)) { $0"" }"#,
         expect!["test: fn(Wobble(a)) -> String"],
+    )
+}
+
+#[test]
+fn qualified_type_alias() {
+    check_fix(
+        r#"#- /test.gleam
+pub type Wobble = Alias
+type Alias = String
+
+#- /test2.gleam
+import test
+
+fn test(a: test.Wobble) { $0"" }"#,
+        expect!["test: fn(String) -> String"],
     )
 }

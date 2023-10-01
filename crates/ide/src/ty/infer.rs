@@ -267,8 +267,12 @@ impl<'db> InferCtx<'db> {
                         },
                         ResolveResult::TypeAlias(alias) => {
                             let data = TypeAlias { id: alias.id }.data(self.db.upcast());
+                            let type_alias = self.db.lookup_intern_type_alias(alias.id);
                             if let Some(ty) = data.body {
-                                return self.make_type(ty, env);
+                                let resolver = std::mem::replace(&mut self.resolver, resolver_for_toplevel(self.db.upcast(), type_alias.file_id));
+                                let ty = self.make_type(ty, env);
+                                let _ = std::mem::replace(&mut self.resolver, resolver);
+                                return ty;
                             }
                             self.idx += 1;
                             Ty::Unknown { idx: self.idx }

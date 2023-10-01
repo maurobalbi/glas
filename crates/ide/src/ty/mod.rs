@@ -46,6 +46,7 @@ pub enum Ty {
         return_: Arc<Ty>,
     },
     Adt {
+        // ToDo: refactor, since this is not quite accurate enough: other types might be qualified also
         module: Option<SmolStr>,
         name: SmolStr,
         params: Arc<Vec<Ty>>,
