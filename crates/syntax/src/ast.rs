@@ -212,6 +212,7 @@ enums! {
         TupleType,
         TypeNameRef,
         TypeApplication,
+        Hole,
     },
     Pattern {
         PatternVariable,

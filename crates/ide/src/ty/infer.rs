@@ -187,6 +187,7 @@ impl<'db> InferCtx<'db> {
     fn make_type(&mut self, ty: super::Ty, env: &mut HashMap<SmolStr, TyVar>) -> TyVar {
         let ty = match ty {
             super::Ty::Unknown => return self.new_ty_var(),
+            super::Ty::Hole => return self.new_ty_var(),
             // this is not correct, same name obviously doesnt have same type e.g fn a(a:a) {a} and fn b(b: a} {b} dont have the same type!
             super::Ty::Generic { name } => {
                 return match env.get(&name) {

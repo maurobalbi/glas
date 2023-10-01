@@ -195,6 +195,9 @@ impl TyDisplay for Ty {
                 write!(f, ") -> ")?;
                 return_.ty_fmt(f)
             }
+            Ty::Hole => {
+                write!(f, "_")
+            }
             Ty::List { of } => {
                 write!(f, "List(")?;
                 of.ty_fmt(f)?;

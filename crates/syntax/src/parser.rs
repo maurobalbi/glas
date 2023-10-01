@@ -40,7 +40,7 @@ const PATTERN_FIRST: TokenSet = TokenSet::new(&[
     T!["-"],
     T![".."],
 ]);
-const TYPE_FIRST: TokenSet = TokenSet::new(&[T!["fn"], T!["#"], IDENT, U_IDENT]);
+const TYPE_FIRST: TokenSet = TokenSet::new(&[T!["fn"], T!["#"], IDENT, U_IDENT, DISCARD_IDENT]);
 const CONST_FIRST: TokenSet = TokenSet::new(&[IDENT, T!["#"], T!["["], INTEGER, FLOAT, STRING]);
 const EXPR_FIRST: TokenSet = TokenSet::new(&[
     IDENT,
@@ -1355,6 +1355,11 @@ fn type_expr(p: &mut Parser) {
             type_application = true;
             type_name_ref(p)
         }
+        DISCARD_IDENT => {
+            let m = p.start_node();
+            p.expect(DISCARD_IDENT);
+            p.finish_node(m, HOLE)
+        },
         // tuple
         T!("#") => tuple_type(p),
         _ => {

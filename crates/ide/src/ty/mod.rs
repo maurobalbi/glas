@@ -25,6 +25,7 @@ pub trait TyDatabase: DefDatabase + Upcast<dyn DefDatabase> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Ty {
     Unknown,
+    Hole,
     Generic {
         name: SmolStr,
     },
@@ -149,5 +150,6 @@ pub fn ty_from_ast(ast_expr: ast::TypeExpr) -> Ty {
                 params: Arc::new(arguments),
             }
         }
+        ast::TypeExpr::Hole(_) => Ty::Hole,
     }
 }
