@@ -593,3 +593,4 @@ fn test(a: test.Wobble) { $0"" }"#,
         expect!["test: fn(String) -> String"],
     )
 }
+

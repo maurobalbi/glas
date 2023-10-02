@@ -1,5 +1,4 @@
 use crate::{LineMap, Result, Vfs};
-use async_lsp::{ErrorCode, ResponseError};
 use ide::{
     CompletionItem, CompletionItemKind, Diagnostic, DiagnosticKind, FileId, FilePos, FileRange,
     HoverResult, Severity,
@@ -7,7 +6,7 @@ use ide::{
 use lsp::{DiagnosticTag, Documentation, Hover, MarkupContent, MarkupKind};
 use lsp_types::{
     self as lsp, DiagnosticRelatedInformation, DiagnosticSeverity, Location, NumberOrString,
-    Position, PrepareRenameResponse, Range, TextDocumentIdentifier, TextDocumentPositionParams,
+    Position, Range, TextDocumentIdentifier, TextDocumentPositionParams,
     Url,
 };
 use std::sync::Arc;
@@ -171,18 +170,3 @@ pub(crate) fn to_diagnostics(
     ret
 }
 
-pub(crate) fn to_rename_error(message: String) -> ResponseError {
-    ResponseError::new(ErrorCode::REQUEST_FAILED, message)
-}
-
-pub(crate) fn to_prepare_rename_response(
-    line_map: &LineMap,
-    range: TextRange,
-    text: String,
-) -> PrepareRenameResponse {
-    let range = to_range(line_map, range);
-    PrepareRenameResponse::RangeWithPlaceholder {
-        range,
-        placeholder: text,
-    }
-}

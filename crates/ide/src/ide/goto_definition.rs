@@ -252,7 +252,7 @@ fn <main>() {
             ],
         );
     }
-    
+
     #[test]
     fn qualified_type() {
         check(
@@ -276,5 +276,30 @@ pub type <Wobble> {
 "#
             ],
         );
+    }
+
+    #[test]
+    fn module_field_access() {
+        check(
+            r#"
+#- /test.gleam
+fn print() {
+    1
+}
+
+#- /test2.gleam
+import test
+
+type Internal {
+    Internal(print)
+}
+
+fn test(test: Internal) { test.$0print }"#,
+            expect![r#"
+fn <print>() {
+    1
+}
+"#],
+        )
     }
 }

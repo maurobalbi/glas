@@ -41,6 +41,7 @@ pub enum Ty {
     List {
         of: Arc<Ty>,
     },
+    // ToDo: when making types for functions, 
     Function {
         params: Arc<Vec<Ty>>,
         return_: Arc<Ty>,

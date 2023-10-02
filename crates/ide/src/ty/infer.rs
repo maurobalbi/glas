@@ -184,6 +184,7 @@ impl<'db> InferCtx<'db> {
         ty_var
     }
 
+    // ToDo: Add context file_id to make proper resolver!
     fn make_type(&mut self, ty: super::Ty, env: &mut HashMap<SmolStr, TyVar>) -> TyVar {
         let ty = match ty {
             super::Ty::Unknown => return self.new_ty_var(),
@@ -269,7 +270,10 @@ impl<'db> InferCtx<'db> {
                             let data = TypeAlias { id: alias.id }.data(self.db.upcast());
                             let type_alias = self.db.lookup_intern_type_alias(alias.id);
                             if let Some(ty) = data.body {
-                                let resolver = std::mem::replace(&mut self.resolver, resolver_for_toplevel(self.db.upcast(), type_alias.file_id));
+                                let resolver = std::mem::replace(
+                                    &mut self.resolver,
+                                    resolver_for_toplevel(self.db.upcast(), type_alias.file_id),
+                                );
                                 let ty = self.make_type(ty, env);
                                 let _ = std::mem::replace(&mut self.resolver, resolver);
                                 return ty;
@@ -606,7 +610,15 @@ impl<'db> InferCtx<'db> {
                             None => {
                                 let inferred_ty = func.ty(db);
                                 let mut env = HashMap::new();
-                                self.make_type(inferred_ty.clone(), &mut env)
+                                // ToDo: analogous to inference for adt in field.access, this and every other resolved type / value
+                                let func_loc = self.db.lookup_intern_function(func.id); //       needs to have a local resolver to make the correct type
+                                let resolver = std::mem::replace(
+                                    &mut self.resolver,
+                                    resolver_for_toplevel(self.db.upcast(), func_loc.file_id),
+                                );
+                                let ty = self.make_type(inferred_ty, &mut env);
+                                let _ = std::mem::replace(&mut self.resolver, resolver);
+                                return ty;
                             }
                         }
                     }
@@ -639,22 +651,23 @@ impl<'db> InferCtx<'db> {
                 let ty = self.infer_expr(*container);
 
                 let field_var = self.new_ty_var();
+                // ToDo: This is wrong, since it might also be a module_access
                 let field_ty = match self.table.get_mut(ty.0) {
-                    Ty::Adt {
-                        adt_id,
-                        generic_params: params,
-                    } => {
-                        self.body_ctx.field_resolution.insert(
-                            tgt_expr,
-                            FieldResolution::ModuleDef(ModuleDef::Adt(hir::Adt::from(*adt_id))),
-                        );
-                        match params.iter().next() {
-                            Some(var) => *var,
-                            None => self.new_ty_var(),
-                        }
-                    }
+                    // Ty::Adt {
+                    //     adt_id,
+                    //     generic_params: params,
+                    // } => {
+                    //     self.body_ctx.field_resolution.insert(
+                    //         tgt_expr,
+                    //         FieldResolution::ModuleDef(ModuleDef::Adt(hir::Adt::from(*adt_id))),
+                    //     );
+                    //     //ToDo: properly resolve common fields of variant
+                    //     match params.iter().next() {
+                    //         Some(var) => *var,
+                    //         None => self.new_ty_var(),
+                    //     }
+                    // }
                     _ => {
-                        // ToDo: This yields nonsensical result! need to resolve the local import name first and then find the module!
                         match self.resolver.resolve_module(base_string) {
                             Some(file) => {
                                 self.body_ctx.module_resolution.insert(*container, file);
@@ -672,8 +685,17 @@ impl<'db> InferCtx<'db> {
                                                 tgt_expr,
                                                 FieldResolution::ModuleDef(ModuleDef::Function(it)),
                                             );
-
-                                            return self.make_type(fn_ty.clone(), &mut env);
+                                            let func_loc = self.db.lookup_intern_function(it.id); //       needs to have a local resolver to make the correct type
+                                            let resolver = std::mem::replace(
+                                                &mut self.resolver,
+                                                resolver_for_toplevel(
+                                                    self.db.upcast(),
+                                                    func_loc.file_id,
+                                                ),
+                                            );
+                                            let ty = self.make_type(fn_ty, &mut env);
+                                            let _ = std::mem::replace(&mut self.resolver, resolver);
+                                            return ty;
                                         }
                                         // ToDo: Add type to adt in hir and fix this.
                                         ResolveResult::Variant(it) => {
@@ -693,8 +715,8 @@ impl<'db> InferCtx<'db> {
                                         }
                                         ResolveResult::BuiltIn(_) => {}
                                         ResolveResult::Module(_) => {}
-                                        ResolveResult::Adt(_) => {},
-                                        ResolveResult::TypeAlias(_) => {},
+                                        ResolveResult::Adt(_) => {}
+                                        ResolveResult::TypeAlias(_) => {}
                                     }
                                 }
                             }
@@ -932,6 +954,9 @@ impl<'db> InferCtx<'db> {
                 },
             ) => {
                 // diagnostic if adt_id not the same!
+                if id1 != id2 {
+                    tracing::info!("Different adts {:?} {:?}", id1, id2);
+                }
                 for (p1, p2) in params1.clone().into_iter().zip(params2.into_iter()) {
                     self.unify_var(p1, p2)
                 }
