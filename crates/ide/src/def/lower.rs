@@ -230,7 +230,7 @@ impl<'a> LowerCtx<'a> {
             for param in param_list.params() {
                 match param.pattern() {
                     Some(Pattern::PatternVariable(it)) => {
-                        it.text().map(|t| {
+                        it.name().and_then(|n| n.text()).map(|t| {
                             params.push(Param {
                                 name: t,
                                 label: param.label().and_then(|n| n.text()),

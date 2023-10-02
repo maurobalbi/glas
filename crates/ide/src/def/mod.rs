@@ -6,6 +6,7 @@ mod lower;
 pub mod module;
 pub mod resolver;
 mod scope;
+mod search;
 pub mod semantics;
 pub mod source;
 pub mod source_analyzer;
@@ -29,6 +30,7 @@ use self::scope::{
     dependency_order_query, module_scope_with_map_query, ExprScopes, ModuleScope, ModuleSourceMap,
 };
 pub use resolver::resolver_for_expr;
+pub use search::SearchScope;
 
 #[salsa::query_group(InternDatabaseStorage)]
 pub trait InternDatabase: SourceDatabase {

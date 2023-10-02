@@ -103,6 +103,7 @@ impl Server {
             .request_snap::<req::GotoDefinition>(handler::goto_definition)
             .request_snap::<req::Completion>(handler::completion)
             .request_snap::<req::HoverRequest>(handler::hover)
+            .request_snap::<req::DocumentHighlightRequest>(handler::document_highlight)
             .request_snap::<lsp_ext::SyntaxTree>(handler::syntax_tree)
             //// Events ////
             .event(Self::on_set_package_info)

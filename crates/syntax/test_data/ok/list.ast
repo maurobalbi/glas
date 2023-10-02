@@ -191,7 +191,8 @@ SOURCE_FILE@0..45079
           IDENT@1385..1387 "of"
         WHITESPACE@1387..1388 " "
         PATTERN_VARIABLE@1388..1392
-          IDENT@1388..1392 "list"
+          NAME@1388..1392
+            IDENT@1388..1392 "list"
         COLON@1392..1393 ":"
         WHITESPACE@1393..1394 " "
         TYPE_APPLICATION@1394..1401
@@ -260,7 +261,8 @@ SOURCE_FILE@0..45079
       L_PAREN@1499..1500 "("
       PARAM@1500..1510
         PATTERN_VARIABLE@1500..1501
-          IDENT@1500..1501 "a"
+          NAME@1500..1501
+            IDENT@1500..1501 "a"
         COLON@1501..1502 ":"
         WHITESPACE@1502..1503 " "
         TYPE_APPLICATION@1503..1510
@@ -298,7 +300,8 @@ SOURCE_FILE@0..45079
       L_PAREN@1552..1553 "("
       PARAM@1553..1566
         PATTERN_VARIABLE@1553..1557
-          IDENT@1553..1557 "list"
+          NAME@1553..1557
+            IDENT@1553..1557 "list"
         COLON@1557..1558 ":"
         WHITESPACE@1558..1559 " "
         TYPE_APPLICATION@1559..1566
@@ -359,7 +362,8 @@ SOURCE_FILE@0..45079
       L_PAREN@1641..1642 "("
       PARAM@1642..1656
         PATTERN_VARIABLE@1642..1646
-          IDENT@1642..1646 "list"
+          NAME@1642..1646
+            IDENT@1642..1646 "list"
         COLON@1646..1647 ":"
         WHITESPACE@1647..1648 " "
         TYPE_APPLICATION@1648..1655
@@ -377,7 +381,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@1656..1657 " "
       PARAM@1657..1667
         PATTERN_VARIABLE@1657..1662
-          IDENT@1657..1662 "count"
+          NAME@1657..1662
+            IDENT@1657..1662 "count"
         COLON@1662..1663 ":"
         WHITESPACE@1663..1664 " "
         TYPE_NAME_REF@1664..1667
@@ -522,7 +527,8 @@ SOURCE_FILE@0..45079
       L_PAREN@2272..2273 "("
       PARAM@2273..2284
         PATTERN_VARIABLE@2273..2275
-          IDENT@2273..2275 "xs"
+          NAME@2273..2275
+            IDENT@2273..2275 "xs"
         COLON@2275..2276 ":"
         WHITESPACE@2276..2277 " "
         TYPE_APPLICATION@2277..2284
@@ -599,7 +605,8 @@ SOURCE_FILE@0..45079
       L_PAREN@2386..2387 "("
       PARAM@2387..2397
         PATTERN_VARIABLE@2387..2388
-          IDENT@2387..2388 "a"
+          NAME@2387..2388
+            IDENT@2387..2388 "a"
         COLON@2388..2389 ":"
         WHITESPACE@2389..2390 " "
         TYPE_APPLICATION@2390..2397
@@ -645,7 +652,8 @@ SOURCE_FILE@0..45079
       L_PAREN@2444..2445 "("
       PARAM@2445..2449
         PATTERN_VARIABLE@2445..2449
-          IDENT@2445..2449 "list"
+          NAME@2445..2449
+            IDENT@2445..2449 "list"
       R_PAREN@2449..2450 ")"
     WHITESPACE@2450..2451 " "
     BLOCK@2451..2481
@@ -688,12 +696,14 @@ SOURCE_FILE@0..45079
       L_PAREN@2520..2521 "("
       PARAM@2521..2531
         PATTERN_VARIABLE@2521..2530
-          IDENT@2521..2530 "remaining"
+          NAME@2521..2530
+            IDENT@2521..2530 "remaining"
         COMMA@2530..2531 ","
       WHITESPACE@2531..2532 " "
       PARAM@2532..2543
         PATTERN_VARIABLE@2532..2543
-          IDENT@2532..2543 "accumulator"
+          NAME@2532..2543
+            IDENT@2532..2543 "accumulator"
       R_PAREN@2543..2544 ")"
     WHITESPACE@2544..2545 " "
     BLOCK@2545..2659
@@ -726,7 +736,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@2592..2606
                 L_SQUARE@2592..2593 "["
                 PATTERN_VARIABLE@2593..2597
-                  IDENT@2593..2597 "item"
+                  NAME@2593..2597
+                    IDENT@2593..2597 "item"
                 COMMA@2597..2598 ","
                 WHITESPACE@2598..2599 " "
                 PATTERN_SPREAD@2599..2605
@@ -822,7 +833,8 @@ SOURCE_FILE@0..45079
       L_PAREN@2960..2961 "("
       PARAM@2961..2974
         PATTERN_VARIABLE@2961..2965
-          IDENT@2961..2965 "list"
+          NAME@2961..2965
+            IDENT@2961..2965 "list"
         COLON@2965..2966 ":"
         WHITESPACE@2966..2967 " "
         TYPE_APPLICATION@2967..2974
@@ -936,7 +948,8 @@ SOURCE_FILE@0..45079
       L_PAREN@3536..3537 "("
       PARAM@3537..3551
         PATTERN_VARIABLE@3537..3541
-          IDENT@3537..3541 "list"
+          NAME@3537..3541
+            IDENT@3537..3541 "list"
         COLON@3541..3542 ":"
         WHITESPACE@3542..3543 " "
         TYPE_APPLICATION@3543..3550
@@ -957,7 +970,8 @@ SOURCE_FILE@0..45079
           IDENT@3552..3555 "any"
         WHITESPACE@3555..3556 " "
         PATTERN_VARIABLE@3556..3560
-          IDENT@3556..3560 "elem"
+          NAME@3556..3560
+            IDENT@3556..3560 "elem"
         COLON@3560..3561 ":"
         WHITESPACE@3561..3562 " "
         TYPE_NAME_REF@3562..3563
@@ -1000,16 +1014,17 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@3609..3620
                 L_SQUARE@3609..3610 "["
                 PATTERN_VARIABLE@3610..3615
-                  IDENT@3610..3615 "first"
+                  NAME@3610..3615
+                    IDENT@3610..3615 "first"
                 COMMA@3615..3616 ","
                 WHITESPACE@3616..3617 " "
                 PATTERN_SPREAD@3617..3619
                   DOT_DOT@3617..3619 ".."
                 R_SQUARE@3619..3620 "]"
             WHITESPACE@3620..3621 " "
-            IF_KW@3621..3623 "if"
-            WHITESPACE@3623..3624 " "
-            PATTERN_GUARD@3624..3637
+            PATTERN_GUARD@3621..3637
+              IF_KW@3621..3623 "if"
+              WHITESPACE@3623..3624 " "
               BINARY_OP@3624..3637
                 VARIABLE@3624..3629
                   NAME_REF@3624..3629
@@ -1113,7 +1128,8 @@ SOURCE_FILE@0..45079
       L_PAREN@3964..3965 "("
       PARAM@3965..3978
         PATTERN_VARIABLE@3965..3969
-          IDENT@3965..3969 "list"
+          NAME@3965..3969
+            IDENT@3965..3969 "list"
         COLON@3969..3970 ":"
         WHITESPACE@3970..3971 " "
         TYPE_APPLICATION@3971..3978
@@ -1187,7 +1203,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@4039..4046
                 L_SQUARE@4039..4040 "["
                 PATTERN_VARIABLE@4040..4041
-                  IDENT@4040..4041 "x"
+                  NAME@4040..4041
+                    IDENT@4040..4041 "x"
                 COMMA@4041..4042 ","
                 WHITESPACE@4042..4043 " "
                 PATTERN_SPREAD@4043..4045
@@ -1267,7 +1284,8 @@ SOURCE_FILE@0..45079
       L_PAREN@4441..4442 "("
       PARAM@4442..4455
         PATTERN_VARIABLE@4442..4446
-          IDENT@4442..4446 "list"
+          NAME@4442..4446
+            IDENT@4442..4446 "list"
         COLON@4446..4447 ":"
         WHITESPACE@4447..4448 " "
         TYPE_APPLICATION@4448..4455
@@ -1386,7 +1404,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@4565..4568 "\n  "
       PARAM@4568..4590
         PATTERN_VARIABLE@4568..4569
-          IDENT@4568..4569 "f"
+          NAME@4568..4569
+            IDENT@4568..4569 "f"
         COLON@4569..4570 ":"
         WHITESPACE@4570..4571 " "
         FN_TYPE@4571..4589
@@ -1483,12 +1502,14 @@ SOURCE_FILE@0..45079
             L_PAREN@4666..4667 "("
             PARAM@4667..4674
               PATTERN_VARIABLE@4667..4673
-                IDENT@4667..4673 "groups"
+                NAME@4667..4673
+                  IDENT@4667..4673 "groups"
               COMMA@4673..4674 ","
             WHITESPACE@4674..4675 " "
             PARAM@4675..4679
               PATTERN_VARIABLE@4675..4679
-                IDENT@4675..4679 "elem"
+                NAME@4675..4679
+                  IDENT@4675..4679 "elem"
             R_PAREN@4679..4680 ")"
           WHITESPACE@4680..4681 " "
           BLOCK@4681..4852
@@ -1539,7 +1560,8 @@ SOURCE_FILE@0..45079
                         L_PAREN@4727..4728 "("
                         VARIANT_REF_FIELD@4728..4736
                           PATTERN_VARIABLE@4728..4736
-                            IDENT@4728..4736 "existing"
+                            NAME@4728..4736
+                              IDENT@4728..4736 "existing"
                         R_PAREN@4736..4737 ")"
                   WHITESPACE@4737..4738 " "
                   R_ARROW@4738..4740 "->"
@@ -1714,7 +1736,8 @@ SOURCE_FILE@0..45079
       L_PAREN@5488..5489 "("
       PARAM@5489..5503
         PATTERN_VARIABLE@5489..5493
-          IDENT@5489..5493 "list"
+          NAME@5489..5493
+            IDENT@5489..5493 "list"
         COLON@5493..5494 ":"
         WHITESPACE@5494..5495 " "
         TYPE_APPLICATION@5495..5502
@@ -1735,7 +1758,8 @@ SOURCE_FILE@0..45079
           IDENT@5504..5506 "by"
         WHITESPACE@5506..5507 " "
         PATTERN_VARIABLE@5507..5510
-          IDENT@5507..5510 "key"
+          NAME@5507..5510
+            IDENT@5507..5510 "key"
         COLON@5510..5511 ":"
         WHITESPACE@5511..5512 " "
         FN_TYPE@5512..5522
@@ -1837,7 +1861,8 @@ SOURCE_FILE@0..45079
       L_PAREN@5603..5604 "("
       PARAM@5604..5618
         PATTERN_VARIABLE@5604..5608
-          IDENT@5604..5608 "list"
+          NAME@5604..5608
+            IDENT@5604..5608 "list"
         COLON@5608..5609 ":"
         WHITESPACE@5609..5610 " "
         TYPE_APPLICATION@5610..5617
@@ -1855,7 +1880,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@5618..5619 " "
       PARAM@5619..5638
         PATTERN_VARIABLE@5619..5622
-          IDENT@5619..5622 "fun"
+          NAME@5619..5622
+            IDENT@5619..5622 "fun"
         COLON@5622..5623 ":"
         WHITESPACE@5623..5624 " "
         FN_TYPE@5624..5637
@@ -1876,7 +1902,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@5638..5639 " "
       PARAM@5639..5651
         PATTERN_VARIABLE@5639..5642
-          IDENT@5639..5642 "acc"
+          NAME@5639..5642
+            IDENT@5639..5642 "acc"
         COLON@5642..5643 ":"
         WHITESPACE@5643..5644 " "
         TYPE_APPLICATION@5644..5651
@@ -1944,7 +1971,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@5707..5716
                 L_SQUARE@5707..5708 "["
                 PATTERN_VARIABLE@5708..5709
-                  IDENT@5708..5709 "x"
+                  NAME@5708..5709
+                    IDENT@5708..5709 "x"
                 COMMA@5709..5710 ","
                 WHITESPACE@5710..5711 " "
                 PATTERN_SPREAD@5711..5715
@@ -1962,7 +1990,8 @@ SOURCE_FILE@0..45079
                 LET_KW@5728..5731 "let"
                 WHITESPACE@5731..5732 " "
                 PATTERN_VARIABLE@5732..5739
-                  IDENT@5732..5739 "new_acc"
+                  NAME@5732..5739
+                    IDENT@5732..5739 "new_acc"
                 WHITESPACE@5739..5740 " "
                 EQ@5740..5741 "="
                 WHITESPACE@5741..5742 " "
@@ -2089,7 +2118,8 @@ SOURCE_FILE@0..45079
       L_PAREN@6174..6175 "("
       PARAM@6175..6189
         PATTERN_VARIABLE@6175..6179
-          IDENT@6175..6179 "list"
+          NAME@6175..6179
+            IDENT@6175..6179 "list"
         COLON@6179..6180 ":"
         WHITESPACE@6180..6181 " "
         TYPE_APPLICATION@6181..6188
@@ -2110,7 +2140,8 @@ SOURCE_FILE@0..45079
           IDENT@6190..6193 "for"
         WHITESPACE@6193..6194 " "
         PATTERN_VARIABLE@6194..6203
-          IDENT@6194..6203 "predicate"
+          NAME@6194..6203
+            IDENT@6194..6203 "predicate"
         COLON@6203..6204 ":"
         WHITESPACE@6204..6205 " "
         FN_TYPE@6205..6218
@@ -2183,7 +2214,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@6286..6289 "\n  "
       PARAM@6289..6303
         PATTERN_VARIABLE@6289..6293
-          IDENT@6289..6293 "list"
+          NAME@6289..6293
+            IDENT@6289..6293 "list"
         COLON@6293..6294 ":"
         WHITESPACE@6294..6295 " "
         TYPE_APPLICATION@6295..6302
@@ -2201,7 +2233,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@6303..6306 "\n  "
       PARAM@6306..6333
         PATTERN_VARIABLE@6306..6309
-          IDENT@6306..6309 "fun"
+          NAME@6306..6309
+            IDENT@6306..6309 "fun"
         COLON@6309..6310 ":"
         WHITESPACE@6310..6311 " "
         FN_TYPE@6311..6332
@@ -2236,7 +2269,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@6333..6336 "\n  "
       PARAM@6336..6349
         PATTERN_VARIABLE@6336..6339
-          IDENT@6336..6339 "acc"
+          NAME@6336..6339
+            IDENT@6336..6339 "acc"
         COLON@6339..6340 ":"
         WHITESPACE@6340..6341 " "
         TYPE_APPLICATION@6341..6348
@@ -2306,7 +2340,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@6406..6415
                 L_SQUARE@6406..6407 "["
                 PATTERN_VARIABLE@6407..6408
-                  IDENT@6407..6408 "x"
+                  NAME@6407..6408
+                    IDENT@6407..6408 "x"
                 COMMA@6408..6409 ","
                 WHITESPACE@6409..6410 " "
                 PATTERN_SPREAD@6410..6414
@@ -2324,7 +2359,8 @@ SOURCE_FILE@0..45079
                 LET_KW@6427..6430 "let"
                 WHITESPACE@6430..6431 " "
                 PATTERN_VARIABLE@6431..6438
-                  IDENT@6431..6438 "new_acc"
+                  NAME@6431..6438
+                    IDENT@6431..6438 "new_acc"
                 WHITESPACE@6438..6439 " "
                 EQ@6439..6440 "="
                 WHITESPACE@6440..6441 " "
@@ -2354,7 +2390,8 @@ SOURCE_FILE@0..45079
                           L_PAREN@6465..6466 "("
                           VARIANT_REF_FIELD@6466..6467
                             PATTERN_VARIABLE@6466..6467
-                              IDENT@6466..6467 "x"
+                              NAME@6466..6467
+                                IDENT@6466..6467 "x"
                           R_PAREN@6467..6468 ")"
                     WHITESPACE@6468..6469 " "
                     R_ARROW@6469..6471 "->"
@@ -2465,7 +2502,8 @@ SOURCE_FILE@0..45079
       L_PAREN@6894..6895 "("
       PARAM@6895..6909
         PATTERN_VARIABLE@6895..6899
-          IDENT@6895..6899 "list"
+          NAME@6895..6899
+            IDENT@6895..6899 "list"
         COLON@6899..6900 ":"
         WHITESPACE@6900..6901 " "
         TYPE_APPLICATION@6901..6908
@@ -2486,7 +2524,8 @@ SOURCE_FILE@0..45079
           IDENT@6910..6914 "with"
         WHITESPACE@6914..6915 " "
         PATTERN_VARIABLE@6915..6918
-          IDENT@6915..6918 "fun"
+          NAME@6915..6918
+            IDENT@6915..6918 "fun"
         COLON@6918..6919 ":"
         WHITESPACE@6919..6920 " "
         FN_TYPE@6920..6941
@@ -2572,7 +2611,8 @@ SOURCE_FILE@0..45079
       L_PAREN@6999..7000 "("
       PARAM@7000..7014
         PATTERN_VARIABLE@7000..7004
-          IDENT@7000..7004 "list"
+          NAME@7000..7004
+            IDENT@7000..7004 "list"
         COLON@7004..7005 ":"
         WHITESPACE@7005..7006 " "
         TYPE_APPLICATION@7006..7013
@@ -2590,7 +2630,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@7014..7015 " "
       PARAM@7015..7031
         PATTERN_VARIABLE@7015..7018
-          IDENT@7015..7018 "fun"
+          NAME@7015..7018
+            IDENT@7015..7018 "fun"
         COLON@7018..7019 ":"
         WHITESPACE@7019..7020 " "
         FN_TYPE@7020..7030
@@ -2611,7 +2652,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@7031..7032 " "
       PARAM@7032..7044
         PATTERN_VARIABLE@7032..7035
-          IDENT@7032..7035 "acc"
+          NAME@7032..7035
+            IDENT@7032..7035 "acc"
         COLON@7035..7036 ":"
         WHITESPACE@7036..7037 " "
         TYPE_APPLICATION@7037..7044
@@ -2679,7 +2721,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@7100..7109
                 L_SQUARE@7100..7101 "["
                 PATTERN_VARIABLE@7101..7102
-                  IDENT@7101..7102 "x"
+                  NAME@7101..7102
+                    IDENT@7101..7102 "x"
                 COMMA@7102..7103 ","
                 WHITESPACE@7103..7104 " "
                 PATTERN_SPREAD@7104..7108
@@ -2767,7 +2810,8 @@ SOURCE_FILE@0..45079
       L_PAREN@7388..7389 "("
       PARAM@7389..7403
         PATTERN_VARIABLE@7389..7393
-          IDENT@7389..7393 "list"
+          NAME@7389..7393
+            IDENT@7389..7393 "list"
         COLON@7393..7394 ":"
         WHITESPACE@7394..7395 " "
         TYPE_APPLICATION@7395..7402
@@ -2788,7 +2832,8 @@ SOURCE_FILE@0..45079
           IDENT@7404..7408 "with"
         WHITESPACE@7408..7409 " "
         PATTERN_VARIABLE@7409..7412
-          IDENT@7409..7412 "fun"
+          NAME@7409..7412
+            IDENT@7409..7412 "fun"
         COLON@7412..7413 ":"
         WHITESPACE@7413..7414 " "
         FN_TYPE@7414..7424
@@ -2894,7 +2939,8 @@ SOURCE_FILE@0..45079
       L_PAREN@7851..7852 "("
       PARAM@7852..7867
         PATTERN_VARIABLE@7852..7857
-          IDENT@7852..7857 "list1"
+          NAME@7852..7857
+            IDENT@7852..7857 "list1"
         COLON@7857..7858 ":"
         WHITESPACE@7858..7859 " "
         TYPE_APPLICATION@7859..7866
@@ -2912,7 +2958,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@7867..7868 " "
       PARAM@7868..7883
         PATTERN_VARIABLE@7868..7873
-          IDENT@7868..7873 "list2"
+          NAME@7868..7873
+            IDENT@7868..7873 "list2"
         COLON@7873..7874 ":"
         WHITESPACE@7874..7875 " "
         TYPE_APPLICATION@7875..7882
@@ -2933,7 +2980,8 @@ SOURCE_FILE@0..45079
           IDENT@7884..7888 "with"
         WHITESPACE@7888..7889 " "
         PATTERN_VARIABLE@7889..7892
-          IDENT@7889..7892 "fun"
+          NAME@7889..7892
+            IDENT@7889..7892 "fun"
         COLON@7892..7893 ":"
         WHITESPACE@7893..7894 " "
         FN_TYPE@7894..7907
@@ -3017,7 +3065,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@7969..7972 "\n  "
       PARAM@7972..7987
         PATTERN_VARIABLE@7972..7977
-          IDENT@7972..7977 "list1"
+          NAME@7972..7977
+            IDENT@7972..7977 "list1"
         COLON@7977..7978 ":"
         WHITESPACE@7978..7979 " "
         TYPE_APPLICATION@7979..7986
@@ -3035,7 +3084,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@7987..7990 "\n  "
       PARAM@7990..8005
         PATTERN_VARIABLE@7990..7995
-          IDENT@7990..7995 "list2"
+          NAME@7990..7995
+            IDENT@7990..7995 "list2"
         COLON@7995..7996 ":"
         WHITESPACE@7996..7997 " "
         TYPE_APPLICATION@7997..8004
@@ -3053,7 +3103,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@8005..8008 "\n  "
       PARAM@8008..8027
         PATTERN_VARIABLE@8008..8011
-          IDENT@8008..8011 "fun"
+          NAME@8008..8011
+            IDENT@8008..8011 "fun"
         COLON@8011..8012 ":"
         WHITESPACE@8012..8013 " "
         FN_TYPE@8013..8026
@@ -3079,7 +3130,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@8027..8030 "\n  "
       PARAM@8030..8043
         PATTERN_VARIABLE@8030..8033
-          IDENT@8030..8033 "acc"
+          NAME@8030..8033
+            IDENT@8030..8033 "acc"
         COLON@8033..8034 ":"
         WHITESPACE@8034..8035 " "
         TYPE_APPLICATION@8035..8042
@@ -3170,7 +3222,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@8119..8129
                 L_SQUARE@8119..8120 "["
                 PATTERN_VARIABLE@8120..8121
-                  IDENT@8120..8121 "a"
+                  NAME@8120..8121
+                    IDENT@8120..8121 "a"
                 COMMA@8121..8122 ","
                 WHITESPACE@8122..8123 " "
                 PATTERN_SPREAD@8123..8128
@@ -3184,7 +3237,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@8131..8140
                 L_SQUARE@8131..8132 "["
                 PATTERN_VARIABLE@8132..8133
-                  IDENT@8132..8133 "b"
+                  NAME@8132..8133
+                    IDENT@8132..8133 "b"
                 COMMA@8133..8134 ","
                 WHITESPACE@8134..8135 " "
                 PATTERN_SPREAD@8135..8139
@@ -3294,7 +3348,8 @@ SOURCE_FILE@0..45079
           IDENT@8473..8477 "over"
         WHITESPACE@8477..8478 " "
         PATTERN_VARIABLE@8478..8482
-          IDENT@8478..8482 "list"
+          NAME@8478..8482
+            IDENT@8478..8482 "list"
         COLON@8482..8483 ":"
         WHITESPACE@8483..8484 " "
         TYPE_APPLICATION@8484..8491
@@ -3315,7 +3370,8 @@ SOURCE_FILE@0..45079
           IDENT@8495..8499 "from"
         WHITESPACE@8499..8500 " "
         PATTERN_VARIABLE@8500..8503
-          IDENT@8500..8503 "acc"
+          NAME@8500..8503
+            IDENT@8500..8503 "acc"
         COLON@8503..8504 ":"
         WHITESPACE@8504..8505 " "
         TYPE_NAME_REF@8505..8508
@@ -3328,7 +3384,8 @@ SOURCE_FILE@0..45079
           IDENT@8512..8516 "with"
         WHITESPACE@8516..8517 " "
         PATTERN_VARIABLE@8517..8520
-          IDENT@8517..8520 "fun"
+          NAME@8517..8520
+            IDENT@8517..8520 "fun"
         COLON@8520..8521 ":"
         WHITESPACE@8521..8522 " "
         FN_TYPE@8522..8545
@@ -3438,12 +3495,14 @@ SOURCE_FILE@0..45079
                     L_PAREN@8628..8629 "("
                     PARAM@8629..8633
                       PATTERN_VARIABLE@8629..8632
-                        IDENT@8629..8632 "acc"
+                        NAME@8629..8632
+                          IDENT@8629..8632 "acc"
                       COMMA@8632..8633 ","
                     WHITESPACE@8633..8634 " "
                     PARAM@8634..8638
                       PATTERN_VARIABLE@8634..8638
-                        IDENT@8634..8638 "item"
+                        NAME@8634..8638
+                          IDENT@8634..8638 "item"
                     R_PAREN@8638..8639 ")"
                   WHITESPACE@8639..8640 " "
                   BLOCK@8640..8783
@@ -3456,11 +3515,13 @@ SOURCE_FILE@0..45079
                         HASH@8652..8653 "#"
                         L_PAREN@8653..8654 "("
                         PATTERN_VARIABLE@8654..8665
-                          IDENT@8654..8665 "current_acc"
+                          NAME@8654..8665
+                            IDENT@8654..8665 "current_acc"
                         COMMA@8665..8666 ","
                         WHITESPACE@8666..8667 " "
                         PATTERN_VARIABLE@8667..8672
-                          IDENT@8667..8672 "items"
+                          NAME@8667..8672
+                            IDENT@8667..8672 "items"
                         R_PAREN@8672..8673 ")"
                       WHITESPACE@8673..8674 " "
                       EQ@8674..8675 "="
@@ -3476,11 +3537,13 @@ SOURCE_FILE@0..45079
                         HASH@8690..8691 "#"
                         L_PAREN@8691..8692 "("
                         PATTERN_VARIABLE@8692..8700
-                          IDENT@8692..8700 "next_acc"
+                          NAME@8692..8700
+                            IDENT@8692..8700 "next_acc"
                         COMMA@8700..8701 ","
                         WHITESPACE@8701..8702 " "
                         PATTERN_VARIABLE@8702..8711
-                          IDENT@8702..8711 "next_item"
+                          NAME@8702..8711
+                            IDENT@8702..8711 "next_item"
                         R_PAREN@8711..8712 ")"
                       WHITESPACE@8712..8713 " "
                       EQ@8713..8714 "="
@@ -3562,7 +3625,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@8838..8841 "\n  "
       PARAM@8841..8855
         PATTERN_VARIABLE@8841..8845
-          IDENT@8841..8845 "list"
+          NAME@8841..8845
+            IDENT@8841..8845 "list"
         COLON@8845..8846 ":"
         WHITESPACE@8846..8847 " "
         TYPE_APPLICATION@8847..8854
@@ -3580,7 +3644,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@8855..8858 "\n  "
       PARAM@8858..8879
         PATTERN_VARIABLE@8858..8861
-          IDENT@8858..8861 "fun"
+          NAME@8858..8861
+            IDENT@8858..8861 "fun"
         COLON@8861..8862 ":"
         WHITESPACE@8862..8863 " "
         FN_TYPE@8863..8878
@@ -3606,7 +3671,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@8879..8882 "\n  "
       PARAM@8882..8893
         PATTERN_VARIABLE@8882..8887
-          IDENT@8882..8887 "index"
+          NAME@8882..8887
+            IDENT@8882..8887 "index"
         COLON@8887..8888 ":"
         WHITESPACE@8888..8889 " "
         TYPE_NAME_REF@8889..8892
@@ -3616,7 +3682,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@8893..8896 "\n  "
       PARAM@8896..8909
         PATTERN_VARIABLE@8896..8899
-          IDENT@8896..8899 "acc"
+          NAME@8896..8899
+            IDENT@8896..8899 "acc"
         COLON@8899..8900 ":"
         WHITESPACE@8900..8901 " "
         TYPE_APPLICATION@8901..8908
@@ -3686,7 +3753,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@8966..8975
                 L_SQUARE@8966..8967 "["
                 PATTERN_VARIABLE@8967..8968
-                  IDENT@8967..8968 "x"
+                  NAME@8967..8968
+                    IDENT@8967..8968 "x"
                 COMMA@8968..8969 ","
                 WHITESPACE@8969..8970 " "
                 PATTERN_SPREAD@8970..8974
@@ -3704,7 +3772,8 @@ SOURCE_FILE@0..45079
                 LET_KW@8987..8990 "let"
                 WHITESPACE@8990..8991 " "
                 PATTERN_VARIABLE@8991..8994
-                  IDENT@8991..8994 "acc"
+                  NAME@8991..8994
+                    IDENT@8991..8994 "acc"
                 WHITESPACE@8994..8995 " "
                 EQ@8995..8996 "="
                 WHITESPACE@8996..8997 " "
@@ -3816,7 +3885,8 @@ SOURCE_FILE@0..45079
       L_PAREN@9448..9449 "("
       PARAM@9449..9463
         PATTERN_VARIABLE@9449..9453
-          IDENT@9449..9453 "list"
+          NAME@9449..9453
+            IDENT@9449..9453 "list"
         COLON@9453..9454 ":"
         WHITESPACE@9454..9455 " "
         TYPE_APPLICATION@9455..9462
@@ -3837,7 +3907,8 @@ SOURCE_FILE@0..45079
           IDENT@9464..9468 "with"
         WHITESPACE@9468..9469 " "
         PATTERN_VARIABLE@9469..9472
-          IDENT@9469..9472 "fun"
+          NAME@9469..9472
+            IDENT@9469..9472 "fun"
         COLON@9472..9473 ":"
         WHITESPACE@9473..9474 " "
         FN_TYPE@9474..9489
@@ -3920,7 +3991,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@9554..9557 "\n  "
       PARAM@9557..9571
         PATTERN_VARIABLE@9557..9561
-          IDENT@9557..9561 "list"
+          NAME@9557..9561
+            IDENT@9557..9561 "list"
         COLON@9561..9562 ":"
         WHITESPACE@9562..9563 " "
         TYPE_APPLICATION@9563..9570
@@ -3938,7 +4010,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@9571..9574 "\n  "
       PARAM@9574..9601
         PATTERN_VARIABLE@9574..9577
-          IDENT@9574..9577 "fun"
+          NAME@9574..9577
+            IDENT@9574..9577 "fun"
         COLON@9577..9578 ":"
         WHITESPACE@9578..9579 " "
         FN_TYPE@9579..9600
@@ -3973,7 +4046,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@9601..9604 "\n  "
       PARAM@9604..9617
         PATTERN_VARIABLE@9604..9607
-          IDENT@9604..9607 "acc"
+          NAME@9604..9607
+            IDENT@9604..9607 "acc"
         COLON@9607..9608 ":"
         WHITESPACE@9608..9609 " "
         TYPE_APPLICATION@9609..9616
@@ -4065,7 +4139,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@9689..9698
                 L_SQUARE@9689..9690 "["
                 PATTERN_VARIABLE@9690..9691
-                  IDENT@9690..9691 "x"
+                  NAME@9690..9691
+                    IDENT@9690..9691 "x"
                 COMMA@9691..9692 ","
                 WHITESPACE@9692..9693 " "
                 PATTERN_SPREAD@9693..9697
@@ -4102,7 +4177,8 @@ SOURCE_FILE@0..45079
                       L_PAREN@9732..9733 "("
                       VARIANT_REF_FIELD@9733..9734
                         PATTERN_VARIABLE@9733..9734
-                          IDENT@9733..9734 "y"
+                          NAME@9733..9734
+                            IDENT@9733..9734 "y"
                       R_PAREN@9734..9735 ")"
                 WHITESPACE@9735..9736 " "
                 R_ARROW@9736..9738 "->"
@@ -4150,7 +4226,8 @@ SOURCE_FILE@0..45079
                       L_PAREN@9784..9785 "("
                       VARIANT_REF_FIELD@9785..9790
                         PATTERN_VARIABLE@9785..9790
-                          IDENT@9785..9790 "error"
+                          NAME@9785..9790
+                            IDENT@9785..9790 "error"
                       R_PAREN@9790..9791 ")"
                 WHITESPACE@9791..9792 " "
                 R_ARROW@9792..9794 "->"
@@ -4252,7 +4329,8 @@ SOURCE_FILE@0..45079
           IDENT@10609..10613 "over"
         WHITESPACE@10613..10614 " "
         PATTERN_VARIABLE@10614..10618
-          IDENT@10614..10618 "list"
+          NAME@10614..10618
+            IDENT@10614..10618 "list"
         COLON@10618..10619 ":"
         WHITESPACE@10619..10620 " "
         TYPE_APPLICATION@10620..10627
@@ -4273,7 +4351,8 @@ SOURCE_FILE@0..45079
           IDENT@10631..10635 "with"
         WHITESPACE@10635..10636 " "
         PATTERN_VARIABLE@10636..10639
-          IDENT@10636..10639 "fun"
+          NAME@10636..10639
+            IDENT@10636..10639 "fun"
         COLON@10639..10640 ":"
         WHITESPACE@10640..10641 " "
         FN_TYPE@10641..10662
@@ -4420,7 +4499,8 @@ SOURCE_FILE@0..45079
           IDENT@11164..11168 "from"
         WHITESPACE@11168..11169 " "
         PATTERN_VARIABLE@11169..11173
-          IDENT@11169..11173 "list"
+          NAME@11169..11173
+            IDENT@11169..11173 "list"
         COLON@11173..11174 ":"
         WHITESPACE@11174..11175 " "
         TYPE_APPLICATION@11175..11182
@@ -4441,7 +4521,8 @@ SOURCE_FILE@0..45079
           IDENT@11184..11189 "up_to"
         WHITESPACE@11189..11190 " "
         PATTERN_VARIABLE@11190..11191
-          IDENT@11190..11191 "n"
+          NAME@11190..11191
+            IDENT@11190..11191 "n"
         COLON@11191..11192 ":"
         WHITESPACE@11192..11193 " "
         TYPE_NAME_REF@11193..11196
@@ -4576,7 +4657,8 @@ SOURCE_FILE@0..45079
       L_PAREN@11354..11355 "("
       PARAM@11355..11369
         PATTERN_VARIABLE@11355..11359
-          IDENT@11355..11359 "list"
+          NAME@11355..11359
+            IDENT@11355..11359 "list"
         COLON@11359..11360 ":"
         WHITESPACE@11360..11361 " "
         TYPE_APPLICATION@11361..11368
@@ -4594,7 +4676,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@11369..11370 " "
       PARAM@11370..11377
         PATTERN_VARIABLE@11370..11371
-          IDENT@11370..11371 "n"
+          NAME@11370..11371
+            IDENT@11370..11371 "n"
         COLON@11371..11372 ":"
         WHITESPACE@11372..11373 " "
         TYPE_NAME_REF@11373..11376
@@ -4604,7 +4687,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@11377..11378 " "
       PARAM@11378..11390
         PATTERN_VARIABLE@11378..11381
-          IDENT@11378..11381 "acc"
+          NAME@11378..11381
+            IDENT@11378..11381 "acc"
         COLON@11381..11382 ":"
         WHITESPACE@11382..11383 " "
         TYPE_APPLICATION@11383..11390
@@ -4713,7 +4797,8 @@ SOURCE_FILE@0..45079
                   PATTERN_LIST@11512..11521
                     L_SQUARE@11512..11513 "["
                     PATTERN_VARIABLE@11513..11514
-                      IDENT@11513..11514 "x"
+                      NAME@11513..11514
+                        IDENT@11513..11514 "x"
                     COMMA@11514..11515 ","
                     WHITESPACE@11515..11516 " "
                     PATTERN_SPREAD@11516..11520
@@ -4824,7 +4909,8 @@ SOURCE_FILE@0..45079
           IDENT@11997..12001 "from"
         WHITESPACE@12001..12002 " "
         PATTERN_VARIABLE@12002..12006
-          IDENT@12002..12006 "list"
+          NAME@12002..12006
+            IDENT@12002..12006 "list"
         COLON@12006..12007 ":"
         WHITESPACE@12007..12008 " "
         TYPE_APPLICATION@12008..12015
@@ -4845,7 +4931,8 @@ SOURCE_FILE@0..45079
           IDENT@12017..12022 "up_to"
         WHITESPACE@12022..12023 " "
         PATTERN_VARIABLE@12023..12024
-          IDENT@12023..12024 "n"
+          NAME@12023..12024
+            IDENT@12023..12024 "n"
         COLON@12024..12025 ":"
         WHITESPACE@12025..12026 " "
         TYPE_NAME_REF@12026..12029
@@ -4985,7 +5072,8 @@ SOURCE_FILE@0..45079
       L_PAREN@12439..12440 "("
       PARAM@12440..12455
         PATTERN_VARIABLE@12440..12445
-          IDENT@12440..12445 "first"
+          NAME@12440..12445
+            IDENT@12440..12445 "first"
         COLON@12445..12446 ":"
         WHITESPACE@12446..12447 " "
         TYPE_APPLICATION@12447..12454
@@ -5003,7 +5091,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@12455..12456 " "
       PARAM@12456..12471
         PATTERN_VARIABLE@12456..12462
-          IDENT@12456..12462 "second"
+          NAME@12456..12462
+            IDENT@12456..12462 "second"
         COLON@12462..12463 ":"
         WHITESPACE@12463..12464 " "
         TYPE_APPLICATION@12464..12471
@@ -5086,7 +5175,8 @@ SOURCE_FILE@0..45079
       L_PAREN@12581..12582 "("
       PARAM@12582..12593
         PATTERN_VARIABLE@12582..12583
-          IDENT@12582..12583 "a"
+          NAME@12582..12583
+            IDENT@12582..12583 "a"
         COLON@12583..12584 ":"
         WHITESPACE@12584..12585 " "
         TYPE_APPLICATION@12585..12592
@@ -5104,7 +5194,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@12593..12594 " "
       PARAM@12594..12604
         PATTERN_VARIABLE@12594..12595
-          IDENT@12594..12595 "b"
+          NAME@12594..12595
+            IDENT@12594..12595 "b"
         COLON@12595..12596 ":"
         WHITESPACE@12596..12597 " "
         TYPE_APPLICATION@12597..12604
@@ -5150,7 +5241,8 @@ SOURCE_FILE@0..45079
       L_PAREN@12650..12651 "("
       PARAM@12651..12666
         PATTERN_VARIABLE@12651..12656
-          IDENT@12651..12656 "first"
+          NAME@12651..12656
+            IDENT@12651..12656 "first"
         COLON@12656..12657 ":"
         WHITESPACE@12657..12658 " "
         TYPE_APPLICATION@12658..12665
@@ -5168,7 +5260,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@12666..12667 " "
       PARAM@12667..12682
         PATTERN_VARIABLE@12667..12673
-          IDENT@12667..12673 "second"
+          NAME@12667..12673
+            IDENT@12667..12673 "second"
         COLON@12673..12674 ":"
         WHITESPACE@12674..12675 " "
         TYPE_APPLICATION@12675..12682
@@ -5246,7 +5339,8 @@ SOURCE_FILE@0..45079
       L_PAREN@12776..12777 "("
       PARAM@12777..12792
         PATTERN_VARIABLE@12777..12782
-          IDENT@12777..12782 "first"
+          NAME@12777..12782
+            IDENT@12777..12782 "first"
         COLON@12782..12783 ":"
         WHITESPACE@12783..12784 " "
         TYPE_APPLICATION@12784..12791
@@ -5264,7 +5358,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@12792..12793 " "
       PARAM@12793..12808
         PATTERN_VARIABLE@12793..12799
-          IDENT@12793..12799 "second"
+          NAME@12793..12799
+            IDENT@12793..12799 "second"
         COLON@12799..12800 ":"
         WHITESPACE@12800..12801 " "
         TYPE_APPLICATION@12801..12808
@@ -5324,7 +5419,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@12859..12873
                 L_SQUARE@12859..12860 "["
                 PATTERN_VARIABLE@12860..12864
-                  IDENT@12860..12864 "item"
+                  NAME@12860..12864
+                    IDENT@12860..12864 "item"
                 COMMA@12864..12865 ","
                 WHITESPACE@12865..12866 " "
                 PATTERN_SPREAD@12866..12872
@@ -5395,7 +5491,8 @@ SOURCE_FILE@0..45079
           IDENT@13099..13101 "to"
         WHITESPACE@13101..13102 " "
         PATTERN_VARIABLE@13102..13106
-          IDENT@13102..13106 "list"
+          NAME@13102..13106
+            IDENT@13102..13106 "list"
         COLON@13106..13107 ":"
         WHITESPACE@13107..13108 " "
         TYPE_APPLICATION@13108..13115
@@ -5416,7 +5513,8 @@ SOURCE_FILE@0..45079
           IDENT@13117..13121 "this"
         WHITESPACE@13121..13122 " "
         PATTERN_VARIABLE@13122..13126
-          IDENT@13122..13126 "item"
+          NAME@13122..13126
+            IDENT@13122..13126 "item"
         COLON@13126..13127 ":"
         WHITESPACE@13127..13128 " "
         TYPE_NAME_REF@13128..13129
@@ -5472,7 +5570,8 @@ SOURCE_FILE@0..45079
           IDENT@13238..13242 "list"
         WHITESPACE@13242..13243 " "
         PATTERN_VARIABLE@13243..13249
-          IDENT@13243..13249 "prefix"
+          NAME@13243..13249
+            IDENT@13243..13249 "prefix"
         COLON@13249..13250 ":"
         WHITESPACE@13250..13251 " "
         TYPE_APPLICATION@13251..13258
@@ -5493,7 +5592,8 @@ SOURCE_FILE@0..45079
           IDENT@13260..13262 "to"
         WHITESPACE@13262..13263 " "
         PATTERN_VARIABLE@13263..13269
-          IDENT@13263..13269 "suffix"
+          NAME@13263..13269
+            IDENT@13263..13269 "suffix"
         COLON@13269..13270 ":"
         WHITESPACE@13270..13271 " "
         TYPE_APPLICATION@13271..13278
@@ -5553,7 +5653,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@13330..13345
                 L_SQUARE@13330..13331 "["
                 PATTERN_VARIABLE@13331..13336
-                  IDENT@13331..13336 "first"
+                  NAME@13331..13336
+                    IDENT@13331..13336 "first"
                 COMMA@13336..13337 ","
                 WHITESPACE@13337..13338 " "
                 PATTERN_SPREAD@13338..13344
@@ -5613,7 +5714,8 @@ SOURCE_FILE@0..45079
       L_PAREN@13423..13424 "("
       PARAM@13424..13445
         PATTERN_VARIABLE@13424..13429
-          IDENT@13424..13429 "lists"
+          NAME@13424..13429
+            IDENT@13424..13429 "lists"
         COLON@13429..13430 ":"
         WHITESPACE@13430..13431 " "
         TYPE_APPLICATION@13431..13444
@@ -5639,7 +5741,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@13445..13446 " "
       PARAM@13446..13458
         PATTERN_VARIABLE@13446..13449
-          IDENT@13446..13449 "acc"
+          NAME@13446..13449
+            IDENT@13446..13449 "acc"
         COLON@13449..13450 ":"
         WHITESPACE@13450..13451 " "
         TYPE_APPLICATION@13451..13458
@@ -5707,7 +5810,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@13515..13538
                 L_SQUARE@13515..13516 "["
                 PATTERN_VARIABLE@13516..13520
-                  IDENT@13516..13520 "list"
+                  NAME@13516..13520
+                    IDENT@13516..13520 "list"
                 COMMA@13520..13521 ","
                 WHITESPACE@13521..13522 " "
                 PATTERN_SPREAD@13522..13537
@@ -5795,7 +5899,8 @@ SOURCE_FILE@0..45079
       L_PAREN@13828..13829 "("
       PARAM@13829..13849
         PATTERN_VARIABLE@13829..13834
-          IDENT@13829..13834 "lists"
+          NAME@13829..13834
+            IDENT@13829..13834 "lists"
         COLON@13834..13835 ":"
         WHITESPACE@13835..13836 " "
         TYPE_APPLICATION@13836..13849
@@ -5872,7 +5977,8 @@ SOURCE_FILE@0..45079
       L_PAREN@14017..14018 "("
       PARAM@14018..14038
         PATTERN_VARIABLE@14018..14023
-          IDENT@14018..14023 "lists"
+          NAME@14018..14023
+            IDENT@14018..14023 "lists"
         COLON@14023..14024 ":"
         WHITESPACE@14024..14025 " "
         TYPE_APPLICATION@14025..14038
@@ -5966,7 +6072,8 @@ SOURCE_FILE@0..45079
           IDENT@14301..14305 "over"
         WHITESPACE@14305..14306 " "
         PATTERN_VARIABLE@14306..14310
-          IDENT@14306..14310 "list"
+          NAME@14306..14310
+            IDENT@14306..14310 "list"
         COLON@14310..14311 ":"
         WHITESPACE@14311..14312 " "
         TYPE_APPLICATION@14312..14319
@@ -5987,7 +6094,8 @@ SOURCE_FILE@0..45079
           IDENT@14321..14325 "with"
         WHITESPACE@14325..14326 " "
         PATTERN_VARIABLE@14326..14329
-          IDENT@14326..14329 "fun"
+          NAME@14326..14329
+            IDENT@14326..14329 "fun"
         COLON@14329..14330 ":"
         WHITESPACE@14330..14331 " "
         FN_TYPE@14331..14347
@@ -6090,7 +6198,8 @@ SOURCE_FILE@0..45079
           IDENT@14670..14674 "over"
         WHITESPACE@14674..14675 " "
         PATTERN_VARIABLE@14675..14679
-          IDENT@14675..14679 "list"
+          NAME@14675..14679
+            IDENT@14675..14679 "list"
         COLON@14679..14680 ":"
         WHITESPACE@14680..14681 " "
         TYPE_APPLICATION@14681..14688
@@ -6111,7 +6220,8 @@ SOURCE_FILE@0..45079
           IDENT@14692..14696 "from"
         WHITESPACE@14696..14697 " "
         PATTERN_VARIABLE@14697..14704
-          IDENT@14697..14704 "initial"
+          NAME@14697..14704
+            IDENT@14697..14704 "initial"
         COLON@14704..14705 ":"
         WHITESPACE@14705..14706 " "
         TYPE_NAME_REF@14706..14709
@@ -6124,7 +6234,8 @@ SOURCE_FILE@0..45079
           IDENT@14713..14717 "with"
         WHITESPACE@14717..14718 " "
         PATTERN_VARIABLE@14718..14721
-          IDENT@14718..14721 "fun"
+          NAME@14718..14721
+            IDENT@14718..14721 "fun"
         COLON@14721..14722 ":"
         WHITESPACE@14722..14723 " "
         FN_TYPE@14723..14740
@@ -6186,7 +6297,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@14789..14800
                 L_SQUARE@14789..14790 "["
                 PATTERN_VARIABLE@14790..14791
-                  IDENT@14790..14791 "x"
+                  NAME@14790..14791
+                    IDENT@14790..14791 "x"
                 COMMA@14791..14792 ","
                 WHITESPACE@14792..14793 " "
                 PATTERN_SPREAD@14793..14799
@@ -6276,7 +6388,8 @@ SOURCE_FILE@0..45079
           IDENT@15257..15261 "over"
         WHITESPACE@15261..15262 " "
         PATTERN_VARIABLE@15262..15266
-          IDENT@15262..15266 "list"
+          NAME@15262..15266
+            IDENT@15262..15266 "list"
         COLON@15266..15267 ":"
         WHITESPACE@15267..15268 " "
         TYPE_APPLICATION@15268..15275
@@ -6297,7 +6410,8 @@ SOURCE_FILE@0..45079
           IDENT@15279..15283 "from"
         WHITESPACE@15283..15284 " "
         PATTERN_VARIABLE@15284..15291
-          IDENT@15284..15291 "initial"
+          NAME@15284..15291
+            IDENT@15284..15291 "initial"
         COLON@15291..15292 ":"
         WHITESPACE@15292..15293 " "
         TYPE_NAME_REF@15293..15296
@@ -6310,7 +6424,8 @@ SOURCE_FILE@0..45079
           IDENT@15300..15304 "with"
         WHITESPACE@15304..15305 " "
         PATTERN_VARIABLE@15305..15308
-          IDENT@15305..15308 "fun"
+          NAME@15305..15308
+            IDENT@15305..15308 "fun"
         COLON@15308..15309 ":"
         WHITESPACE@15309..15310 " "
         FN_TYPE@15310..15327
@@ -6372,7 +6487,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@15376..15387
                 L_SQUARE@15376..15377 "["
                 PATTERN_VARIABLE@15377..15378
-                  IDENT@15377..15378 "x"
+                  NAME@15377..15378
+                    IDENT@15377..15378 "x"
                 COMMA@15378..15379 ","
                 WHITESPACE@15379..15380 " "
                 PATTERN_SPREAD@15380..15386
@@ -6435,7 +6551,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@15454..15457 "\n  "
       PARAM@15457..15471
         PATTERN_VARIABLE@15457..15461
-          IDENT@15457..15461 "over"
+          NAME@15457..15461
+            IDENT@15457..15461 "over"
         COLON@15461..15462 ":"
         WHITESPACE@15462..15463 " "
         TYPE_APPLICATION@15463..15470
@@ -6453,7 +6570,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@15471..15474 "\n  "
       PARAM@15474..15483
         PATTERN_VARIABLE@15474..15477
-          IDENT@15474..15477 "acc"
+          NAME@15474..15477
+            IDENT@15474..15477 "acc"
         COLON@15477..15478 ":"
         WHITESPACE@15478..15479 " "
         TYPE_NAME_REF@15479..15482
@@ -6463,7 +6581,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@15483..15486 "\n  "
       PARAM@15486..15515
         PATTERN_VARIABLE@15486..15490
-          IDENT@15486..15490 "with"
+          NAME@15486..15490
+            IDENT@15486..15490 "with"
         COLON@15490..15491 ":"
         WHITESPACE@15491..15492 " "
         FN_TYPE@15492..15514
@@ -6494,7 +6613,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@15515..15518 "\n  "
       PARAM@15518..15529
         PATTERN_VARIABLE@15518..15523
-          IDENT@15518..15523 "index"
+          NAME@15518..15523
+            IDENT@15518..15523 "index"
         COLON@15523..15524 ":"
         WHITESPACE@15524..15525 " "
         TYPE_NAME_REF@15525..15528
@@ -6540,7 +6660,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@15573..15588
                 L_SQUARE@15573..15574 "["
                 PATTERN_VARIABLE@15574..15579
-                  IDENT@15574..15579 "first"
+                  NAME@15574..15579
+                    IDENT@15574..15579 "first"
                 COMMA@15579..15580 ","
                 WHITESPACE@15580..15581 " "
                 PATTERN_SPREAD@15581..15587
@@ -6644,7 +6765,8 @@ SOURCE_FILE@0..45079
           IDENT@15896..15900 "over"
         WHITESPACE@15900..15901 " "
         PATTERN_VARIABLE@15901..15905
-          IDENT@15901..15905 "over"
+          NAME@15901..15905
+            IDENT@15901..15905 "over"
         COLON@15905..15906 ":"
         WHITESPACE@15906..15907 " "
         TYPE_APPLICATION@15907..15914
@@ -6665,7 +6787,8 @@ SOURCE_FILE@0..45079
           IDENT@15918..15922 "from"
         WHITESPACE@15922..15923 " "
         PATTERN_VARIABLE@15923..15930
-          IDENT@15923..15930 "initial"
+          NAME@15923..15930
+            IDENT@15923..15930 "initial"
         COLON@15930..15931 ":"
         WHITESPACE@15931..15932 " "
         TYPE_NAME_REF@15932..15935
@@ -6678,7 +6801,8 @@ SOURCE_FILE@0..45079
           IDENT@15939..15943 "with"
         WHITESPACE@15943..15944 " "
         PATTERN_VARIABLE@15944..15947
-          IDENT@15944..15947 "fun"
+          NAME@15944..15947
+            IDENT@15944..15947 "fun"
         COLON@15947..15948 ":"
         WHITESPACE@15948..15949 " "
         FN_TYPE@15949..15971
@@ -6801,7 +6925,8 @@ SOURCE_FILE@0..45079
           IDENT@16524..16528 "over"
         WHITESPACE@16528..16529 " "
         PATTERN_VARIABLE@16529..16539
-          IDENT@16529..16539 "collection"
+          NAME@16529..16539
+            IDENT@16529..16539 "collection"
         COLON@16539..16540 ":"
         WHITESPACE@16540..16541 " "
         TYPE_APPLICATION@16541..16548
@@ -6822,7 +6947,8 @@ SOURCE_FILE@0..45079
           IDENT@16552..16556 "from"
         WHITESPACE@16556..16557 " "
         PATTERN_VARIABLE@16557..16568
-          IDENT@16557..16568 "accumulator"
+          NAME@16557..16568
+            IDENT@16557..16568 "accumulator"
         COLON@16568..16569 ":"
         WHITESPACE@16569..16570 " "
         TYPE_NAME_REF@16570..16573
@@ -6835,7 +6961,8 @@ SOURCE_FILE@0..45079
           IDENT@16577..16581 "with"
         WHITESPACE@16581..16582 " "
         PATTERN_VARIABLE@16582..16585
-          IDENT@16582..16585 "fun"
+          NAME@16582..16585
+            IDENT@16582..16585 "fun"
         COLON@16585..16586 ":"
         WHITESPACE@16586..16587 " "
         FN_TYPE@16587..16615
@@ -6933,7 +7060,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@16689..16704
                 L_SQUARE@16689..16690 "["
                 PATTERN_VARIABLE@16690..16695
-                  IDENT@16690..16695 "first"
+                  NAME@16690..16695
+                    IDENT@16690..16695 "first"
                 COMMA@16695..16696 ","
                 WHITESPACE@16696..16697 " "
                 PATTERN_SPREAD@16697..16703
@@ -6976,7 +7104,8 @@ SOURCE_FILE@0..45079
                       L_PAREN@16755..16756 "("
                       VARIANT_REF_FIELD@16756..16762
                         PATTERN_VARIABLE@16756..16762
-                          IDENT@16756..16762 "result"
+                          NAME@16756..16762
+                            IDENT@16756..16762 "result"
                       R_PAREN@16762..16763 ")"
                 WHITESPACE@16763..16764 " "
                 R_ARROW@16764..16766 "->"
@@ -7021,7 +7150,8 @@ SOURCE_FILE@0..45079
                     AS_KW@16812..16814 "as"
                     WHITESPACE@16814..16815 " "
                     PATTERN_VARIABLE@16815..16820
-                      IDENT@16815..16820 "error"
+                      NAME@16815..16820
+                        IDENT@16815..16820 "error"
                 WHITESPACE@16820..16821 " "
                 R_ARROW@16821..16823 "->"
                 WHITESPACE@16823..16824 " "
@@ -7126,7 +7256,8 @@ SOURCE_FILE@0..45079
           IDENT@17450..17454 "over"
         WHITESPACE@17454..17455 " "
         PATTERN_VARIABLE@17455..17465
-          IDENT@17455..17465 "collection"
+          NAME@17455..17465
+            IDENT@17455..17465 "collection"
         COLON@17465..17466 ":"
         WHITESPACE@17466..17467 " "
         TYPE_APPLICATION@17467..17474
@@ -7147,7 +7278,8 @@ SOURCE_FILE@0..45079
           IDENT@17478..17482 "from"
         WHITESPACE@17482..17483 " "
         PATTERN_VARIABLE@17483..17494
-          IDENT@17483..17494 "accumulator"
+          NAME@17483..17494
+            IDENT@17483..17494 "accumulator"
         COLON@17494..17495 ":"
         WHITESPACE@17495..17496 " "
         TYPE_NAME_REF@17496..17499
@@ -7160,7 +7292,8 @@ SOURCE_FILE@0..45079
           IDENT@17503..17507 "with"
         WHITESPACE@17507..17508 " "
         PATTERN_VARIABLE@17508..17511
-          IDENT@17508..17511 "fun"
+          NAME@17508..17511
+            IDENT@17508..17511 "fun"
         COLON@17511..17512 ":"
         WHITESPACE@17512..17513 " "
         FN_TYPE@17513..17546
@@ -7230,7 +7363,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@17605..17620
                 L_SQUARE@17605..17606 "["
                 PATTERN_VARIABLE@17606..17611
-                  IDENT@17606..17611 "first"
+                  NAME@17606..17611
+                    IDENT@17606..17611 "first"
                 COMMA@17611..17612 ","
                 WHITESPACE@17612..17613 " "
                 PATTERN_SPREAD@17613..17619
@@ -7273,7 +7407,8 @@ SOURCE_FILE@0..45079
                       L_PAREN@17677..17678 "("
                       VARIANT_REF_FIELD@17678..17694
                         PATTERN_VARIABLE@17678..17694
-                          IDENT@17678..17694 "next_accumulator"
+                          NAME@17678..17694
+                            IDENT@17678..17694 "next_accumulator"
                       R_PAREN@17694..17695 ")"
                 WHITESPACE@17695..17696 " "
                 R_ARROW@17696..17698 "->"
@@ -7311,7 +7446,8 @@ SOURCE_FILE@0..45079
                       L_PAREN@17751..17752 "("
                       VARIANT_REF_FIELD@17752..17753
                         PATTERN_VARIABLE@17752..17753
-                          IDENT@17752..17753 "b"
+                          NAME@17752..17753
+                            IDENT@17752..17753 "b"
                       R_PAREN@17753..17754 ")"
                 WHITESPACE@17754..17755 " "
                 R_ARROW@17755..17757 "->"
@@ -7385,7 +7521,8 @@ SOURCE_FILE@0..45079
           IDENT@18189..18191 "in"
         WHITESPACE@18191..18192 " "
         PATTERN_VARIABLE@18192..18200
-          IDENT@18192..18200 "haystack"
+          NAME@18192..18200
+            IDENT@18192..18200 "haystack"
         COLON@18200..18201 ":"
         WHITESPACE@18201..18202 " "
         TYPE_APPLICATION@18202..18209
@@ -7406,7 +7543,8 @@ SOURCE_FILE@0..45079
           IDENT@18213..18221 "one_that"
         WHITESPACE@18221..18222 " "
         PATTERN_VARIABLE@18222..18232
-          IDENT@18222..18232 "is_desired"
+          NAME@18222..18232
+            IDENT@18222..18232 "is_desired"
         COLON@18232..18233 ":"
         WHITESPACE@18233..18234 " "
         FN_TYPE@18234..18247
@@ -7485,7 +7623,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@18314..18325
                 L_SQUARE@18314..18315 "["
                 PATTERN_VARIABLE@18315..18316
-                  IDENT@18315..18316 "x"
+                  NAME@18315..18316
+                    IDENT@18315..18316 "x"
                 COMMA@18316..18317 ","
                 WHITESPACE@18317..18318 " "
                 PATTERN_SPREAD@18318..18324
@@ -7630,7 +7769,8 @@ SOURCE_FILE@0..45079
           IDENT@18895..18897 "in"
         WHITESPACE@18897..18898 " "
         PATTERN_VARIABLE@18898..18906
-          IDENT@18898..18906 "haystack"
+          NAME@18898..18906
+            IDENT@18898..18906 "haystack"
         COLON@18906..18907 ":"
         WHITESPACE@18907..18908 " "
         TYPE_APPLICATION@18908..18915
@@ -7651,7 +7791,8 @@ SOURCE_FILE@0..45079
           IDENT@18919..18923 "with"
         WHITESPACE@18923..18924 " "
         PATTERN_VARIABLE@18924..18927
-          IDENT@18924..18927 "fun"
+          NAME@18924..18927
+            IDENT@18924..18927 "fun"
         COLON@18927..18928 ":"
         WHITESPACE@18928..18929 " "
         FN_TYPE@18929..18950
@@ -7744,7 +7885,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@19017..19028
                 L_SQUARE@19017..19018 "["
                 PATTERN_VARIABLE@19018..19019
-                  IDENT@19018..19019 "x"
+                  NAME@19018..19019
+                    IDENT@19018..19019 "x"
                 COMMA@19019..19020 ","
                 WHITESPACE@19020..19021 " "
                 PATTERN_SPREAD@19021..19027
@@ -7781,7 +7923,8 @@ SOURCE_FILE@0..45079
                       L_PAREN@19062..19063 "("
                       VARIANT_REF_FIELD@19063..19064
                         PATTERN_VARIABLE@19063..19064
-                          IDENT@19063..19064 "x"
+                          NAME@19063..19064
+                            IDENT@19063..19064 "x"
                       R_PAREN@19064..19065 ")"
                 WHITESPACE@19065..19066 " "
                 R_ARROW@19066..19068 "->"
@@ -7893,7 +8036,8 @@ SOURCE_FILE@0..45079
           IDENT@19602..19604 "in"
         WHITESPACE@19604..19605 " "
         PATTERN_VARIABLE@19605..19609
-          IDENT@19605..19609 "list"
+          NAME@19605..19609
+            IDENT@19605..19609 "list"
         COLON@19609..19610 ":"
         WHITESPACE@19610..19611 " "
         TYPE_APPLICATION@19611..19618
@@ -7914,7 +8058,8 @@ SOURCE_FILE@0..45079
           IDENT@19620..19630 "satisfying"
         WHITESPACE@19630..19631 " "
         PATTERN_VARIABLE@19631..19640
-          IDENT@19631..19640 "predicate"
+          NAME@19631..19640
+            IDENT@19631..19640 "predicate"
         COLON@19640..19641 ":"
         WHITESPACE@19641..19642 " "
         FN_TYPE@19642..19655
@@ -7968,7 +8113,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@19700..19715
                 L_SQUARE@19700..19701 "["
                 PATTERN_VARIABLE@19701..19706
-                  IDENT@19701..19706 "first"
+                  NAME@19701..19706
+                    IDENT@19701..19706 "first"
                 COMMA@19706..19707 ","
                 WHITESPACE@19707..19708 " "
                 PATTERN_SPREAD@19708..19714
@@ -8103,7 +8249,8 @@ SOURCE_FILE@0..45079
           IDENT@20361..20363 "in"
         WHITESPACE@20363..20364 " "
         PATTERN_VARIABLE@20364..20368
-          IDENT@20364..20368 "list"
+          NAME@20364..20368
+            IDENT@20364..20368 "list"
         COLON@20368..20369 ":"
         WHITESPACE@20369..20370 " "
         TYPE_APPLICATION@20370..20377
@@ -8124,7 +8271,8 @@ SOURCE_FILE@0..45079
           IDENT@20379..20389 "satisfying"
         WHITESPACE@20389..20390 " "
         PATTERN_VARIABLE@20390..20399
-          IDENT@20390..20399 "predicate"
+          NAME@20390..20399
+            IDENT@20390..20399 "predicate"
         COLON@20399..20400 ":"
         WHITESPACE@20400..20401 " "
         FN_TYPE@20401..20414
@@ -8178,7 +8326,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@20460..20475
                 L_SQUARE@20460..20461 "["
                 PATTERN_VARIABLE@20461..20466
-                  IDENT@20461..20466 "first"
+                  NAME@20461..20466
+                    IDENT@20461..20466 "first"
                 COMMA@20466..20467 ","
                 WHITESPACE@20467..20468 " "
                 PATTERN_SPREAD@20468..20474
@@ -8256,7 +8405,8 @@ SOURCE_FILE@0..45079
       L_PAREN@20592..20593 "("
       PARAM@20593..20605
         PATTERN_VARIABLE@20593..20595
-          IDENT@20593..20595 "xs"
+          NAME@20593..20595
+            IDENT@20593..20595 "xs"
         COLON@20595..20596 ":"
         WHITESPACE@20596..20597 " "
         TYPE_APPLICATION@20597..20604
@@ -8274,7 +8424,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@20605..20606 " "
       PARAM@20606..20618
         PATTERN_VARIABLE@20606..20608
-          IDENT@20606..20608 "ys"
+          NAME@20606..20608
+            IDENT@20606..20608 "ys"
         COLON@20608..20609 ":"
         WHITESPACE@20609..20610 " "
         TYPE_APPLICATION@20610..20617
@@ -8292,7 +8443,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@20618..20619 " "
       PARAM@20619..20637
         PATTERN_VARIABLE@20619..20622
-          IDENT@20619..20622 "acc"
+          NAME@20619..20622
+            IDENT@20619..20622 "acc"
         COLON@20622..20623 ":"
         WHITESPACE@20623..20624 " "
         TYPE_APPLICATION@20624..20637
@@ -8363,7 +8515,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@20678..20687
                 L_SQUARE@20678..20679 "["
                 PATTERN_VARIABLE@20679..20680
-                  IDENT@20679..20680 "x"
+                  NAME@20679..20680
+                    IDENT@20679..20680 "x"
                 COMMA@20680..20681 ","
                 WHITESPACE@20681..20682 " "
                 PATTERN_SPREAD@20682..20686
@@ -8377,7 +8530,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@20689..20698
                 L_SQUARE@20689..20690 "["
                 PATTERN_VARIABLE@20690..20691
-                  IDENT@20690..20691 "y"
+                  NAME@20690..20691
+                    IDENT@20690..20691 "y"
                 COMMA@20691..20692 ","
                 WHITESPACE@20692..20693 " "
                 PATTERN_SPREAD@20693..20697
@@ -8524,7 +8678,8 @@ SOURCE_FILE@0..45079
       L_PAREN@21232..21233 "("
       PARAM@21233..21247
         PATTERN_VARIABLE@21233..21237
-          IDENT@21233..21237 "list"
+          NAME@21233..21237
+            IDENT@21233..21237 "list"
         COLON@21237..21238 ":"
         WHITESPACE@21238..21239 " "
         TYPE_APPLICATION@21239..21246
@@ -8545,7 +8700,8 @@ SOURCE_FILE@0..45079
           IDENT@21248..21252 "with"
         WHITESPACE@21252..21253 " "
         PATTERN_VARIABLE@21253..21258
-          IDENT@21253..21258 "other"
+          NAME@21253..21258
+            IDENT@21253..21258 "other"
         COLON@21258..21259 ":"
         WHITESPACE@21259..21260 " "
         TYPE_APPLICATION@21260..21267
@@ -8678,7 +8834,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@21812..21815 "\n  "
       PARAM@21815..21829
         PATTERN_VARIABLE@21815..21819
-          IDENT@21815..21819 "list"
+          NAME@21815..21819
+            IDENT@21815..21819 "list"
         COLON@21819..21820 ":"
         WHITESPACE@21820..21821 " "
         TYPE_APPLICATION@21821..21828
@@ -8699,7 +8856,8 @@ SOURCE_FILE@0..45079
           IDENT@21832..21836 "with"
         WHITESPACE@21836..21837 " "
         PATTERN_VARIABLE@21837..21842
-          IDENT@21837..21842 "other"
+          NAME@21837..21842
+            IDENT@21837..21842 "other"
         COLON@21842..21843 ":"
         WHITESPACE@21843..21844 " "
         TYPE_APPLICATION@21844..21851
@@ -8863,17 +9021,20 @@ SOURCE_FILE@0..45079
       L_PAREN@22031..22032 "("
       PARAM@22032..22038
         PATTERN_VARIABLE@22032..22037
-          IDENT@22032..22037 "input"
+          NAME@22032..22037
+            IDENT@22032..22037 "input"
         COMMA@22037..22038 ","
       WHITESPACE@22038..22039 " "
       PARAM@22039..22042
         PATTERN_VARIABLE@22039..22041
-          IDENT@22039..22041 "xs"
+          NAME@22039..22041
+            IDENT@22039..22041 "xs"
         COMMA@22041..22042 ","
       WHITESPACE@22042..22043 " "
       PARAM@22043..22045
         PATTERN_VARIABLE@22043..22045
-          IDENT@22043..22045 "ys"
+          NAME@22043..22045
+            IDENT@22043..22045 "ys"
       R_PAREN@22045..22046 ")"
     WHITESPACE@22046..22047 " "
     BLOCK@22047..22169
@@ -8934,11 +9095,13 @@ SOURCE_FILE@0..45079
                   HASH@22107..22108 "#"
                   L_PAREN@22108..22109 "("
                   PATTERN_VARIABLE@22109..22110
-                    IDENT@22109..22110 "x"
+                    NAME@22109..22110
+                      IDENT@22109..22110 "x"
                   COMMA@22110..22111 ","
                   WHITESPACE@22111..22112 " "
                   PATTERN_VARIABLE@22112..22113
-                    IDENT@22112..22113 "y"
+                    NAME@22112..22113
+                      IDENT@22112..22113 "y"
                   R_PAREN@22113..22114 ")"
                 COMMA@22114..22115 ","
                 WHITESPACE@22115..22116 " "
@@ -9037,7 +9200,8 @@ SOURCE_FILE@0..45079
       L_PAREN@22408..22409 "("
       PARAM@22409..22429
         PATTERN_VARIABLE@22409..22414
-          IDENT@22409..22414 "input"
+          NAME@22409..22414
+            IDENT@22409..22414 "input"
         COLON@22414..22415 ":"
         WHITESPACE@22415..22416 " "
         TYPE_APPLICATION@22416..22429
@@ -9132,7 +9296,8 @@ SOURCE_FILE@0..45079
       L_PAREN@22502..22503 "("
       PARAM@22503..22517
         PATTERN_VARIABLE@22503..22507
-          IDENT@22503..22507 "list"
+          NAME@22503..22507
+            IDENT@22503..22507 "list"
         COLON@22507..22508 ":"
         WHITESPACE@22508..22509 " "
         TYPE_APPLICATION@22509..22516
@@ -9150,7 +9315,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@22517..22518 " "
       PARAM@22518..22531
         PATTERN_VARIABLE@22518..22527
-          IDENT@22518..22527 "separator"
+          NAME@22518..22527
+            IDENT@22518..22527 "separator"
         COLON@22527..22528 ":"
         WHITESPACE@22528..22529 " "
         TYPE_NAME_REF@22529..22530
@@ -9160,7 +9326,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@22531..22532 " "
       PARAM@22532..22544
         PATTERN_VARIABLE@22532..22535
-          IDENT@22532..22535 "acc"
+          NAME@22532..22535
+            IDENT@22532..22535 "acc"
         COLON@22535..22536 ":"
         WHITESPACE@22536..22537 " "
         TYPE_APPLICATION@22537..22544
@@ -9228,7 +9395,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@22600..22611
                 L_SQUARE@22600..22601 "["
                 PATTERN_VARIABLE@22601..22602
-                  IDENT@22601..22602 "x"
+                  NAME@22601..22602
+                    IDENT@22601..22602 "x"
                 COMMA@22602..22603 ","
                 WHITESPACE@22603..22604 " "
                 PATTERN_SPREAD@22604..22610
@@ -9325,7 +9493,8 @@ SOURCE_FILE@0..45079
       L_PAREN@22989..22990 "("
       PARAM@22990..23004
         PATTERN_VARIABLE@22990..22994
-          IDENT@22990..22994 "list"
+          NAME@22990..22994
+            IDENT@22990..22994 "list"
         COLON@22994..22995 ":"
         WHITESPACE@22995..22996 " "
         TYPE_APPLICATION@22996..23003
@@ -9346,7 +9515,8 @@ SOURCE_FILE@0..45079
           IDENT@23005..23009 "with"
         WHITESPACE@23009..23010 " "
         PATTERN_VARIABLE@23010..23014
-          IDENT@23010..23014 "elem"
+          NAME@23010..23014
+            IDENT@23010..23014 "elem"
         COLON@23014..23015 ":"
         WHITESPACE@23015..23016 " "
         TYPE_NAME_REF@23016..23017
@@ -9406,7 +9576,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@23071..23082
                 L_SQUARE@23071..23072 "["
                 PATTERN_VARIABLE@23072..23073
-                  IDENT@23072..23073 "x"
+                  NAME@23072..23073
+                    IDENT@23072..23073 "x"
                 COMMA@23073..23074 ","
                 WHITESPACE@23074..23075 " "
                 PATTERN_SPREAD@23075..23081
@@ -9498,7 +9669,8 @@ SOURCE_FILE@0..45079
           IDENT@23494..23496 "in"
         WHITESPACE@23496..23497 " "
         PATTERN_VARIABLE@23497..23501
-          IDENT@23497..23501 "list"
+          NAME@23497..23501
+            IDENT@23497..23501 "list"
         COLON@23501..23502 ":"
         WHITESPACE@23502..23503 " "
         TYPE_APPLICATION@23503..23510
@@ -9519,7 +9691,8 @@ SOURCE_FILE@0..45079
           IDENT@23512..23515 "get"
         WHITESPACE@23515..23516 " "
         PATTERN_VARIABLE@23516..23521
-          IDENT@23516..23521 "index"
+          NAME@23516..23521
+            IDENT@23516..23521 "index"
         COLON@23521..23522 ":"
         WHITESPACE@23522..23523 " "
         TYPE_NAME_REF@23523..23526
@@ -9655,7 +9828,8 @@ SOURCE_FILE@0..45079
       L_PAREN@23879..23880 "("
       PARAM@23880..23893
         PATTERN_VARIABLE@23880..23884
-          IDENT@23880..23884 "list"
+          NAME@23880..23884
+            IDENT@23880..23884 "list"
         COLON@23884..23885 ":"
         WHITESPACE@23885..23886 " "
         TYPE_APPLICATION@23886..23893
@@ -9715,7 +9889,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@23939..23950
                 L_SQUARE@23939..23940 "["
                 PATTERN_VARIABLE@23940..23941
-                  IDENT@23940..23941 "x"
+                  NAME@23940..23941
+                    IDENT@23940..23941 "x"
                 COMMA@23941..23942 ","
                 WHITESPACE@23942..23943 " "
                 PATTERN_SPREAD@23943..23949
@@ -9761,7 +9936,8 @@ SOURCE_FILE@0..45079
                                 L_PAREN@23982..23983 "("
                                 PARAM@23983..23984
                                   PATTERN_VARIABLE@23983..23984
-                                    IDENT@23983..23984 "y"
+                                    NAME@23983..23984
+                                      IDENT@23983..23984 "y"
                                 R_PAREN@23984..23985 ")"
                               WHITESPACE@23985..23986 " "
                               BLOCK@23986..23996
@@ -9804,7 +9980,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@24133..24136 "\n  "
       PARAM@24136..24144
         PATTERN_VARIABLE@24136..24138
-          IDENT@24136..24138 "na"
+          NAME@24136..24138
+            IDENT@24136..24138 "na"
         COLON@24138..24139 ":"
         WHITESPACE@24139..24140 " "
         TYPE_NAME_REF@24140..24143
@@ -9814,7 +9991,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@24144..24147 "\n  "
       PARAM@24147..24155
         PATTERN_VARIABLE@24147..24149
-          IDENT@24147..24149 "nb"
+          NAME@24147..24149
+            IDENT@24147..24149 "nb"
         COLON@24149..24150 ":"
         WHITESPACE@24150..24151 " "
         TYPE_NAME_REF@24151..24154
@@ -9824,7 +10002,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@24155..24158 "\n  "
       PARAM@24158..24169
         PATTERN_VARIABLE@24158..24159
-          IDENT@24158..24159 "a"
+          NAME@24158..24159
+            IDENT@24158..24159 "a"
         COLON@24159..24160 ":"
         WHITESPACE@24160..24161 " "
         TYPE_APPLICATION@24161..24168
@@ -9842,7 +10021,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@24169..24172 "\n  "
       PARAM@24172..24183
         PATTERN_VARIABLE@24172..24173
-          IDENT@24172..24173 "b"
+          NAME@24172..24173
+            IDENT@24172..24173 "b"
         COLON@24173..24174 ":"
         WHITESPACE@24174..24175 " "
         TYPE_APPLICATION@24175..24182
@@ -9860,7 +10040,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@24183..24186 "\n  "
       PARAM@24186..24199
         PATTERN_VARIABLE@24186..24189
-          IDENT@24186..24189 "acc"
+          NAME@24186..24189
+            IDENT@24186..24189 "acc"
         COLON@24189..24190 ":"
         WHITESPACE@24190..24191 " "
         TYPE_APPLICATION@24191..24198
@@ -9878,7 +10059,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@24199..24202 "\n  "
       PARAM@24202..24229
         PATTERN_VARIABLE@24202..24209
-          IDENT@24202..24209 "compare"
+          NAME@24202..24209
+            IDENT@24202..24209 "compare"
         COLON@24209..24210 ":"
         WHITESPACE@24210..24211 " "
         FN_TYPE@24211..24228
@@ -9973,7 +10155,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@24288..24298
                 L_SQUARE@24288..24289 "["
                 PATTERN_VARIABLE@24289..24291
-                  IDENT@24289..24291 "ax"
+                  NAME@24289..24291
+                    IDENT@24289..24291 "ax"
                 COMMA@24291..24292 ","
                 WHITESPACE@24292..24293 " "
                 PATTERN_SPREAD@24293..24297
@@ -10067,7 +10250,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@24368..24378
                 L_SQUARE@24368..24369 "["
                 PATTERN_VARIABLE@24369..24371
-                  IDENT@24369..24371 "bx"
+                  NAME@24369..24371
+                    IDENT@24369..24371 "bx"
                 COMMA@24371..24372 ","
                 WHITESPACE@24372..24373 " "
                 PATTERN_SPREAD@24373..24377
@@ -10151,7 +10335,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@24442..24452
                 L_SQUARE@24442..24443 "["
                 PATTERN_VARIABLE@24443..24445
-                  IDENT@24443..24445 "ax"
+                  NAME@24443..24445
+                    IDENT@24443..24445 "ax"
                 COMMA@24445..24446 ","
                 WHITESPACE@24446..24447 " "
                 PATTERN_SPREAD@24447..24451
@@ -10165,7 +10350,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@24454..24464
                 L_SQUARE@24454..24455 "["
                 PATTERN_VARIABLE@24455..24457
-                  IDENT@24455..24457 "bx"
+                  NAME@24455..24457
+                    IDENT@24455..24457 "bx"
                 COMMA@24457..24458 ","
                 WHITESPACE@24458..24459 " "
                 PATTERN_SPREAD@24459..24463
@@ -10203,7 +10389,8 @@ SOURCE_FILE@0..45079
                 ALTERNATIVE_PATTERN@24505..24513
                   VARIANT_REF@24505..24513
                     MODULE_NAME@24505..24510
-                      IDENT@24505..24510 "order"
+                      NAME@24505..24510
+                        IDENT@24505..24510 "order"
                     DOT@24510..24511 "."
                     NAME_REF@24511..24513
                       U_IDENT@24511..24513 "Gt"
@@ -10355,7 +10542,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@24774..24777 "\n  "
       PARAM@24777..24785
         PATTERN_VARIABLE@24777..24779
-          IDENT@24777..24779 "na"
+          NAME@24777..24779
+            IDENT@24777..24779 "na"
         COLON@24779..24780 ":"
         WHITESPACE@24780..24781 " "
         TYPE_NAME_REF@24781..24784
@@ -10365,7 +10553,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@24785..24788 "\n  "
       PARAM@24788..24796
         PATTERN_VARIABLE@24788..24790
-          IDENT@24788..24790 "nb"
+          NAME@24788..24790
+            IDENT@24788..24790 "nb"
         COLON@24790..24791 ":"
         WHITESPACE@24791..24792 " "
         TYPE_NAME_REF@24792..24795
@@ -10375,7 +10564,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@24796..24799 "\n  "
       PARAM@24799..24810
         PATTERN_VARIABLE@24799..24800
-          IDENT@24799..24800 "a"
+          NAME@24799..24800
+            IDENT@24799..24800 "a"
         COLON@24800..24801 ":"
         WHITESPACE@24801..24802 " "
         TYPE_APPLICATION@24802..24809
@@ -10393,7 +10583,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@24810..24813 "\n  "
       PARAM@24813..24824
         PATTERN_VARIABLE@24813..24814
-          IDENT@24813..24814 "b"
+          NAME@24813..24814
+            IDENT@24813..24814 "b"
         COLON@24814..24815 ":"
         WHITESPACE@24815..24816 " "
         TYPE_APPLICATION@24816..24823
@@ -10411,7 +10602,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@24824..24827 "\n  "
       PARAM@24827..24840
         PATTERN_VARIABLE@24827..24830
-          IDENT@24827..24830 "acc"
+          NAME@24827..24830
+            IDENT@24827..24830 "acc"
         COLON@24830..24831 ":"
         WHITESPACE@24831..24832 " "
         TYPE_APPLICATION@24832..24839
@@ -10429,7 +10621,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@24840..24843 "\n  "
       PARAM@24843..24870
         PATTERN_VARIABLE@24843..24850
-          IDENT@24843..24850 "compare"
+          NAME@24843..24850
+            IDENT@24843..24850 "compare"
         COLON@24850..24851 ":"
         WHITESPACE@24851..24852 " "
         FN_TYPE@24852..24869
@@ -10524,7 +10717,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@24929..24939
                 L_SQUARE@24929..24930 "["
                 PATTERN_VARIABLE@24930..24932
-                  IDENT@24930..24932 "ax"
+                  NAME@24930..24932
+                    IDENT@24930..24932 "ax"
                 COMMA@24932..24933 ","
                 WHITESPACE@24933..24934 " "
                 PATTERN_SPREAD@24934..24938
@@ -10618,7 +10812,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@25011..25021
                 L_SQUARE@25011..25012 "["
                 PATTERN_VARIABLE@25012..25014
-                  IDENT@25012..25014 "bx"
+                  NAME@25012..25014
+                    IDENT@25012..25014 "bx"
                 COMMA@25014..25015 ","
                 WHITESPACE@25015..25016 " "
                 PATTERN_SPREAD@25016..25020
@@ -10702,7 +10897,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@25087..25097
                 L_SQUARE@25087..25088 "["
                 PATTERN_VARIABLE@25088..25090
-                  IDENT@25088..25090 "ax"
+                  NAME@25088..25090
+                    IDENT@25088..25090 "ax"
                 COMMA@25090..25091 ","
                 WHITESPACE@25091..25092 " "
                 PATTERN_SPREAD@25092..25096
@@ -10716,7 +10912,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@25099..25109
                 L_SQUARE@25099..25100 "["
                 PATTERN_VARIABLE@25100..25102
-                  IDENT@25100..25102 "bx"
+                  NAME@25100..25102
+                    IDENT@25100..25102 "bx"
                 COMMA@25102..25103 ","
                 WHITESPACE@25103..25104 " "
                 PATTERN_SPREAD@25104..25108
@@ -10754,7 +10951,8 @@ SOURCE_FILE@0..45079
                 ALTERNATIVE_PATTERN@25150..25158
                   VARIANT_REF@25150..25158
                     MODULE_NAME@25150..25155
-                      IDENT@25150..25155 "order"
+                      NAME@25150..25155
+                        IDENT@25150..25155 "order"
                     DOT@25155..25156 "."
                     NAME_REF@25156..25158
                       U_IDENT@25156..25158 "Lt"
@@ -10912,7 +11110,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@25564..25567 "\n  "
       PARAM@25567..25578
         PATTERN_VARIABLE@25567..25568
-          IDENT@25567..25568 "l"
+          NAME@25567..25568
+            IDENT@25567..25568 "l"
         COLON@25568..25569 ":"
         WHITESPACE@25569..25570 " "
         TYPE_APPLICATION@25570..25577
@@ -10930,7 +11129,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@25578..25581 "\n  "
       PARAM@25581..25589
         PATTERN_VARIABLE@25581..25583
-          IDENT@25581..25583 "ln"
+          NAME@25581..25583
+            IDENT@25581..25583 "ln"
         COLON@25583..25584 ":"
         WHITESPACE@25584..25585 " "
         TYPE_NAME_REF@25585..25588
@@ -10940,7 +11140,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@25589..25592 "\n  "
       PARAM@25592..25619
         PATTERN_VARIABLE@25592..25599
-          IDENT@25592..25599 "compare"
+          NAME@25592..25599
+            IDENT@25592..25599 "compare"
         COLON@25599..25600 ":"
         WHITESPACE@25600..25601 " "
         FN_TYPE@25601..25618
@@ -10966,7 +11167,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@25619..25622 "\n  "
       PARAM@25622..25633
         PATTERN_VARIABLE@25622..25626
-          IDENT@25622..25626 "down"
+          NAME@25622..25626
+            IDENT@25622..25626 "down"
         COLON@25626..25627 ":"
         WHITESPACE@25627..25628 " "
         TYPE_NAME_REF@25628..25632
@@ -10997,7 +11199,8 @@ SOURCE_FILE@0..45079
         LET_KW@25651..25654 "let"
         WHITESPACE@25654..25655 " "
         PATTERN_VARIABLE@25655..25656
-          IDENT@25655..25656 "n"
+          NAME@25655..25656
+            IDENT@25655..25656 "n"
         WHITESPACE@25656..25657 " "
         EQ@25657..25658 "="
         WHITESPACE@25658..25659 " "
@@ -11015,7 +11218,8 @@ SOURCE_FILE@0..45079
         LET_KW@25668..25671 "let"
         WHITESPACE@25671..25672 " "
         PATTERN_VARIABLE@25672..25673
-          IDENT@25672..25673 "a"
+          NAME@25672..25673
+            IDENT@25672..25673 "a"
         WHITESPACE@25673..25674 " "
         EQ@25674..25675 "="
         WHITESPACE@25675..25676 " "
@@ -11027,7 +11231,8 @@ SOURCE_FILE@0..45079
         LET_KW@25680..25683 "let"
         WHITESPACE@25683..25684 " "
         PATTERN_VARIABLE@25684..25685
-          IDENT@25684..25685 "b"
+          NAME@25684..25685
+            IDENT@25684..25685 "b"
         WHITESPACE@25685..25686 " "
         EQ@25686..25687 "="
         WHITESPACE@25687..25688 " "
@@ -11482,7 +11687,8 @@ SOURCE_FILE@0..45079
       L_PAREN@26606..26607 "("
       PARAM@26607..26621
         PATTERN_VARIABLE@26607..26611
-          IDENT@26607..26611 "list"
+          NAME@26607..26611
+            IDENT@26607..26611 "list"
         COLON@26611..26612 ":"
         WHITESPACE@26612..26613 " "
         TYPE_APPLICATION@26613..26620
@@ -11503,7 +11709,8 @@ SOURCE_FILE@0..45079
           IDENT@26622..26624 "by"
         WHITESPACE@26624..26625 " "
         PATTERN_VARIABLE@26625..26632
-          IDENT@26625..26632 "compare"
+          NAME@26625..26632
+            IDENT@26625..26632 "compare"
         COLON@26632..26633 ":"
         WHITESPACE@26633..26634 " "
         FN_TYPE@26634..26651
@@ -11636,7 +11843,8 @@ SOURCE_FILE@0..45079
           IDENT@27012..27016 "from"
         WHITESPACE@27016..27017 " "
         PATTERN_VARIABLE@27017..27022
-          IDENT@27017..27022 "start"
+          NAME@27017..27022
+            IDENT@27017..27022 "start"
         COLON@27022..27023 ":"
         WHITESPACE@27023..27024 " "
         TYPE_NAME_REF@27024..27027
@@ -11649,7 +11857,8 @@ SOURCE_FILE@0..45079
           IDENT@27029..27031 "to"
         WHITESPACE@27031..27032 " "
         PATTERN_VARIABLE@27032..27036
-          IDENT@27032..27036 "stop"
+          NAME@27032..27036
+            IDENT@27032..27036 "stop"
         COLON@27036..27037 ":"
         WHITESPACE@27037..27038 " "
         TYPE_NAME_REF@27038..27041
@@ -11710,7 +11919,8 @@ SOURCE_FILE@0..45079
       L_PAREN@27124..27125 "("
       PARAM@27125..27136
         PATTERN_VARIABLE@27125..27130
-          IDENT@27125..27130 "start"
+          NAME@27125..27130
+            IDENT@27125..27130 "start"
         COLON@27130..27131 ":"
         WHITESPACE@27131..27132 " "
         TYPE_NAME_REF@27132..27135
@@ -11720,7 +11930,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@27136..27137 " "
       PARAM@27137..27147
         PATTERN_VARIABLE@27137..27141
-          IDENT@27137..27141 "stop"
+          NAME@27137..27141
+            IDENT@27137..27141 "stop"
         COLON@27141..27142 ":"
         WHITESPACE@27142..27143 " "
         TYPE_NAME_REF@27143..27146
@@ -11730,7 +11941,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@27147..27148 " "
       PARAM@27148..27162
         PATTERN_VARIABLE@27148..27151
-          IDENT@27148..27151 "acc"
+          NAME@27148..27151
+            IDENT@27148..27151 "acc"
         COLON@27151..27152 ":"
         WHITESPACE@27152..27153 " "
         TYPE_APPLICATION@27153..27162
@@ -11795,7 +12007,8 @@ SOURCE_FILE@0..45079
             ALTERNATIVE_PATTERN@27217..27225
               VARIANT_REF@27217..27225
                 MODULE_NAME@27217..27222
-                  IDENT@27217..27222 "order"
+                  NAME@27217..27222
+                    IDENT@27217..27222 "order"
                 DOT@27222..27223 "."
                 NAME_REF@27223..27225
                   U_IDENT@27223..27225 "Eq"
@@ -11828,7 +12041,8 @@ SOURCE_FILE@0..45079
             ALTERNATIVE_PATTERN@27256..27264
               VARIANT_REF@27256..27264
                 MODULE_NAME@27256..27261
-                  IDENT@27256..27261 "order"
+                  NAME@27256..27261
+                    IDENT@27256..27261 "order"
                 DOT@27261..27262 "."
                 NAME_REF@27262..27264
                   U_IDENT@27262..27264 "Gt"
@@ -11879,7 +12093,8 @@ SOURCE_FILE@0..45079
             ALTERNATIVE_PATTERN@27326..27334
               VARIANT_REF@27326..27334
                 MODULE_NAME@27326..27331
-                  IDENT@27326..27331 "order"
+                  NAME@27326..27331
+                    IDENT@27326..27331 "order"
                 DOT@27331..27332 "."
                 NAME_REF@27332..27334
                   U_IDENT@27332..27334 "Lt"
@@ -11939,7 +12154,8 @@ SOURCE_FILE@0..45079
       L_PAREN@27411..27412 "("
       PARAM@27412..27417
         PATTERN_VARIABLE@27412..27413
-          IDENT@27412..27413 "a"
+          NAME@27412..27413
+            IDENT@27412..27413 "a"
         COLON@27413..27414 ":"
         WHITESPACE@27414..27415 " "
         TYPE_NAME_REF@27415..27416
@@ -11949,7 +12165,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@27417..27418 " "
       PARAM@27418..27429
         PATTERN_VARIABLE@27418..27423
-          IDENT@27418..27423 "times"
+          NAME@27418..27423
+            IDENT@27418..27423 "times"
         COLON@27423..27424 ":"
         WHITESPACE@27424..27425 " "
         TYPE_NAME_REF@27425..27428
@@ -11959,7 +12176,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@27429..27430 " "
       PARAM@27430..27442
         PATTERN_VARIABLE@27430..27433
-          IDENT@27430..27433 "acc"
+          NAME@27430..27433
+            IDENT@27430..27433 "acc"
         COLON@27433..27434 ":"
         WHITESPACE@27434..27435 " "
         TYPE_APPLICATION@27435..27442
@@ -12112,7 +12330,8 @@ SOURCE_FILE@0..45079
           IDENT@27790..27794 "item"
         WHITESPACE@27794..27795 " "
         PATTERN_VARIABLE@27795..27796
-          IDENT@27795..27796 "a"
+          NAME@27795..27796
+            IDENT@27795..27796 "a"
         COLON@27796..27797 ":"
         WHITESPACE@27797..27798 " "
         TYPE_NAME_REF@27798..27799
@@ -12125,7 +12344,8 @@ SOURCE_FILE@0..45079
           IDENT@27801..27806 "times"
         WHITESPACE@27806..27807 " "
         PATTERN_VARIABLE@27807..27812
-          IDENT@27807..27812 "times"
+          NAME@27807..27812
+            IDENT@27807..27812 "times"
         COLON@27812..27813 ":"
         WHITESPACE@27813..27814 " "
         TYPE_NAME_REF@27814..27817
@@ -12186,7 +12406,8 @@ SOURCE_FILE@0..45079
       L_PAREN@27872..27873 "("
       PARAM@27873..27887
         PATTERN_VARIABLE@27873..27877
-          IDENT@27873..27877 "list"
+          NAME@27873..27877
+            IDENT@27873..27877 "list"
         COLON@27877..27878 ":"
         WHITESPACE@27878..27879 " "
         TYPE_APPLICATION@27879..27886
@@ -12204,7 +12425,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@27887..27888 " "
       PARAM@27888..27895
         PATTERN_VARIABLE@27888..27889
-          IDENT@27888..27889 "n"
+          NAME@27888..27889
+            IDENT@27888..27889 "n"
         COLON@27889..27890 ":"
         WHITESPACE@27890..27891 " "
         TYPE_NAME_REF@27891..27894
@@ -12214,7 +12436,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@27895..27896 " "
       PARAM@27896..27910
         PATTERN_VARIABLE@27896..27901
-          IDENT@27896..27901 "taken"
+          NAME@27896..27901
+            IDENT@27896..27901 "taken"
         COLON@27901..27902 ":"
         WHITESPACE@27902..27903 " "
         TYPE_APPLICATION@27903..27910
@@ -12358,7 +12581,8 @@ SOURCE_FILE@0..45079
                   PATTERN_LIST@28064..28073
                     L_SQUARE@28064..28065 "["
                     PATTERN_VARIABLE@28065..28066
-                      IDENT@28065..28066 "x"
+                      NAME@28065..28066
+                        IDENT@28065..28066 "x"
                     COMMA@28066..28067 ","
                     WHITESPACE@28067..28068 " "
                     PATTERN_SPREAD@28068..28072
@@ -12473,7 +12697,8 @@ SOURCE_FILE@0..45079
           IDENT@28585..28589 "list"
         WHITESPACE@28589..28590 " "
         PATTERN_VARIABLE@28590..28594
-          IDENT@28590..28594 "list"
+          NAME@28590..28594
+            IDENT@28590..28594 "list"
         COLON@28594..28595 ":"
         WHITESPACE@28595..28596 " "
         TYPE_APPLICATION@28596..28603
@@ -12494,7 +12719,8 @@ SOURCE_FILE@0..45079
           IDENT@28605..28607 "at"
         WHITESPACE@28607..28608 " "
         PATTERN_VARIABLE@28608..28613
-          IDENT@28608..28613 "index"
+          NAME@28608..28613
+            IDENT@28608..28613 "index"
         COLON@28613..28614 ":"
         WHITESPACE@28614..28615 " "
         TYPE_NAME_REF@28615..28618
@@ -12573,7 +12799,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@28694..28697 "\n  "
       PARAM@28697..28711
         PATTERN_VARIABLE@28697..28701
-          IDENT@28697..28701 "list"
+          NAME@28697..28701
+            IDENT@28697..28701 "list"
         COLON@28701..28702 ":"
         WHITESPACE@28702..28703 " "
         TYPE_APPLICATION@28703..28710
@@ -12591,7 +12818,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@28711..28714 "\n  "
       PARAM@28714..28731
         PATTERN_VARIABLE@28714..28715
-          IDENT@28714..28715 "f"
+          NAME@28714..28715
+            IDENT@28714..28715 "f"
         COLON@28715..28716 ":"
         WHITESPACE@28716..28717 " "
         FN_TYPE@28717..28730
@@ -12612,7 +12840,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@28731..28734 "\n  "
       PARAM@28734..28747
         PATTERN_VARIABLE@28734..28737
-          IDENT@28734..28737 "acc"
+          NAME@28734..28737
+            IDENT@28734..28737 "acc"
         COLON@28737..28738 ":"
         WHITESPACE@28738..28739 " "
         TYPE_APPLICATION@28739..28746
@@ -12708,7 +12937,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@28823..28832
                 L_SQUARE@28823..28824 "["
                 PATTERN_VARIABLE@28824..28825
-                  IDENT@28824..28825 "x"
+                  NAME@28824..28825
+                    IDENT@28824..28825 "x"
                 COMMA@28825..28826 ","
                 WHITESPACE@28826..28827 " "
                 PATTERN_SPREAD@28827..28831
@@ -12862,7 +13092,8 @@ SOURCE_FILE@0..45079
           IDENT@29440..29444 "list"
         WHITESPACE@29444..29445 " "
         PATTERN_VARIABLE@29445..29449
-          IDENT@29445..29449 "list"
+          NAME@29445..29449
+            IDENT@29445..29449 "list"
         COLON@29449..29450 ":"
         WHITESPACE@29450..29451 " "
         TYPE_APPLICATION@29451..29458
@@ -12883,7 +13114,8 @@ SOURCE_FILE@0..45079
           IDENT@29462..29472 "satisfying"
         WHITESPACE@29472..29473 " "
         PATTERN_VARIABLE@29473..29482
-          IDENT@29473..29482 "predicate"
+          NAME@29473..29482
+            IDENT@29473..29482 "predicate"
         COLON@29482..29483 ":"
         WHITESPACE@29483..29484 " "
         FN_TYPE@29484..29497
@@ -13030,7 +13262,8 @@ SOURCE_FILE@0..45079
           IDENT@30176..30178 "in"
         WHITESPACE@30178..30179 " "
         PATTERN_VARIABLE@30179..30191
-          IDENT@30179..30191 "keyword_list"
+          NAME@30179..30191
+            IDENT@30179..30191 "keyword_list"
         COLON@30191..30192 ":"
         WHITESPACE@30192..30193 " "
         TYPE_APPLICATION@30193..30206
@@ -13060,7 +13293,8 @@ SOURCE_FILE@0..45079
           IDENT@30210..30214 "find"
         WHITESPACE@30214..30215 " "
         PATTERN_VARIABLE@30215..30226
-          IDENT@30215..30226 "desired_key"
+          NAME@30215..30226
+            IDENT@30215..30226 "desired_key"
         COLON@30226..30227 ":"
         WHITESPACE@30227..30228 " "
         TYPE_NAME_REF@30228..30229
@@ -13114,7 +13348,8 @@ SOURCE_FILE@0..45079
                   L_PAREN@30289..30290 "("
                   PARAM@30290..30297
                     PATTERN_VARIABLE@30290..30297
-                      IDENT@30290..30297 "keyword"
+                      NAME@30290..30297
+                        IDENT@30290..30297 "keyword"
                   R_PAREN@30297..30298 ")"
                 WHITESPACE@30298..30299 " "
                 BLOCK@30299..30434
@@ -13127,11 +13362,13 @@ SOURCE_FILE@0..45079
                       HASH@30311..30312 "#"
                       L_PAREN@30312..30313 "("
                       PATTERN_VARIABLE@30313..30316
-                        IDENT@30313..30316 "key"
+                        NAME@30313..30316
+                          IDENT@30313..30316 "key"
                       COMMA@30316..30317 ","
                       WHITESPACE@30317..30318 " "
                       PATTERN_VARIABLE@30318..30323
-                        IDENT@30318..30323 "value"
+                        NAME@30318..30323
+                          IDENT@30318..30323 "value"
                       R_PAREN@30323..30324 ")"
                     WHITESPACE@30324..30325 " "
                     EQ@30325..30326 "="
@@ -13213,17 +13450,20 @@ SOURCE_FILE@0..45079
       L_PAREN@30452..30453 "("
       PARAM@30453..30462
         PATTERN_VARIABLE@30453..30461
-          IDENT@30453..30461 "haystack"
+          NAME@30453..30461
+            IDENT@30453..30461 "haystack"
         COMMA@30461..30462 ","
       WHITESPACE@30462..30463 " "
       PARAM@30463..30473
         PATTERN_VARIABLE@30463..30472
-          IDENT@30463..30472 "predicate"
+          NAME@30463..30472
+            IDENT@30463..30472 "predicate"
         COMMA@30472..30473 ","
       WHITESPACE@30473..30474 " "
       PARAM@30474..30481
         PATTERN_VARIABLE@30474..30481
-          IDENT@30474..30481 "checked"
+          NAME@30474..30481
+            IDENT@30474..30481 "checked"
       R_PAREN@30481..30482 ")"
     WHITESPACE@30482..30483 " "
     BLOCK@30483..30696
@@ -13264,7 +13504,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@30528..30539
                 L_SQUARE@30528..30529 "["
                 PATTERN_VARIABLE@30529..30530
-                  IDENT@30529..30530 "x"
+                  NAME@30529..30530
+                    IDENT@30529..30530 "x"
                 COMMA@30530..30531 ","
                 WHITESPACE@30531..30532 " "
                 PATTERN_SPREAD@30532..30538
@@ -13446,7 +13687,8 @@ SOURCE_FILE@0..45079
           IDENT@31121..31123 "in"
         WHITESPACE@31123..31124 " "
         PATTERN_VARIABLE@31124..31132
-          IDENT@31124..31132 "haystack"
+          NAME@31124..31132
+            IDENT@31124..31132 "haystack"
         COLON@31132..31133 ":"
         WHITESPACE@31133..31134 " "
         TYPE_APPLICATION@31134..31141
@@ -13467,7 +13709,8 @@ SOURCE_FILE@0..45079
           IDENT@31145..31153 "one_that"
         WHITESPACE@31153..31154 " "
         PATTERN_VARIABLE@31154..31164
-          IDENT@31154..31164 "is_desired"
+          NAME@31154..31164
+            IDENT@31154..31164 "is_desired"
         COLON@31164..31165 ":"
         WHITESPACE@31165..31166 " "
         FN_TYPE@31166..31179
@@ -13564,17 +13807,20 @@ SOURCE_FILE@0..45079
       L_PAREN@31266..31267 "("
       PARAM@31267..31276
         PATTERN_VARIABLE@31267..31275
-          IDENT@31267..31275 "haystack"
+          NAME@31267..31275
+            IDENT@31267..31275 "haystack"
         COMMA@31275..31276 ","
       WHITESPACE@31276..31277 " "
       PARAM@31277..31284
         PATTERN_VARIABLE@31277..31283
-          IDENT@31277..31283 "mapper"
+          NAME@31277..31283
+            IDENT@31277..31283 "mapper"
         COMMA@31283..31284 ","
       WHITESPACE@31284..31285 " "
       PARAM@31285..31292
         PATTERN_VARIABLE@31285..31292
-          IDENT@31285..31292 "checked"
+          NAME@31285..31292
+            IDENT@31285..31292 "checked"
       R_PAREN@31292..31293 ")"
     WHITESPACE@31293..31294 " "
     BLOCK@31294..31509
@@ -13615,7 +13861,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@31339..31350
                 L_SQUARE@31339..31340 "["
                 PATTERN_VARIABLE@31340..31341
-                  IDENT@31340..31341 "x"
+                  NAME@31340..31341
+                    IDENT@31340..31341 "x"
                 COMMA@31341..31342 ","
                 WHITESPACE@31342..31343 " "
                 PATTERN_SPREAD@31343..31349
@@ -13652,7 +13899,8 @@ SOURCE_FILE@0..45079
                       L_PAREN@31387..31388 "("
                       VARIANT_REF_FIELD@31388..31389
                         PATTERN_VARIABLE@31388..31389
-                          IDENT@31388..31389 "y"
+                          NAME@31388..31389
+                            IDENT@31388..31389 "y"
                       R_PAREN@31389..31390 ")"
                 WHITESPACE@31390..31391 " "
                 R_ARROW@31391..31393 "->"
@@ -13813,7 +14061,8 @@ SOURCE_FILE@0..45079
           IDENT@32014..32016 "in"
         WHITESPACE@32016..32017 " "
         PATTERN_VARIABLE@32017..32025
-          IDENT@32017..32025 "haystack"
+          NAME@32017..32025
+            IDENT@32017..32025 "haystack"
         COLON@32025..32026 ":"
         WHITESPACE@32026..32027 " "
         TYPE_APPLICATION@32027..32034
@@ -13834,7 +14083,8 @@ SOURCE_FILE@0..45079
           IDENT@32038..32046 "one_that"
         WHITESPACE@32046..32047 " "
         PATTERN_VARIABLE@32047..32057
-          IDENT@32047..32057 "is_desired"
+          NAME@32047..32057
+            IDENT@32047..32057 "is_desired"
         COLON@32057..32058 ":"
         WHITESPACE@32058..32059 " "
         FN_TYPE@32059..32080
@@ -13994,7 +14244,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@32751..32754 "\n  "
       PARAM@32754..32778
         PATTERN_VARIABLE@32754..32762
-          IDENT@32754..32762 "haystack"
+          NAME@32754..32762
+            IDENT@32754..32762 "haystack"
         COLON@32762..32763 ":"
         WHITESPACE@32763..32764 " "
         TYPE_APPLICATION@32764..32777
@@ -14021,7 +14272,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@32778..32781 "\n  "
       PARAM@32781..32788
         PATTERN_VARIABLE@32781..32784
-          IDENT@32781..32784 "key"
+          NAME@32781..32784
+            IDENT@32781..32784 "key"
         COLON@32784..32785 ":"
         WHITESPACE@32785..32786 " "
         TYPE_NAME_REF@32786..32787
@@ -14101,7 +14353,8 @@ SOURCE_FILE@0..45079
                   L_PAREN@32860..32861 "("
                   PARAM@32861..32866
                     PATTERN_VARIABLE@32861..32866
-                      IDENT@32861..32866 "entry"
+                      NAME@32861..32866
+                        IDENT@32861..32866 "entry"
                   R_PAREN@32866..32867 ")"
                 WHITESPACE@32867..32868 " "
                 BLOCK@32868..32979
@@ -14114,11 +14367,13 @@ SOURCE_FILE@0..45079
                       HASH@32880..32881 "#"
                       L_PAREN@32881..32882 "("
                       PATTERN_VARIABLE@32882..32883
-                        IDENT@32882..32883 "k"
+                        NAME@32882..32883
+                          IDENT@32882..32883 "k"
                       COMMA@32883..32884 ","
                       WHITESPACE@32884..32885 " "
                       PATTERN_VARIABLE@32885..32886
-                        IDENT@32885..32886 "v"
+                        NAME@32885..32886
+                          IDENT@32885..32886 "v"
                       R_PAREN@32886..32887 ")"
                     WHITESPACE@32887..32888 " "
                     EQ@32888..32889 "="
@@ -14140,11 +14395,12 @@ SOURCE_FILE@0..45079
                       CLAUSE@32919..32941
                         ALTERNATIVE_PATTERN@32919..32920
                           PATTERN_VARIABLE@32919..32920
-                            IDENT@32919..32920 "k"
+                            NAME@32919..32920
+                              IDENT@32919..32920 "k"
                         WHITESPACE@32920..32921 " "
-                        IF_KW@32921..32923 "if"
-                        WHITESPACE@32923..32924 " "
-                        PATTERN_GUARD@32924..32932
+                        PATTERN_GUARD@32921..32932
+                          IF_KW@32921..32923 "if"
+                          WHITESPACE@32923..32924 " "
                           BINARY_OP@32924..32932
                             VARIABLE@32924..32925
                               NAME_REF@32924..32925
@@ -14243,7 +14499,8 @@ SOURCE_FILE@0..45079
       L_PAREN@33417..33418 "("
       PARAM@33418..33438
         PATTERN_VARIABLE@33418..33422
-          IDENT@33418..33422 "list"
+          NAME@33418..33422
+            IDENT@33418..33422 "list"
         COLON@33422..33423 ":"
         WHITESPACE@33423..33424 " "
         TYPE_APPLICATION@33424..33437
@@ -14270,7 +14527,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@33438..33439 " "
       PARAM@33439..33446
         PATTERN_VARIABLE@33439..33442
-          IDENT@33439..33442 "key"
+          NAME@33439..33442
+            IDENT@33439..33442 "key"
         COLON@33442..33443 ":"
         WHITESPACE@33443..33444 " "
         TYPE_NAME_REF@33444..33445
@@ -14280,7 +14538,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@33446..33447 " "
       PARAM@33447..33455
         PATTERN_VARIABLE@33447..33452
-          IDENT@33447..33452 "value"
+          NAME@33447..33452
+            IDENT@33447..33452 "value"
         COLON@33452..33453 ":"
         WHITESPACE@33453..33454 " "
         TYPE_NAME_REF@33454..33455
@@ -14356,7 +14615,8 @@ SOURCE_FILE@0..45079
                   HASH@33521..33522 "#"
                   L_PAREN@33522..33523 "("
                   PATTERN_VARIABLE@33523..33524
-                    IDENT@33523..33524 "k"
+                    NAME@33523..33524
+                      IDENT@33523..33524 "k"
                   COMMA@33524..33525 ","
                   WHITESPACE@33525..33526 " "
                   HOLE@33526..33527
@@ -14370,9 +14630,9 @@ SOURCE_FILE@0..45079
                     IDENT@33532..33536 "rest"
                 R_SQUARE@33536..33537 "]"
             WHITESPACE@33537..33538 " "
-            IF_KW@33538..33540 "if"
-            WHITESPACE@33540..33541 " "
-            PATTERN_GUARD@33541..33549
+            PATTERN_GUARD@33538..33549
+              IF_KW@33538..33540 "if"
+              WHITESPACE@33540..33541 " "
               BINARY_OP@33541..33549
                 VARIABLE@33541..33542
                   NAME_REF@33541..33542
@@ -14414,7 +14674,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@33581..33596
                 L_SQUARE@33581..33582 "["
                 PATTERN_VARIABLE@33582..33587
-                  IDENT@33582..33587 "first"
+                  NAME@33582..33587
+                    IDENT@33582..33587 "first"
                 COMMA@33587..33588 ","
                 WHITESPACE@33588..33589 " "
                 PATTERN_SPREAD@33589..33595
@@ -14492,7 +14753,8 @@ SOURCE_FILE@0..45079
       L_PAREN@33876..33877 "("
       PARAM@33877..33891
         PATTERN_VARIABLE@33877..33881
-          IDENT@33877..33881 "list"
+          NAME@33877..33881
+            IDENT@33877..33881 "list"
         COLON@33881..33882 ":"
         WHITESPACE@33882..33883 " "
         TYPE_APPLICATION@33883..33890
@@ -14510,7 +14772,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@33891..33892 " "
       PARAM@33892..33905
         PATTERN_VARIABLE@33892..33893
-          IDENT@33892..33893 "f"
+          NAME@33892..33893
+            IDENT@33892..33893 "f"
         COLON@33893..33894 ":"
         WHITESPACE@33894..33895 " "
         FN_TYPE@33895..33905
@@ -14565,7 +14828,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@33948..33957
                 L_SQUARE@33948..33949 "["
                 PATTERN_VARIABLE@33949..33950
-                  IDENT@33949..33950 "x"
+                  NAME@33949..33950
+                    IDENT@33949..33950 "x"
                 COMMA@33950..33951 ","
                 WHITESPACE@33951..33952 " "
                 PATTERN_SPREAD@33952..33956
@@ -14664,7 +14928,8 @@ SOURCE_FILE@0..45079
           IDENT@34435..34439 "over"
         WHITESPACE@34439..34440 " "
         PATTERN_VARIABLE@34440..34444
-          IDENT@34440..34444 "list"
+          NAME@34440..34444
+            IDENT@34440..34444 "list"
         COLON@34444..34445 ":"
         WHITESPACE@34445..34446 " "
         TYPE_APPLICATION@34446..34453
@@ -14685,7 +14950,8 @@ SOURCE_FILE@0..45079
           IDENT@34457..34461 "with"
         WHITESPACE@34461..34462 " "
         PATTERN_VARIABLE@34462..34465
-          IDENT@34462..34465 "fun"
+          NAME@34462..34465
+            IDENT@34462..34465 "fun"
         COLON@34465..34466 ":"
         WHITESPACE@34466..34467 " "
         FN_TYPE@34467..34488
@@ -14778,7 +15044,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@34548..34557
                 L_SQUARE@34548..34549 "["
                 PATTERN_VARIABLE@34549..34550
-                  IDENT@34549..34550 "x"
+                  NAME@34549..34550
+                    IDENT@34549..34550 "x"
                 COMMA@34550..34551 ","
                 WHITESPACE@34551..34552 " "
                 PATTERN_SPREAD@34552..34556
@@ -14855,7 +15122,8 @@ SOURCE_FILE@0..45079
                       L_PAREN@34641..34642 "("
                       VARIANT_REF_FIELD@34642..34643
                         PATTERN_VARIABLE@34642..34643
-                          IDENT@34642..34643 "e"
+                          NAME@34642..34643
+                            IDENT@34642..34643 "e"
                       R_PAREN@34643..34644 ")"
                 WHITESPACE@34644..34645 " "
                 R_ARROW@34645..34647 "->"
@@ -14887,22 +15155,26 @@ SOURCE_FILE@0..45079
       L_PAREN@34687..34688 "("
       PARAM@34688..34693
         PATTERN_VARIABLE@34688..34692
-          IDENT@34688..34692 "list"
+          NAME@34688..34692
+            IDENT@34688..34692 "list"
         COMMA@34692..34693 ","
       WHITESPACE@34693..34694 " "
       PARAM@34694..34705
         PATTERN_VARIABLE@34694..34704
-          IDENT@34694..34704 "categorise"
+          NAME@34694..34704
+            IDENT@34694..34704 "categorise"
         COMMA@34704..34705 ","
       WHITESPACE@34705..34706 " "
       PARAM@34706..34712
         PATTERN_VARIABLE@34706..34711
-          IDENT@34706..34711 "trues"
+          NAME@34706..34711
+            IDENT@34706..34711 "trues"
         COMMA@34711..34712 ","
       WHITESPACE@34712..34713 " "
       PARAM@34713..34719
         PATTERN_VARIABLE@34713..34719
-          IDENT@34713..34719 "falses"
+          NAME@34713..34719
+            IDENT@34713..34719 "falses"
       R_PAREN@34719..34720 ")"
     WHITESPACE@34720..34721 " "
     BLOCK@34721..34974
@@ -14960,7 +15232,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@34786..34795
                 L_SQUARE@34786..34787 "["
                 PATTERN_VARIABLE@34787..34788
-                  IDENT@34787..34788 "x"
+                  NAME@34787..34788
+                    IDENT@34787..34788 "x"
                 COMMA@34788..34789 ","
                 WHITESPACE@34789..34790 " "
                 PATTERN_SPREAD@34790..34794
@@ -15120,7 +15393,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@35208..35211 "\n  "
       PARAM@35211..35225
         PATTERN_VARIABLE@35211..35215
-          IDENT@35211..35215 "list"
+          NAME@35211..35215
+            IDENT@35211..35215 "list"
         COLON@35215..35216 ":"
         WHITESPACE@35216..35217 " "
         TYPE_APPLICATION@35217..35224
@@ -15141,7 +15415,8 @@ SOURCE_FILE@0..45079
           IDENT@35228..35232 "with"
         WHITESPACE@35232..35233 " "
         PATTERN_VARIABLE@35233..35243
-          IDENT@35233..35243 "categorise"
+          NAME@35233..35243
+            IDENT@35233..35243 "categorise"
         COLON@35243..35244 ":"
         WHITESPACE@35244..35245 " "
         FN_TYPE@35245..35258
@@ -15258,7 +15533,8 @@ SOURCE_FILE@0..45079
       L_PAREN@35491..35492 "("
       PARAM@35492..35502
         PATTERN_VARIABLE@35492..35493
-          IDENT@35492..35493 "l"
+          NAME@35492..35493
+            IDENT@35492..35493 "l"
         COLON@35493..35494 ":"
         WHITESPACE@35494..35495 " "
         TYPE_APPLICATION@35495..35502
@@ -15352,12 +15628,14 @@ SOURCE_FILE@0..45079
                           L_PAREN@35587..35588 "("
                           PARAM@35588..35594
                             PATTERN_VARIABLE@35588..35593
-                              IDENT@35588..35593 "i_idx"
+                              NAME@35588..35593
+                                IDENT@35588..35593 "i_idx"
                             COMMA@35593..35594 ","
                           WHITESPACE@35594..35595 " "
                           PARAM@35595..35596
                             PATTERN_VARIABLE@35595..35596
-                              IDENT@35595..35596 "i"
+                              NAME@35595..35596
+                                IDENT@35595..35596 "i"
                           R_PAREN@35596..35597 ")"
                         WHITESPACE@35597..35598 " "
                         BLOCK@35598..35913
@@ -15394,17 +15672,20 @@ SOURCE_FILE@0..45079
                                               L_PAREN@35659..35660 "("
                                               PARAM@35660..35664
                                                 PATTERN_VARIABLE@35660..35663
-                                                  IDENT@35660..35663 "acc"
+                                                  NAME@35660..35663
+                                                    IDENT@35660..35663 "acc"
                                                 COMMA@35663..35664 ","
                                               WHITESPACE@35664..35665 " "
                                               PARAM@35665..35667
                                                 PATTERN_VARIABLE@35665..35666
-                                                  IDENT@35665..35666 "j"
+                                                  NAME@35665..35666
+                                                    IDENT@35665..35666 "j"
                                                 COMMA@35666..35667 ","
                                               WHITESPACE@35667..35668 " "
                                               PARAM@35668..35673
                                                 PATTERN_VARIABLE@35668..35673
-                                                  IDENT@35668..35673 "j_idx"
+                                                  NAME@35668..35673
+                                                    IDENT@35668..35673 "j_idx"
                                               R_PAREN@35673..35674 ")"
                                             WHITESPACE@35674..35675 " "
                                             BLOCK@35675..35796
@@ -15493,7 +15774,8 @@ SOURCE_FILE@0..45079
                                         L_PAREN@35868..35869 "("
                                         PARAM@35869..35880
                                           PATTERN_VARIABLE@35869..35880
-                                            IDENT@35869..35880 "permutation"
+                                            NAME@35869..35880
+                                              IDENT@35869..35880 "permutation"
                                         R_PAREN@35880..35881 ")"
                                       WHITESPACE@35881..35882 " "
                                       BLOCK@35882..35904
@@ -15539,7 +15821,8 @@ SOURCE_FILE@0..45079
       L_PAREN@35950..35951 "("
       PARAM@35951..35970
         PATTERN_VARIABLE@35951..35954
-          IDENT@35951..35954 "acc"
+          NAME@35951..35954
+            IDENT@35951..35954 "acc"
         COLON@35954..35955 ":"
         WHITESPACE@35955..35956 " "
         TYPE_APPLICATION@35956..35969
@@ -15565,7 +15848,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@35970..35971 " "
       PARAM@35971..35982
         PATTERN_VARIABLE@35971..35972
-          IDENT@35971..35972 "l"
+          NAME@35971..35972
+            IDENT@35971..35972 "l"
         COLON@35972..35973 ":"
         WHITESPACE@35973..35974 " "
         TYPE_APPLICATION@35974..35981
@@ -15583,7 +15867,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@35982..35983 " "
       PARAM@35983..35989
         PATTERN_VARIABLE@35983..35984
-          IDENT@35983..35984 "n"
+          NAME@35983..35984
+            IDENT@35983..35984 "n"
         COLON@35984..35985 ":"
         WHITESPACE@35985..35986 " "
         TYPE_NAME_REF@35986..35989
@@ -15620,7 +15905,8 @@ SOURCE_FILE@0..45079
         LET_KW@36012..36015 "let"
         WHITESPACE@36015..36016 " "
         PATTERN_VARIABLE@36016..36022
-          IDENT@36016..36022 "window"
+          NAME@36016..36022
+            IDENT@36016..36022 "window"
         WHITESPACE@36022..36023 " "
         EQ@36023..36024 "="
         WHITESPACE@36024..36025 " "
@@ -15775,7 +16061,8 @@ SOURCE_FILE@0..45079
       L_PAREN@36368..36369 "("
       PARAM@36369..36380
         PATTERN_VARIABLE@36369..36370
-          IDENT@36369..36370 "l"
+          NAME@36369..36370
+            IDENT@36369..36370 "l"
         COLON@36370..36371 ":"
         WHITESPACE@36371..36372 " "
         TYPE_APPLICATION@36372..36379
@@ -15796,7 +16083,8 @@ SOURCE_FILE@0..45079
           IDENT@36381..36383 "by"
         WHITESPACE@36383..36384 " "
         PATTERN_VARIABLE@36384..36385
-          IDENT@36384..36385 "n"
+          NAME@36384..36385
+            IDENT@36384..36385 "n"
         COLON@36385..36386 ":"
         WHITESPACE@36386..36387 " "
         TYPE_NAME_REF@36387..36390
@@ -15902,7 +16190,8 @@ SOURCE_FILE@0..45079
       L_PAREN@36697..36698 "("
       PARAM@36698..36708
         PATTERN_VARIABLE@36698..36699
-          IDENT@36698..36699 "l"
+          NAME@36698..36699
+            IDENT@36698..36699 "l"
         COLON@36699..36700 ":"
         WHITESPACE@36700..36701 " "
         TYPE_APPLICATION@36701..36708
@@ -16011,7 +16300,8 @@ SOURCE_FILE@0..45079
           IDENT@36977..36979 "in"
         WHITESPACE@36979..36980 " "
         PATTERN_VARIABLE@36980..36984
-          IDENT@36980..36984 "list"
+          NAME@36980..36984
+            IDENT@36980..36984 "list"
         COLON@36984..36985 ":"
         WHITESPACE@36985..36986 " "
         TYPE_APPLICATION@36986..36993
@@ -16032,7 +16322,8 @@ SOURCE_FILE@0..45079
           IDENT@36997..37007 "satisfying"
         WHITESPACE@37007..37008 " "
         PATTERN_VARIABLE@37008..37017
-          IDENT@37008..37017 "predicate"
+          NAME@37008..37017
+            IDENT@37008..37017 "predicate"
         COLON@37017..37018 ":"
         WHITESPACE@37018..37019 " "
         FN_TYPE@37019..37032
@@ -16097,7 +16388,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@37080..37089
                 L_SQUARE@37080..37081 "["
                 PATTERN_VARIABLE@37081..37082
-                  IDENT@37081..37082 "x"
+                  NAME@37081..37082
+                    IDENT@37081..37082 "x"
                 COMMA@37082..37083 ","
                 WHITESPACE@37083..37084 " "
                 PATTERN_SPREAD@37084..37088
@@ -16187,7 +16479,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@37220..37223 "\n  "
       PARAM@37223..37237
         PATTERN_VARIABLE@37223..37227
-          IDENT@37223..37227 "list"
+          NAME@37223..37227
+            IDENT@37223..37227 "list"
         COLON@37227..37228 ":"
         WHITESPACE@37228..37229 " "
         TYPE_APPLICATION@37229..37236
@@ -16205,7 +16498,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@37237..37240 "\n  "
       PARAM@37240..37265
         PATTERN_VARIABLE@37240..37249
-          IDENT@37240..37249 "predicate"
+          NAME@37240..37249
+            IDENT@37240..37249 "predicate"
         COLON@37249..37250 ":"
         WHITESPACE@37250..37251 " "
         FN_TYPE@37251..37264
@@ -16226,7 +16520,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@37265..37268 "\n  "
       PARAM@37268..37281
         PATTERN_VARIABLE@37268..37271
-          IDENT@37268..37271 "acc"
+          NAME@37268..37271
+            IDENT@37268..37271 "acc"
         COLON@37271..37272 ":"
         WHITESPACE@37272..37273 " "
         TYPE_APPLICATION@37273..37280
@@ -16296,7 +16591,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@37338..37353
                 L_SQUARE@37338..37339 "["
                 PATTERN_VARIABLE@37339..37344
-                  IDENT@37339..37344 "first"
+                  NAME@37339..37344
+                    IDENT@37339..37344 "first"
                 COMMA@37344..37345 ","
                 WHITESPACE@37345..37346 " "
                 PATTERN_SPREAD@37346..37352
@@ -16423,7 +16719,8 @@ SOURCE_FILE@0..45079
           IDENT@37722..37724 "in"
         WHITESPACE@37724..37725 " "
         PATTERN_VARIABLE@37725..37729
-          IDENT@37725..37729 "list"
+          NAME@37725..37729
+            IDENT@37725..37729 "list"
         COLON@37729..37730 ":"
         WHITESPACE@37730..37731 " "
         TYPE_APPLICATION@37731..37738
@@ -16444,7 +16741,8 @@ SOURCE_FILE@0..45079
           IDENT@37742..37752 "satisfying"
         WHITESPACE@37752..37753 " "
         PATTERN_VARIABLE@37753..37762
-          IDENT@37753..37762 "predicate"
+          NAME@37753..37762
+            IDENT@37753..37762 "predicate"
         COLON@37762..37763 ":"
         WHITESPACE@37763..37764 " "
         FN_TYPE@37764..37777
@@ -16519,7 +16817,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@37846..37849 "\n  "
       PARAM@37849..37863
         PATTERN_VARIABLE@37849..37853
-          IDENT@37849..37853 "list"
+          NAME@37849..37853
+            IDENT@37849..37853 "list"
         COLON@37853..37854 ":"
         WHITESPACE@37854..37855 " "
         TYPE_APPLICATION@37855..37862
@@ -16537,7 +16836,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@37863..37866 "\n  "
       PARAM@37866..37882
         PATTERN_VARIABLE@37866..37867
-          IDENT@37866..37867 "f"
+          NAME@37866..37867
+            IDENT@37866..37867 "f"
         COLON@37867..37868 ":"
         WHITESPACE@37868..37869 " "
         FN_TYPE@37869..37881
@@ -16558,7 +16858,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@37882..37885 "\n  "
       PARAM@37885..37903
         PATTERN_VARIABLE@37885..37897
-          IDENT@37885..37897 "previous_key"
+          NAME@37885..37897
+            IDENT@37885..37897 "previous_key"
         COLON@37897..37898 ":"
         WHITESPACE@37898..37899 " "
         TYPE_NAME_REF@37899..37902
@@ -16568,7 +16869,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@37903..37906 "\n  "
       PARAM@37906..37929
         PATTERN_VARIABLE@37906..37919
-          IDENT@37906..37919 "current_chunk"
+          NAME@37906..37919
+            IDENT@37906..37919 "current_chunk"
         COLON@37919..37920 ":"
         WHITESPACE@37920..37921 " "
         TYPE_APPLICATION@37921..37928
@@ -16586,7 +16888,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@37929..37932 "\n  "
       PARAM@37932..37951
         PATTERN_VARIABLE@37932..37935
-          IDENT@37932..37935 "acc"
+          NAME@37932..37935
+            IDENT@37932..37935 "acc"
         COLON@37935..37936 ":"
         WHITESPACE@37936..37937 " "
         TYPE_APPLICATION@37937..37950
@@ -16652,7 +16955,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@37991..38006
                 L_SQUARE@37991..37992 "["
                 PATTERN_VARIABLE@37992..37997
-                  IDENT@37992..37997 "first"
+                  NAME@37992..37997
+                    IDENT@37992..37997 "first"
                 COMMA@37997..37998 ","
                 WHITESPACE@37998..37999 " "
                 PATTERN_SPREAD@37999..38005
@@ -16670,7 +16974,8 @@ SOURCE_FILE@0..45079
                 LET_KW@38018..38021 "let"
                 WHITESPACE@38021..38022 " "
                 PATTERN_VARIABLE@38022..38025
-                  IDENT@38022..38025 "key"
+                  NAME@38022..38025
+                    IDENT@38022..38025 "key"
                 WHITESPACE@38025..38026 " "
                 EQ@38026..38027 "="
                 WHITESPACE@38027..38028 " "
@@ -16717,7 +17022,8 @@ SOURCE_FILE@0..45079
                         LET_KW@38099..38102 "let"
                         WHITESPACE@38102..38103 " "
                         PATTERN_VARIABLE@38103..38110
-                          IDENT@38103..38110 "new_acc"
+                          NAME@38103..38110
+                            IDENT@38103..38110 "new_acc"
                         WHITESPACE@38110..38111 " "
                         EQ@38111..38112 "="
                         WHITESPACE@38112..38113 " "
@@ -16917,7 +17223,8 @@ SOURCE_FILE@0..45079
           IDENT@38624..38626 "in"
         WHITESPACE@38626..38627 " "
         PATTERN_VARIABLE@38627..38631
-          IDENT@38627..38631 "list"
+          NAME@38627..38631
+            IDENT@38627..38631 "list"
         COLON@38631..38632 ":"
         WHITESPACE@38632..38633 " "
         TYPE_APPLICATION@38633..38640
@@ -16938,7 +17245,8 @@ SOURCE_FILE@0..45079
           IDENT@38642..38644 "by"
         WHITESPACE@38644..38645 " "
         PATTERN_VARIABLE@38645..38646
-          IDENT@38645..38646 "f"
+          NAME@38645..38646
+            IDENT@38645..38646 "f"
         COLON@38646..38647 ":"
         WHITESPACE@38647..38648 " "
         FN_TYPE@38648..38660
@@ -17009,7 +17317,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@38712..38727
                 L_SQUARE@38712..38713 "["
                 PATTERN_VARIABLE@38713..38718
-                  IDENT@38713..38718 "first"
+                  NAME@38713..38718
+                    IDENT@38713..38718 "first"
                 COMMA@38718..38719 ","
                 WHITESPACE@38719..38720 " "
                 PATTERN_SPREAD@38720..38726
@@ -17081,7 +17390,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@38797..38800 "\n  "
       PARAM@38800..38814
         PATTERN_VARIABLE@38800..38804
-          IDENT@38800..38804 "list"
+          NAME@38800..38804
+            IDENT@38800..38804 "list"
         COLON@38804..38805 ":"
         WHITESPACE@38805..38806 " "
         TYPE_APPLICATION@38806..38813
@@ -17099,7 +17409,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@38814..38817 "\n  "
       PARAM@38817..38828
         PATTERN_VARIABLE@38817..38822
-          IDENT@38817..38822 "count"
+          NAME@38817..38822
+            IDENT@38817..38822 "count"
         COLON@38822..38823 ":"
         WHITESPACE@38823..38824 " "
         TYPE_NAME_REF@38824..38827
@@ -17109,7 +17420,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@38828..38831 "\n  "
       PARAM@38831..38841
         PATTERN_VARIABLE@38831..38835
-          IDENT@38831..38835 "left"
+          NAME@38831..38835
+            IDENT@38831..38835 "left"
         COLON@38835..38836 ":"
         WHITESPACE@38836..38837 " "
         TYPE_NAME_REF@38837..38840
@@ -17119,7 +17431,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@38841..38844 "\n  "
       PARAM@38844..38867
         PATTERN_VARIABLE@38844..38857
-          IDENT@38844..38857 "current_chunk"
+          NAME@38844..38857
+            IDENT@38844..38857 "current_chunk"
         COLON@38857..38858 ":"
         WHITESPACE@38858..38859 " "
         TYPE_APPLICATION@38859..38866
@@ -17137,7 +17450,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@38867..38870 "\n  "
       PARAM@38870..38889
         PATTERN_VARIABLE@38870..38873
-          IDENT@38870..38873 "acc"
+          NAME@38870..38873
+            IDENT@38870..38873 "acc"
         COLON@38873..38874 ":"
         WHITESPACE@38874..38875 " "
         TYPE_APPLICATION@38875..38888
@@ -17238,7 +17552,8 @@ SOURCE_FILE@0..45079
               CLAUSE@38997..39046
                 ALTERNATIVE_PATTERN@38997..39006
                   PATTERN_VARIABLE@38997..39006
-                    IDENT@38997..39006 "remaining"
+                    NAME@38997..39006
+                      IDENT@38997..39006 "remaining"
                 WHITESPACE@39006..39007 " "
                 R_ARROW@39007..39009 "->"
                 WHITESPACE@39009..39010 " "
@@ -17279,7 +17594,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@39059..39074
                 L_SQUARE@39059..39060 "["
                 PATTERN_VARIABLE@39060..39065
-                  IDENT@39060..39065 "first"
+                  NAME@39060..39065
+                    IDENT@39060..39065 "first"
                 COMMA@39065..39066 ","
                 WHITESPACE@39066..39067 " "
                 PATTERN_SPREAD@39067..39073
@@ -17297,7 +17613,8 @@ SOURCE_FILE@0..45079
                 LET_KW@39086..39089 "let"
                 WHITESPACE@39089..39090 " "
                 PATTERN_VARIABLE@39090..39095
-                  IDENT@39090..39095 "chunk"
+                  NAME@39090..39095
+                    IDENT@39090..39095 "chunk"
                 WHITESPACE@39095..39096 " "
                 EQ@39096..39097 "="
                 WHITESPACE@39097..39098 " "
@@ -17501,7 +17818,8 @@ SOURCE_FILE@0..45079
           IDENT@39844..39846 "in"
         WHITESPACE@39846..39847 " "
         PATTERN_VARIABLE@39847..39851
-          IDENT@39847..39851 "list"
+          NAME@39847..39851
+            IDENT@39847..39851 "list"
         COLON@39851..39852 ":"
         WHITESPACE@39852..39853 " "
         TYPE_APPLICATION@39853..39860
@@ -17522,7 +17840,8 @@ SOURCE_FILE@0..45079
           IDENT@39862..39866 "into"
         WHITESPACE@39866..39867 " "
         PATTERN_VARIABLE@39867..39872
-          IDENT@39867..39872 "count"
+          NAME@39867..39872
+            IDENT@39867..39872 "count"
         COLON@39872..39873 ":"
         WHITESPACE@39873..39874 " "
         TYPE_NAME_REF@39874..39877
@@ -17648,7 +17967,8 @@ SOURCE_FILE@0..45079
           IDENT@40538..40542 "over"
         WHITESPACE@40542..40543 " "
         PATTERN_VARIABLE@40543..40547
-          IDENT@40543..40547 "list"
+          NAME@40543..40547
+            IDENT@40543..40547 "list"
         COLON@40547..40548 ":"
         WHITESPACE@40548..40549 " "
         TYPE_APPLICATION@40549..40556
@@ -17669,7 +17989,8 @@ SOURCE_FILE@0..45079
           IDENT@40558..40562 "with"
         WHITESPACE@40562..40563 " "
         PATTERN_VARIABLE@40563..40566
-          IDENT@40563..40566 "fun"
+          NAME@40563..40566
+            IDENT@40563..40566 "fun"
         COLON@40566..40567 ":"
         WHITESPACE@40567..40568 " "
         FN_TYPE@40568..40581
@@ -17751,7 +18072,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@40642..40657
                 L_SQUARE@40642..40643 "["
                 PATTERN_VARIABLE@40643..40648
-                  IDENT@40643..40648 "first"
+                  NAME@40643..40648
+                    IDENT@40643..40648 "first"
                 COMMA@40648..40649 ","
                 WHITESPACE@40649..40650 " "
                 PATTERN_SPREAD@40650..40656
@@ -17808,7 +18130,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@40706..40709 "\n  "
       PARAM@40709..40723
         PATTERN_VARIABLE@40709..40713
-          IDENT@40709..40713 "list"
+          NAME@40709..40713
+            IDENT@40709..40713 "list"
         COLON@40713..40714 ":"
         WHITESPACE@40714..40715 " "
         TYPE_APPLICATION@40715..40722
@@ -17826,7 +18149,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@40723..40726 "\n  "
       PARAM@40726..40743
         PATTERN_VARIABLE@40726..40737
-          IDENT@40726..40737 "accumulator"
+          NAME@40726..40737
+            IDENT@40726..40737 "accumulator"
         COLON@40737..40738 ":"
         WHITESPACE@40738..40739 " "
         TYPE_NAME_REF@40739..40742
@@ -17836,7 +18160,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@40743..40746 "\n  "
       PARAM@40746..40769
         PATTERN_VARIABLE@40746..40757
-          IDENT@40746..40757 "accumulated"
+          NAME@40746..40757
+            IDENT@40746..40757 "accumulated"
         COLON@40757..40758 ":"
         WHITESPACE@40758..40759 " "
         TYPE_APPLICATION@40759..40768
@@ -17854,7 +18179,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@40769..40772 "\n  "
       PARAM@40772..40795
         PATTERN_VARIABLE@40772..40775
-          IDENT@40772..40775 "fun"
+          NAME@40772..40775
+            IDENT@40772..40775 "fun"
         COLON@40775..40776 ":"
         WHITESPACE@40776..40777 " "
         FN_TYPE@40777..40794
@@ -17932,7 +18258,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@40862..40871
                 L_SQUARE@40862..40863 "["
                 PATTERN_VARIABLE@40863..40864
-                  IDENT@40863..40864 "x"
+                  NAME@40863..40864
+                    IDENT@40863..40864 "x"
                 COMMA@40864..40865 ","
                 WHITESPACE@40865..40866 " "
                 PATTERN_SPREAD@40866..40870
@@ -17950,7 +18277,8 @@ SOURCE_FILE@0..45079
                 LET_KW@40883..40886 "let"
                 WHITESPACE@40886..40887 " "
                 PATTERN_VARIABLE@40887..40891
-                  IDENT@40887..40891 "next"
+                  NAME@40887..40891
+                    IDENT@40887..40891 "next"
                 WHITESPACE@40891..40892 " "
                 EQ@40892..40893 "="
                 WHITESPACE@40893..40894 " "
@@ -18052,7 +18380,8 @@ SOURCE_FILE@0..45079
           IDENT@41210..41214 "over"
         WHITESPACE@41214..41215 " "
         PATTERN_VARIABLE@41215..41219
-          IDENT@41215..41219 "list"
+          NAME@41215..41219
+            IDENT@41215..41219 "list"
         COLON@41219..41220 ":"
         WHITESPACE@41220..41221 " "
         TYPE_APPLICATION@41221..41228
@@ -18073,7 +18402,8 @@ SOURCE_FILE@0..45079
           IDENT@41232..41236 "from"
         WHITESPACE@41236..41237 " "
         PATTERN_VARIABLE@41237..41244
-          IDENT@41237..41244 "initial"
+          NAME@41237..41244
+            IDENT@41237..41244 "initial"
         COLON@41244..41245 ":"
         WHITESPACE@41245..41246 " "
         TYPE_NAME_REF@41246..41249
@@ -18086,7 +18416,8 @@ SOURCE_FILE@0..45079
           IDENT@41253..41257 "with"
         WHITESPACE@41257..41258 " "
         PATTERN_VARIABLE@41258..41261
-          IDENT@41258..41261 "fun"
+          NAME@41258..41261
+            IDENT@41258..41261 "fun"
         COLON@41261..41262 ":"
         WHITESPACE@41262..41263 " "
         FN_TYPE@41263..41280
@@ -18213,7 +18544,8 @@ SOURCE_FILE@0..45079
       L_PAREN@41730..41731 "("
       PARAM@41731..41744
         PATTERN_VARIABLE@41731..41735
-          IDENT@41731..41735 "list"
+          NAME@41731..41735
+            IDENT@41731..41735 "list"
         COLON@41735..41736 ":"
         WHITESPACE@41736..41737 " "
         TYPE_APPLICATION@41737..41744
@@ -18278,7 +18610,8 @@ SOURCE_FILE@0..45079
                     WHITESPACE@41790..41791 " "
                     PARAM@41791..41795
                       PATTERN_VARIABLE@41791..41795
-                        IDENT@41791..41795 "elem"
+                        NAME@41791..41795
+                          IDENT@41791..41795 "elem"
                     R_PAREN@41795..41796 ")"
                   WHITESPACE@41796..41797 " "
                   BLOCK@41797..41805
@@ -18333,7 +18666,8 @@ SOURCE_FILE@0..45079
       L_PAREN@42106..42107 "("
       PARAM@42107..42122
         PATTERN_VARIABLE@42107..42112
-          IDENT@42107..42112 "items"
+          NAME@42107..42112
+            IDENT@42107..42112 "items"
         COLON@42112..42113 ":"
         WHITESPACE@42113..42114 " "
         TYPE_APPLICATION@42114..42121
@@ -18354,7 +18688,8 @@ SOURCE_FILE@0..45079
           IDENT@42123..42125 "by"
         WHITESPACE@42125..42126 " "
         PATTERN_VARIABLE@42126..42127
-          IDENT@42126..42127 "n"
+          NAME@42126..42127
+            IDENT@42126..42127 "n"
         COLON@42127..42128 ":"
         WHITESPACE@42128..42129 " "
         TYPE_NAME_REF@42129..42132
@@ -18444,7 +18779,8 @@ SOURCE_FILE@0..45079
                   PATTERN_LIST@42231..42240
                     L_SQUARE@42231..42232 "["
                     PATTERN_VARIABLE@42232..42233
-                      IDENT@42232..42233 "x"
+                      NAME@42232..42233
+                        IDENT@42232..42233 "x"
                     COMMA@42233..42234 ","
                     WHITESPACE@42234..42235 " "
                     PATTERN_SPREAD@42235..42239
@@ -18462,7 +18798,8 @@ SOURCE_FILE@0..45079
                     LET_KW@42256..42259 "let"
                     WHITESPACE@42259..42260 " "
                     PATTERN_VARIABLE@42260..42278
-                      IDENT@42260..42278 "first_combinations"
+                      NAME@42260..42278
+                        IDENT@42260..42278 "first_combinations"
                     WHITESPACE@42278..42279 " "
                     EQ@42279..42280 "="
                     WHITESPACE@42280..42293 "\n            "
@@ -18510,7 +18847,8 @@ SOURCE_FILE@0..45079
                                 L_PAREN@42330..42331 "("
                                 PARAM@42331..42334
                                   PATTERN_VARIABLE@42331..42334
-                                    IDENT@42331..42334 "com"
+                                    NAME@42331..42334
+                                      IDENT@42331..42334 "com"
                                 R_PAREN@42334..42335 ")"
                               WHITESPACE@42335..42336 " "
                               BLOCK@42336..42350
@@ -18581,12 +18919,14 @@ SOURCE_FILE@0..45079
                               L_PAREN@42470..42471 "("
                               PARAM@42471..42475
                                 PATTERN_VARIABLE@42471..42474
-                                  IDENT@42471..42474 "acc"
+                                  NAME@42471..42474
+                                    IDENT@42471..42474 "acc"
                                 COMMA@42474..42475 ","
                               WHITESPACE@42475..42476 " "
                               PARAM@42476..42477
                                 PATTERN_VARIABLE@42476..42477
-                                  IDENT@42476..42477 "c"
+                                  NAME@42476..42477
+                                    IDENT@42476..42477 "c"
                               R_PAREN@42477..42478 ")"
                             WHITESPACE@42478..42479 " "
                             BLOCK@42479..42493
@@ -18629,7 +18969,8 @@ SOURCE_FILE@0..45079
       L_PAREN@42555..42556 "("
       PARAM@42556..42570
         PATTERN_VARIABLE@42556..42561
-          IDENT@42556..42561 "items"
+          NAME@42556..42561
+            IDENT@42556..42561 "items"
         COLON@42561..42562 ":"
         WHITESPACE@42562..42563 " "
         TYPE_APPLICATION@42563..42570
@@ -18706,7 +19047,8 @@ SOURCE_FILE@0..45079
               PATTERN_LIST@42629..42638
                 L_SQUARE@42629..42630 "["
                 PATTERN_VARIABLE@42630..42631
-                  IDENT@42630..42631 "x"
+                  NAME@42630..42631
+                    IDENT@42630..42631 "x"
                 COMMA@42631..42632 ","
                 WHITESPACE@42632..42633 " "
                 PATTERN_SPREAD@42633..42637
@@ -18724,7 +19066,8 @@ SOURCE_FILE@0..45079
                 LET_KW@42650..42653 "let"
                 WHITESPACE@42653..42654 " "
                 PATTERN_VARIABLE@42654..42672
-                  IDENT@42654..42672 "first_combinations"
+                  NAME@42654..42672
+                    IDENT@42654..42672 "first_combinations"
                 WHITESPACE@42672..42673 " "
                 EQ@42673..42674 "="
                 WHITESPACE@42674..42675 " "
@@ -18751,7 +19094,8 @@ SOURCE_FILE@0..45079
                           L_PAREN@42691..42692 "("
                           PARAM@42692..42697
                             PATTERN_VARIABLE@42692..42697
-                              IDENT@42692..42697 "other"
+                              NAME@42692..42697
+                                IDENT@42692..42697 "other"
                           R_PAREN@42697..42698 ")"
                         WHITESPACE@42698..42699 " "
                         BLOCK@42699..42714
@@ -18832,7 +19176,8 @@ SOURCE_FILE@0..45079
       L_PAREN@42984..42985 "("
       PARAM@42985..42999
         PATTERN_VARIABLE@42985..42990
-          IDENT@42985..42990 "items"
+          NAME@42985..42990
+            IDENT@42985..42990 "items"
         COLON@42990..42991 ":"
         WHITESPACE@42991..42992 " "
         TYPE_APPLICATION@42992..42999
@@ -18925,7 +19270,8 @@ SOURCE_FILE@0..45079
       L_PAREN@43280..43281 "("
       PARAM@43281..43300
         PATTERN_VARIABLE@43281..43285
-          IDENT@43281..43285 "list"
+          NAME@43281..43285
+            IDENT@43281..43285 "list"
         COLON@43285..43286 ":"
         WHITESPACE@43286..43287 " "
         TYPE_APPLICATION@43287..43300
@@ -19025,7 +19371,8 @@ SOURCE_FILE@0..45079
       L_PAREN@43691..43692 "("
       PARAM@43692..43719
         PATTERN_VARIABLE@43692..43704
-          IDENT@43692..43704 "list_of_list"
+          NAME@43692..43704
+            IDENT@43692..43704 "list_of_list"
         COLON@43704..43705 ":"
         WHITESPACE@43705..43706 " "
         TYPE_APPLICATION@43706..43719
@@ -19078,7 +19425,8 @@ SOURCE_FILE@0..45079
         LET_KW@43742..43745 "let"
         WHITESPACE@43745..43746 " "
         PATTERN_VARIABLE@43746..43756
-          IDENT@43746..43756 "take_first"
+          NAME@43746..43756
+            IDENT@43746..43756 "take_first"
         WHITESPACE@43756..43757 " "
         EQ@43757..43758 "="
         WHITESPACE@43758..43759 " "
@@ -19088,7 +19436,8 @@ SOURCE_FILE@0..45079
             L_PAREN@43761..43762 "("
             PARAM@43762..43766
               PATTERN_VARIABLE@43762..43766
-                IDENT@43762..43766 "list"
+                NAME@43762..43766
+                  IDENT@43762..43766 "list"
             R_PAREN@43766..43767 ")"
           WHITESPACE@43767..43768 " "
           BLOCK@43768..43848
@@ -19121,7 +19470,8 @@ SOURCE_FILE@0..45079
                     PATTERN_LIST@43807..43810
                       L_SQUARE@43807..43808 "["
                       PATTERN_VARIABLE@43808..43809
-                        IDENT@43808..43809 "f"
+                        NAME@43808..43809
+                          IDENT@43808..43809 "f"
                       R_SQUARE@43809..43810 "]"
                   WHITESPACE@43810..43811 " "
                   R_ARROW@43811..43813 "->"
@@ -19138,7 +19488,8 @@ SOURCE_FILE@0..45079
                     PATTERN_LIST@43824..43831
                       L_SQUARE@43824..43825 "["
                       PATTERN_VARIABLE@43825..43826
-                        IDENT@43825..43826 "f"
+                        NAME@43825..43826
+                          IDENT@43825..43826 "f"
                       COMMA@43826..43827 ","
                       WHITESPACE@43827..43828 " "
                       PATTERN_SPREAD@43828..43830
@@ -19212,7 +19563,8 @@ SOURCE_FILE@0..45079
           CLAUSE@43923..44088
             ALTERNATIVE_PATTERN@43923..43927
               PATTERN_VARIABLE@43923..43927
-                IDENT@43923..43927 "rows"
+                NAME@43923..43927
+                  IDENT@43923..43927 "rows"
             WHITESPACE@43927..43928 " "
             R_ARROW@43928..43930 "->"
             WHITESPACE@43930..43931 " "
@@ -19223,7 +19575,8 @@ SOURCE_FILE@0..45079
                 LET_KW@43939..43942 "let"
                 WHITESPACE@43942..43943 " "
                 PATTERN_VARIABLE@43943..43949
-                  IDENT@43943..43949 "firsts"
+                  NAME@43943..43949
+                    IDENT@43943..43949 "firsts"
                 WHITESPACE@43949..43950 " "
                 EQ@43950..43951 "="
                 WHITESPACE@43951..43960 "\n        "
@@ -19257,7 +19610,8 @@ SOURCE_FILE@0..45079
                 LET_KW@44016..44019 "let"
                 WHITESPACE@44019..44020 " "
                 PATTERN_VARIABLE@44020..44024
-                  IDENT@44020..44024 "rest"
+                  NAME@44020..44024
+                    IDENT@44020..44024 "rest"
                 WHITESPACE@44024..44025 " "
                 EQ@44025..44026 "="
                 WHITESPACE@44026..44027 " "
@@ -19329,7 +19683,8 @@ SOURCE_FILE@0..45079
       L_PAREN@44121..44122 "("
       PARAM@44122..44146
         PATTERN_VARIABLE@44122..44126
-          IDENT@44122..44126 "list"
+          NAME@44122..44126
+            IDENT@44122..44126 "list"
         COLON@44126..44127 ":"
         WHITESPACE@44127..44128 " "
         TYPE_APPLICATION@44128..44145
@@ -19356,7 +19711,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@44146..44147 " "
       PARAM@44147..44159
         PATTERN_VARIABLE@44147..44150
-          IDENT@44147..44150 "acc"
+          NAME@44147..44150
+            IDENT@44147..44150 "acc"
         COLON@44150..44151 ":"
         WHITESPACE@44151..44152 " "
         TYPE_APPLICATION@44152..44159
@@ -19427,7 +19783,8 @@ SOURCE_FILE@0..45079
                 PATTERN_LIST@44223..44248
                   L_SQUARE@44223..44224 "["
                   PATTERN_VARIABLE@44224..44233
-                    IDENT@44224..44233 "elem_pair"
+                    NAME@44224..44233
+                      IDENT@44224..44233 "elem_pair"
                   COMMA@44233..44234 ","
                   WHITESPACE@44234..44235 " "
                   PATTERN_SPREAD@44235..44247
@@ -19490,7 +19847,8 @@ SOURCE_FILE@0..45079
       WHITESPACE@44362..44365 "\n  "
       PARAM@44365..44398
         PATTERN_VARIABLE@44365..44378
-          IDENT@44365..44378 "list_of_pairs"
+          NAME@44365..44378
+            IDENT@44365..44378 "list_of_pairs"
         COLON@44378..44379 ":"
         WHITESPACE@44379..44380 " "
         TYPE_APPLICATION@44380..44397
@@ -19564,7 +19922,8 @@ SOURCE_FILE@0..45079
                   L_PAREN@44457..44458 "("
                   PARAM@44458..44478
                     PATTERN_VARIABLE@44458..44464
-                      IDENT@44458..44464 "a_pair"
+                      NAME@44458..44464
+                        IDENT@44458..44464 "a_pair"
                     COLON@44464..44465 ":"
                     WHITESPACE@44465..44466 " "
                     TUPLE_TYPE@44466..44477
@@ -19583,7 +19942,8 @@ SOURCE_FILE@0..45079
                   WHITESPACE@44478..44479 " "
                   PARAM@44479..44498
                     PATTERN_VARIABLE@44479..44485
-                      IDENT@44479..44485 "b_pair"
+                      NAME@44479..44485
+                        IDENT@44479..44485 "b_pair"
                     COLON@44485..44486 ":"
                     WHITESPACE@44486..44487 " "
                     TUPLE_TYPE@44487..44498
@@ -19682,7 +20042,8 @@ SOURCE_FILE@0..45079
       L_PAREN@44895..44896 "("
       PARAM@44896..44909
         PATTERN_VARIABLE@44896..44900
-          IDENT@44896..44900 "list"
+          NAME@44896..44900
+            IDENT@44896..44900 "list"
         COLON@44900..44901 ":"
         WHITESPACE@44901..44902 " "
         TYPE_APPLICATION@44902..44909
@@ -19752,12 +20113,14 @@ SOURCE_FILE@0..45079
                         L_PAREN@44959..44960 "("
                         PARAM@44960..44964
                           PATTERN_VARIABLE@44960..44963
-                            IDENT@44960..44963 "acc"
+                            NAME@44960..44963
+                              IDENT@44960..44963 "acc"
                           COMMA@44963..44964 ","
                         WHITESPACE@44964..44965 " "
                         PARAM@44965..44966
                           PATTERN_VARIABLE@44965..44966
-                            IDENT@44965..44966 "a"
+                            NAME@44965..44966
+                              IDENT@44965..44966 "a"
                         R_PAREN@44966..44967 ")"
                       WHITESPACE@44967..44968 " "
                       BLOCK@44968..45009

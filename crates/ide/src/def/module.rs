@@ -104,7 +104,6 @@ pub enum Visibility {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Clause {
-    // patterns are lowered into #(pat, pat) tuples to make type inference easier
     pub patterns: Vec<PatternId>,
     // pub guard: Option<ExprId>,
     pub expr: ExprId,

@@ -61,6 +61,7 @@ pub(crate) fn negotiate_capabilities(
             trigger_characters: Some(vec![".".into(), "@".into()]),
             ..Default::default()
         }),
+        document_highlight_provider: Some(OneOf::Left(true)),
         hover_provider: Some(HoverProviderCapability::Simple(true)),
         definition_provider: Some(OneOf::Left(true)),
         ..Default::default()

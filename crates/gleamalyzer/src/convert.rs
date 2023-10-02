@@ -1,9 +1,9 @@
 use crate::{LineMap, Result, Vfs};
 use ide::{
     CompletionItem, CompletionItemKind, Diagnostic, DiagnosticKind, FileId, FilePos, FileRange,
-    HoverResult, Severity,
+    HoverResult, Severity, HlRelated,
 };
-use lsp::{DiagnosticTag, Documentation, Hover, MarkupContent, MarkupKind};
+use lsp::{DiagnosticTag, Documentation, Hover, MarkupContent, MarkupKind, DocumentHighlight, DocumentHighlightKind};
 use lsp_types::{
     self as lsp, DiagnosticRelatedInformation, DiagnosticSeverity, Location, NumberOrString,
     Position, Range, TextDocumentIdentifier, TextDocumentPositionParams,
@@ -170,3 +170,18 @@ pub(crate) fn to_diagnostics(
     ret
 }
 
+pub(crate) fn to_document_highlight(
+    line_map: &LineMap,
+    hls: &[HlRelated],
+) -> Vec<DocumentHighlight> {
+    hls.iter()
+        .map(|hl| DocumentHighlight {
+            range: to_range(line_map, hl.range),
+            kind: Some(if hl.is_definition {
+                DocumentHighlightKind::WRITE
+            } else {
+                DocumentHighlightKind::READ
+            }),
+        })
+        .collect()
+}

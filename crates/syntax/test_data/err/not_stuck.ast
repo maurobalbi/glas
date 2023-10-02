@@ -17,12 +17,14 @@ SOURCE_FILE@0..141
       L_PAREN@14..15 "("
       PARAM@15..17
         PATTERN_VARIABLE@15..16
-          IDENT@15..16 "a"
+          NAME@15..16
+            IDENT@15..16 "a"
         COMMA@16..17 ","
       WHITESPACE@17..18 " "
       PARAM@18..19
         PATTERN_VARIABLE@18..19
-          IDENT@18..19 "b"
+          NAME@18..19
+            IDENT@18..19 "b"
       R_PAREN@19..20 ")"
     WHITESPACE@20..21 " "
     BLOCK@21..32
@@ -60,7 +62,8 @@ SOURCE_FILE@0..141
             ALTERNATIVE_PATTERN@71..80
               VARIANT_REF@71..80
                 MODULE_NAME@71..76
-                  IDENT@71..76 "local"
+                  NAME@71..76
+                    IDENT@71..76 "local"
                 DOT@76..77 "."
                 WHITESPACE@77..80 "\n  "
                 NAME_REF@80..80

@@ -377,7 +377,7 @@ impl ExprScopes {
                     });
                     self.add_bindings(body, scope, pattern);
                 }
-                Statement::Expr { expr, .. } => {
+                Statement::Expr { expr } => {
                     self.traverse_expr(body, *expr, scope);
                 }
                 Statement::Use { patterns, expr } => {

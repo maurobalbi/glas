@@ -228,6 +228,7 @@ enums! {
     TypeNameOrName {
         Name,
         TypeName,
+        NameRef,
     },
 }
 
@@ -254,6 +255,7 @@ impl TypeNameOrName {
         match self {
             TypeNameOrName::Name(name) => name.token(),
             TypeNameOrName::TypeName(type_name) => type_name.token(),
+            TypeNameOrName::NameRef(it) => it.token(),
         }
     }
 
@@ -429,13 +431,7 @@ asts! {
         statements: [ModuleStatement],
     },
     MODULE_NAME = ModuleName {
-        pub fn token(&self) -> SyntaxToken {
-            self.0.children_with_tokens().find_map(NodeOrToken::into_token).unwrap()
-        }
-
-        pub fn text(&self) -> SmolStr {
-            self.token().text().into()
-        }
+        name: Name,
     },
     // Change to body with expression to be able to reuse parser / collecting logic and validate constant during lowering
     MODULE_CONSTANT = ModuleConstant {
@@ -544,7 +540,7 @@ asts! {
         elements: [ConstantExpr],
     },
     TYPE_NAME_REF = TypeNameRef {
-        module: ModuleName,
+        module: Name,
         constructor_name: TypeName,
     },
     TYPE_APPLICATION = TypeApplication {
@@ -593,16 +589,10 @@ asts! {
         patterns: [Pattern],
     },
     PATTERN_VARIABLE = PatternVariable {
-        pub fn token(&self) -> Option<SyntaxToken> {
-            self.0.children_with_tokens().find_map(NodeOrToken::into_token)
-        }
-
-        pub fn text(&self) -> Option<SmolStr> {
-            self.token().map(|t| t.text().into())
-        }
+        name: Name,
     },
     VARIANT_REF = VariantRef {
-        module: ModuleName,
+        module: Name,
         variant: NameRef,
         field_list: VariantRefFieldList,
     },
@@ -674,11 +664,7 @@ mod tests {
     #[test]
     fn assert() {
         let e = crate::parse_module(
-            "fn a() { 
-                    case wobble, 1 + 7 
-                    { 
-                        int.Bla(Some(a)), 1 -> 2
-                    }}",
+            "type Mogie { Mogie(name: Int) } fn wops() { let bobo = Mogie(name: 1) bobo.name}",
         );
         for error in e.errors() {
             println!("{}", error);
@@ -978,6 +964,19 @@ mod tests {
         let mut pats = c.patterns().into_iter();
         pats.next().unwrap().syntax().should_eq("Bird | Snake");
         pats.next().unwrap().syntax().should_eq("a");
+    }
+
+    #[test]
+    fn clause_guards() {
+        let clause = parse::<Clause>(" fn guards(a: String) {
+            case 1 {
+                b if b == a -> 1
+            }
+        }");
+        let mut pats = clause.patterns().into_iter();
+        pats.next().unwrap().syntax().should_eq("b");
+        assert!(pats.next().is_none());
+        clause.body().unwrap().syntax().should_eq("1")
     }
 
     #[test]

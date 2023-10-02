@@ -25,83 +25,9 @@ pub(crate) fn goto_definition(
     let parse = sema.parse(file_id);
     let tok = best_token_at_offset(&parse.syntax(), pos)?;
 
-    match semantics::classify_node(sema, &tok.parent()?)? {
-        semantics::Definition::Adt(it) => {
-            let src = it.source(db.upcast())?;
-            let full_range = src.value.syntax().text_range();
-            let focus_range = src
-                .value
-                .name()
-                .map(|n| n.syntax().text_range())
-                .unwrap_or_else(|| full_range);
-            Some(GotoDefinitionResult::Targets(vec![NavigationTarget {
-                file_id: src.file_id,
-                focus_range,
-                full_range,
-            }]))
-        }
-        semantics::Definition::Function(it) => {
-            let src = it.source(db.upcast())?;
-            let full_range = src.value.syntax().text_range();
-            let focus_range = src
-                .value
-                .name()
-                .map(|n| n.syntax().text_range())
-                .unwrap_or_else(|| full_range);
-            Some(GotoDefinitionResult::Targets(vec![NavigationTarget {
-                file_id: src.file_id,
-                focus_range,
-                full_range,
-            }]))
-        }
-        semantics::Definition::Variant(it) => {
-            let src = it.source(db.upcast())?;
-            let full_range = src.value.syntax().text_range();
-            Some(GotoDefinitionResult::Targets(vec![NavigationTarget {
-                file_id: src.file_id,
-                focus_range: full_range,
-                full_range,
-            }]))
-        }
-        semantics::Definition::Module(module) => {
-            let full_range = TextRange::new(0.into(), 0.into());
-            Some(GotoDefinitionResult::Targets(vec![NavigationTarget {
-                file_id: module.id,
-                focus_range: full_range,
-                full_range,
-            }]))
-        }
-        semantics::Definition::Field(_) => todo!(),
-        semantics::Definition::Local(it) => {
-            let focus_node = it.source(db.upcast());
-            let focus_range = focus_node.syntax().text_range();
-            let full_range = focus_node
-                .syntax()
-                .parent()
-                .map(|p| p.text_range())
-                .unwrap_or(focus_range);
-            Some(GotoDefinitionResult::Targets(vec![NavigationTarget {
-                file_id,
-                focus_range,
-                full_range,
-            }]))
-        }
-        semantics::Definition::BuiltIn(_) => None,
-        semantics::Definition::TypeAlias(it) => {
-            let src = it.source(db.upcast())?;
-            let full_range = src.value.syntax().text_range();
-            let focus_range = src
-                .value
-                .name()
-                .map(|n| n.syntax().text_range())
-                .unwrap_or_else(|| full_range);
-            Some(GotoDefinitionResult::Targets(vec![NavigationTarget {
-                file_id: src.file_id,
-                focus_range,
-                full_range,
-            }]))
-        }
-    }
+    semantics::classify_node(&sema, &tok.parent()?)
+        .and_then(|def| def.to_nav(db))
+        .map(|navs| GotoDefinitionResult::Targets(vec![navs]))
 }
 
 #[cfg(test)]
@@ -174,6 +100,7 @@ mod tests {
     }
 
     #[test]
+    // Temporarily broken!
     fn field_resolution() {
         check(
             "type Mogie { Mogie(name: Int) } fn wops() { Mogie(name: 1).$0name}",
@@ -189,7 +116,6 @@ mod tests {
         );
     }
 
-    #[traced_test]
     #[test]
     fn pattern_spread() {
         check(
@@ -198,6 +124,7 @@ mod tests {
         );
     }
 
+    // Temporarily broken!
     #[test]
     fn field_access() {
         check(
@@ -208,6 +135,26 @@ mod tests {
             "type Mogie { Mogie(name: Int) } fn wops() { let bobo = Mogie(name: 1) bobo.$0name}",
             expect!["type <Mogie> { Mogie(name: Int) }"],
         );
+    }
+
+    #[test]
+    #[traced_test]
+    fn guards_scope() {
+        check(r#"
+        fn guards(a: String) {
+            case 1 {
+                b if b == $0a -> 1
+            }
+        }
+        "#, expect!["<a>: String"]);
+
+        check(r#"
+        fn guards(a: String) {
+            case 1 {
+                b if $0b == a -> 1
+            }
+        }
+        "#, expect![""]);
     }
 
     #[test]
@@ -295,11 +242,13 @@ type Internal {
 }
 
 fn test(test: Internal) { test.$0print }"#,
-            expect![r#"
+            expect![
+                r#"
 fn <print>() {
     1
 }
-"#],
+"#
+            ],
         )
     }
 }

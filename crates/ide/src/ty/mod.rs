@@ -41,7 +41,7 @@ pub enum Ty {
     List {
         of: Arc<Ty>,
     },
-    // ToDo: when making types for functions, 
+    // ToDo: when making types for functions,
     Function {
         params: Arc<Vec<Ty>>,
         return_: Arc<Ty>,
@@ -102,7 +102,9 @@ pub fn ty_from_ast(ast_expr: ast::TypeExpr) -> Ty {
                     // ToDo: Diagnostics
                     a if token.kind() == syntax::SyntaxKind::U_IDENT => {
                         return Ty::Adt {
-                            module: t.module().map(|m| m.text().into()),
+                            module: t
+                                .module()
+                                .and_then(|m| m.text()),
                             name: a.into(),
                             params: Arc::new(Vec::new()),
                         }
@@ -147,7 +149,7 @@ pub fn ty_from_ast(ast_expr: ast::TypeExpr) -> Ty {
             Ty::Adt {
                 module: type_constr
                     .and_then(|t| t.module())
-                    .and_then(|m| m.text().into()),
+                    .and_then(|m| m.text()),
                 name,
                 params: Arc::new(arguments),
             }

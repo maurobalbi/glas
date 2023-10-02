@@ -543,7 +543,7 @@ fn param(p: &mut Parser, is_anon: bool) {
     }
     if p.at(IDENT) {
         let pat = p.start_node();
-        p.bump();
+        name(p);
         p.finish_node(pat, PATTERN_VARIABLE);
     } else if p.at(DISCARD_IDENT) {
         let pat = p.start_node();
@@ -846,8 +846,8 @@ fn clause(p: &mut Parser) {
     }
     if p.at(T!["if"]) {
         // parse guards
-        p.expect(T!["if"]);
         let guard = p.start_node();
+        p.expect(T!["if"]);
         expr(p);
         p.finish_node(guard, PATTERN_GUARD);
     }
@@ -889,13 +889,14 @@ fn pattern(p: &mut Parser) {
             // let n = p.start_node();
             p.expect(IDENT);
             if !p.at(T!["."]) {
-                // p.finish_node(n, NAME);
-                p.finish_node(m, PATTERN_VARIABLE);
+                let pat = p.finish_node(m, NAME);
+                let pat = p.start_node_before(pat);
+                p.finish_node(pat, PATTERN_VARIABLE);
 
                 return;
             }
 
-            let module_m = p.finish_node(m, MODULE_NAME);
+            let module_m = p.finish_node(m, NAME);
             let t_ref = p.start_node_before(module_m);
             p.expect(T!["."]);
             name_ref(p);
@@ -928,7 +929,7 @@ fn pattern(p: &mut Parser) {
                 let concat = p.start_node_before(literal);
                 p.expect(T!["<>"]);
                 let var = p.start_node();
-                p.expect(IDENT);
+                name(p);
                 p.finish_node(var, PATTERN_VARIABLE);
                 literal = p.finish_node(concat, PATTERN_CONCAT);
             }
@@ -954,7 +955,11 @@ fn pattern(p: &mut Parser) {
     };
     if p.eat(T!["as"]) {
         let var = p.start_node();
-        p.expect(IDENT);
+        if p.at_any(TokenSet::new(&[IDENT, U_IDENT])) {
+            name(p);
+        } else {
+            p.error(ErrorKind::ExpectedIdentifier);
+        }
         p.finish_node(var, PATTERN_VARIABLE);
         let as_pat = p.start_node_before(pat);
         p.finish_node(as_pat, AS_PATTERN);
@@ -1341,7 +1346,7 @@ fn type_expr(p: &mut Parser) {
                 p.finish_node(type_name, TYPE_NAME_REF);
                 return;
             }
-            let m = p.finish_node(m, MODULE_NAME);
+            let m = p.finish_node(m, NAME);
             let n = p.start_node_before(m);
             type_application = true;
             p.expect(T!["."]);

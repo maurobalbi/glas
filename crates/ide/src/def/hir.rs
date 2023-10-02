@@ -1,18 +1,17 @@
 use std::collections::HashMap;
 
 use smol_str::SmolStr;
-use syntax::ast::{self};
+use syntax::ast::{self, AstNode};
 
 use crate::{
     impl_from,
     ty::{self, TyDatabase},
-    DefDatabase, FileId, SourceRootId,
+    DefDatabase, FileId, SourceRootId, InFile,
 };
 
 use super::{
     hir_def::{AdtId, LocalVariantId, TypeAliasId},
     module::{AdtData, Field, FunctionData, Param, PatternId, TypeAliasData, VariantData},
-    scope::ExprScopes,
     FunctionId, InternDatabase,
 };
 
@@ -76,6 +75,10 @@ impl TypeAlias {
         let module_items = db.module_items(type_alias.file_id);
         module_items[type_alias.value].clone()
     }
+    
+    pub fn module(&self, db: &dyn DefDatabase) -> Module {
+        db.lookup_intern_type_alias(self.id).file_id.into()
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -107,6 +110,10 @@ impl Adt {
         let adt = db.lookup_intern_adt(self.id);
         let module_items = db.module_items(adt.file_id);
         module_items[adt.value].clone()
+    }
+
+    pub fn module(&self, db: &dyn DefDatabase) -> Module {
+        db.lookup_intern_adt(self.id).file_id.into()
     }
 }
 
@@ -158,6 +165,10 @@ impl Function {
         let func = db.lookup_intern_function(self.id);
         db.module_items(func.file_id)[func.value].clone()
     }
+    
+    pub fn module(&self, db: &dyn DefDatabase) -> Module {
+        db.lookup_intern_function(self.id).file_id.into()
+    }
 }
 
 impl_from!(
@@ -172,13 +183,13 @@ pub struct Local {
 }
 
 impl Local {
-    pub fn source(&self, db: &dyn DefDatabase) -> ast::Pattern {
+    pub fn source(&self, db: &dyn DefDatabase) -> InFile<ast::Pattern> {
         let (_body, source_map) = db.body_with_source_map(self.parent);
         let src = source_map
             .node_for_pattern(self.pat_id)
             .expect("This is a compiler bug!");
         let root = db.parse(src.file_id).syntax_node();
-        src.value.to_node(&root)
+        src.with_value(src.value.clone().to_node(&root))
     }
 
     pub fn ty(self, db: &dyn TyDatabase) -> ty::Ty {
@@ -186,6 +197,10 @@ impl Local {
         let infer = db.infer_function(def);
         let ty = infer.ty_for_pattern(self.pat_id).clone();
         ty
+    }
+
+    pub fn name(self, db: &dyn DefDatabase) -> SmolStr {
+        SmolStr::from(self.source(db).value.syntax().to_string())
     }
 }
 

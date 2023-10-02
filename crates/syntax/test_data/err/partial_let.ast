@@ -9,12 +9,14 @@ SOURCE_FILE@0..29
       L_PAREN@7..8 "("
       PARAM@8..10
         PATTERN_VARIABLE@8..9
-          IDENT@8..9 "a"
+          NAME@8..9
+            IDENT@8..9 "a"
         COMMA@9..10 ","
       WHITESPACE@10..11 " "
       PARAM@11..12
         PATTERN_VARIABLE@11..12
-          IDENT@11..12 "b"
+          NAME@11..12
+            IDENT@11..12 "b"
       R_PAREN@12..13 ")"
     WHITESPACE@13..14 " "
     BLOCK@14..28
@@ -24,7 +26,8 @@ SOURCE_FILE@0..29
         LET_KW@18..21 "let"
         WHITESPACE@21..22 " "
         PATTERN_VARIABLE@22..23
-          IDENT@22..23 "a"
+          NAME@22..23
+            IDENT@22..23 "a"
         WHITESPACE@23..24 " "
         EQ@24..25 "="
       WHITESPACE@25..27 " \n"

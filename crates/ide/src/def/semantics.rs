@@ -3,10 +3,11 @@ use std::{cell::RefCell, collections::HashMap};
 use smol_str::SmolStr;
 use syntax::{
     ast::{self, AstNode},
-    match_ast, AstPtr, GleamLanguage, SyntaxNode,
+    match_ast, AstPtr, GleamLanguage, SyntaxNode, TextRange,
 };
 
 use crate::{
+    ide::{NavigationTarget, RootDatabase},
     impl_from,
     ty::{self, FieldResolution, TyDatabase},
     DefDatabase, FileId, InFile,
@@ -17,9 +18,11 @@ use super::{
     hir_def::ModuleDefId,
     module::{Field, Pattern},
     resolver::{resolver_for_toplevel, ResolveResult},
+    source::HasSource,
     source_analyzer::SourceAnalyzer,
 };
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Definition {
     Adt(Adt),
     Function(Function),
@@ -35,6 +38,119 @@ impl_from!(
     Adt, Local, Function, Field, Variant, Module, BuiltIn, TypeAlias
     for Definition
 );
+
+impl Definition {
+    pub fn module(&self, db: &dyn DefDatabase) -> Option<Module> {
+        let module = match self {
+            Definition::Adt(it) => it.module(db),
+            Definition::Function(it) => it.module(db),
+            Definition::Variant(it) => Adt::from(it.parent).module(db),
+            Definition::Field(it) => return None,
+            Definition::Local(it) => Function::from(it.parent).module(db),
+            Definition::Module(it) => *it,
+            Definition::BuiltIn(_) => return None,
+            Definition::TypeAlias(it) => it.module(db),
+        };
+        Some(module)
+    }
+
+    pub fn name(&self, db: &dyn DefDatabase) -> Option<SmolStr> {
+        let name = match self {
+            Definition::Adt(it) => it.name(db),
+            Definition::Function(it) => it.name(db),
+            Definition::Variant(it) => it.name(db),
+            // ToDo: Fixme
+            Definition::Field(it) => return None,
+            Definition::Local(it) => it.name(db),
+            Definition::Module(_) => return None,
+            // ToDo: Fixme
+            Definition::BuiltIn(it) => return None,
+            Definition::TypeAlias(it) => it.name(db),
+        };
+        Some(name)
+    }
+
+    pub fn to_nav(&self, db: &dyn TyDatabase) -> Option<NavigationTarget> {
+        match self {
+            Definition::Adt(it) => {
+                let src = it.source(db.upcast())?;
+                let full_range = src.value.syntax().text_range();
+                let focus_range = src
+                    .value
+                    .name()
+                    .map(|n| n.syntax().text_range())
+                    .unwrap_or_else(|| full_range);
+                Some(NavigationTarget {
+                    file_id: src.file_id,
+                    focus_range,
+                    full_range,
+                })
+            }
+            Definition::Function(it) => {
+                let src = it.source(db.upcast())?;
+                let full_range = src.value.syntax().text_range();
+                let focus_range = src
+                    .value
+                    .name()
+                    .map(|n| n.syntax().text_range())
+                    .unwrap_or_else(|| full_range);
+                Some(NavigationTarget {
+                    file_id: src.file_id,
+                    focus_range,
+                    full_range,
+                })
+            }
+            Definition::Variant(it) => {
+                let src = it.source(db.upcast())?;
+                let full_range = src.value.syntax().text_range();
+                Some(NavigationTarget {
+                    file_id: src.file_id,
+                    focus_range: full_range,
+                    full_range,
+                })
+            }
+            Definition::Module(module) => {
+                let full_range = TextRange::new(0.into(), 0.into());
+                Some(NavigationTarget {
+                    file_id: module.id,
+                    focus_range: full_range,
+                    full_range,
+                })
+            }
+            Definition::Field(_) => todo!(),
+            Definition::Local(it) => {
+                let focus_node = it.source(db.upcast());
+                let focus_range = focus_node.value.syntax().text_range();
+                let full_range = focus_node
+                    .value
+                    .syntax()
+                    .parent()
+                    .map(|p| p.text_range())
+                    .unwrap_or(focus_range);
+                Some(NavigationTarget {
+                    file_id: focus_node.file_id,
+                    focus_range,
+                    full_range,
+                })
+            }
+            Definition::BuiltIn(_) => None,
+            Definition::TypeAlias(it) => {
+                let src = it.source(db.upcast())?;
+                let full_range = src.value.syntax().text_range();
+                let focus_range = src
+                    .value
+                    .name()
+                    .map(|n| n.syntax().text_range())
+                    .unwrap_or_else(|| full_range);
+                Some(NavigationTarget {
+                    file_id: src.file_id,
+                    focus_range,
+                    full_range,
+                })
+            }
+        }
+    }
+}
 
 impl From<FieldResolution> for Definition {
     fn from(value: FieldResolution) -> Self {
@@ -64,23 +180,31 @@ impl From<ResolveResult> for Definition {
     }
 }
 
-pub fn classify_node(sema: Semantics, node: &SyntaxNode) -> Option<Definition> {
+pub fn classify_node(sema: &Semantics, node: &SyntaxNode) -> Option<Definition> {
     match_ast! {
         match node {
             ast::NameRef(name_ref) => classify_name_ref(sema, &name_ref),
             ast::Name(name) => classify_name(sema, &name),
             ast::TypeName(type_name) => classify_type_name(sema, &type_name),
+            // ast::PatternVariable(type_name) => classify_pattern_variable(sema, &type_name),
             _ => None,
         }
     }
 }
 
-fn classify_name(sema: Semantics, name: &ast::Name) -> Option<Definition> {
+fn classify_name(sema: &Semantics, name: &ast::Name) -> Option<Definition> {
     let parent = name.syntax().parent()?;
 
     match_ast! {
         match parent {
             ast::Function(it) => return sema.to_def(&it).map(From::from),
+            ast::PatternVariable(it) => {
+                let pattern = ast::Pattern::cast(it.syntax().clone())?;
+                let def = sema.to_def(&pattern).map(From::from);
+                tracing::info!("Pattern {:?} {:?}", pattern.syntax().text(), def);
+
+                return def
+            },
             _ => {},
         }
     }
@@ -88,7 +212,7 @@ fn classify_name(sema: Semantics, name: &ast::Name) -> Option<Definition> {
     return None;
 }
 
-fn classify_name_ref(sema: Semantics, name_ref: &ast::NameRef) -> Option<Definition> {
+fn classify_name_ref(sema: &Semantics, name_ref: &ast::NameRef) -> Option<Definition> {
     let parent = name_ref.syntax().parent()?;
 
     match_ast! {
@@ -101,12 +225,12 @@ fn classify_name_ref(sema: Semantics, name_ref: &ast::NameRef) -> Option<Definit
     return sema.resolve_name(name_ref.clone()).map(Into::into);
 }
 
-fn classify_type_name(sema: Semantics, type_name: &ast::TypeName) -> Option<Definition> {
+fn classify_type_name(sema: &Semantics, type_name: &ast::TypeName) -> Option<Definition> {
     let parent = type_name.syntax().parent()?;
 
     ast::TypeNameRef::cast(parent)
         .and_then(|t| {
-            let module: SmolStr = t.module()?.text();
+            let module: SmolStr = t.module()?.text()?;
             let file_id = sema
                 .analyze(type_name.syntax())?
                 .resolver
@@ -191,7 +315,7 @@ impl<'db> Semantics<'db> {
     }
 
     /// Wraps the node in a [`InFile`] with the file id it belongs to.
-    fn find_file<'node>(&self, node: &'node SyntaxNode) -> InFile<&'node SyntaxNode> {
+    pub fn find_file<'node>(&self, node: &'node SyntaxNode) -> InFile<&'node SyntaxNode> {
         let root_node = find_root(node);
         let file_id = self.lookup(&root_node).unwrap_or_else(|| {
             panic!(
@@ -242,15 +366,26 @@ impl ToDef for ast::Function {
     }
 }
 
-// impl ToDef for ast::Pattern {
-//     type Def = Pattern;
+impl ToDef for ast::Pattern {
+    type Def = Local;
 
-//     fn to_def(sema: &Semantics<'_>, src: InFile<Self>) -> Option<Self::Def> {
-//         let map = sema.db.module_source_map(src.file_id);
-//         let fn_id = map.node_to_function(&src.value);
-//         return fn_id.map(From::from);
-//     }
-// }
+    fn to_def(sema: &Semantics<'_>, src: InFile<Self>) -> Option<Self::Def> {
+        let syntax = src.value.syntax();
+        let container = find_container(sema.db.upcast(), src.with_value(syntax))?;
+        match container {
+            ModuleDefId::FunctionId(it) => {
+                let (_, source_map) = sema.db.body_with_source_map(it);
+                let pat = source_map.pattern_for_node(src.as_ref())?;
+                return Some(Local {
+                    parent: it,
+                    pat_id: pat,
+                });
+            }
+            _ => return None,
+        }
+    }
+}
+
 pub fn find_container(db: &dyn DefDatabase, node: InFile<&SyntaxNode>) -> Option<ModuleDefId> {
     let map = db.module_source_map(node.file_id);
     for node in node.ancestors() {

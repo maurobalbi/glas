@@ -386,7 +386,10 @@ impl BodyLowerCtx<'_> {
         let ptr = AstPtr::new(&pattern);
         let pat = match pattern {
             ast::Pattern::PatternVariable(var) => {
-                let name = var.text().unwrap_or(SmolStr::new_inline("[missing text]"));
+                let name = var
+                    .name()
+                    .and_then(|n| n.text())
+                    .unwrap_or(SmolStr::new_inline("[missing text]"));
                 Pattern::Variable { name }
             }
             ast::Pattern::Literal(lit) => lit
@@ -407,7 +410,7 @@ impl BodyLowerCtx<'_> {
                         .variant()
                         .and_then(|n| n.text())
                         .unwrap_or_else(Name::missing),
-                    module: pat.module().map(|t| t.text()),
+                    module: pat.module().and_then(|t| t.text()),
                     fields,
                 }
             }

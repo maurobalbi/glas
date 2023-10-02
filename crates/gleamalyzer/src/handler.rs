@@ -3,7 +3,7 @@ use anyhow::Result;
 use ide::{FileRange, GotoDefinitionResult};
 use lsp_types::{
     CompletionParams, CompletionResponse, Diagnostic, GotoDefinitionParams, GotoDefinitionResponse,
-    Hover, HoverParams, Url,
+    Hover, HoverParams, Url, DocumentHighlightParams, DocumentHighlight,
 };
 
 const MAX_DIAGNOSTICS_CNT: usize = 128;
@@ -62,6 +62,17 @@ pub(crate) fn goto_definition(
         _ => return Ok(None),
     };
     Ok(Some(GotoDefinitionResponse::Array(targets)))
+}
+
+pub(crate) fn document_highlight(
+    snap: StateSnapshot,
+    params: DocumentHighlightParams,
+) -> Result<Option<Vec<DocumentHighlight>>> {
+    let (fpos, line_map) =
+        convert::from_file_pos(&snap.vfs(), &params.text_document_position_params)?;
+    let ret = snap.analysis.highlight_related(fpos)?;
+    let ret = convert::to_document_highlight(&line_map, &ret);
+    Ok(Some(ret))
 }
 
 pub(crate) fn syntax_tree(snap: StateSnapshot, params: SyntaxTreeParams) -> Result<String> {
