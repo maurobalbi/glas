@@ -1,16 +1,19 @@
-Features for 1.0:
+Features for 1.0 rc:
 
   ✓ Finish parser: attribute syntax, pattern guards, record spread 
   ✓ Finish inference for Result, Tuple, Case multiple subjects
   ✓ finish type_from_ast
   ✓ type alias
   ✓ fix parsing for panic, <>
-  - fix make_ast for types with module def, e.g. wisp.Response
+  ✓ fix make_ast for types with module def, e.g. wisp.Response
+  - Fix make_type to use proper resolver!
+  - Fix field_access for adt
   - Fix pattern completion (e.g. only show constructors)
-  ✓  Fix pattern inference for module types (e.g. local.Wobbler)
+  ✓ Fix pattern inference for module types (e.g. local.Wobbler)
   ✓ Fix Record Spread
   - Fix function label / Record label lowering + inference (Unsaturated Constructors are inferred as fn (...) -> Constr)
-  - Finish hover for names (e.g. Adt, Variant, docs, etc)
+  ✓ Finish hover for types 
+  - Improve hover ( docs, etc)
   - Add signature help
   - Add Inlay - Hints ?
   - Fix call completion in pipes
