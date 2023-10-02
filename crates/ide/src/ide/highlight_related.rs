@@ -21,6 +21,8 @@ pub(crate) fn highlight_related(db: &dyn TyDatabase, fpos: FilePos) -> Option<Ve
     // let source_map = db.souce_map(fpos.file_id);
     let mut res = HashSet::new();
 
+    tracing::info!("HIGHLIGHTING FILE {:?} {:?}", fpos.file_id, sema.db.module_map().module_name_for_file(fpos.file_id));
+
     let def = semantics::classify_node(&sema, &tok.parent()?)?;
     def.clone()
         .usages(&sema)
@@ -29,6 +31,7 @@ pub(crate) fn highlight_related(db: &dyn TyDatabase, fpos: FilePos) -> Option<Ve
         .references
         .remove(&fpos.file_id)
         .map(|t| {
+            tracing::info!("REMOVING REFS {:?}", t);
             t.into_iter().for_each(|range| {
                 res.insert(HlRelated {
                     range,

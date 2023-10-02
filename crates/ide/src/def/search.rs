@@ -32,13 +32,21 @@ impl SearchScope {
     pub fn single_file(file: FileId) -> SearchScope {
         SearchScope::new(std::iter::once((file, None)).collect())
     }
+
+    pub fn package_graph(db: &dyn DefDatabase) -> SearchScope {
+        let mut entries = IntMap::default();
+        for (file, _) in db.module_map().iter() {
+            entries.insert(file, None);
+        }
+        SearchScope { entries }
+    }
 }
 
 impl Definition {
     fn search_scope(&self, db: &dyn DefDatabase) -> SearchScope {
-        // ToDo: This is a hack to get highlight related working
+        // ToDo: This is a hack to get started
         match self.module(db) {
-            Some(module) => SearchScope::single_file(module.id),
+            Some(_) => SearchScope::package_graph(db),
             None => SearchScope::empty(),
         }
     }
@@ -78,6 +86,7 @@ impl<'a> FindUsages<'a> {
             res.references.entry(file_id).or_default().push(reference);
             false
         });
+        tracing::info!("REFERENCES {:?}", res.references);
         res
     }
 

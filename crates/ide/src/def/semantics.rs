@@ -214,6 +214,7 @@ fn classify_name(sema: &Semantics, name: &ast::Name) -> Option<Definition> {
 
 fn classify_name_ref(sema: &Semantics, name_ref: &ast::NameRef) -> Option<Definition> {
     let parent = name_ref.syntax().parent()?;
+    tracing::info!("PARENT {:?} {:?}", parent.text(), name_ref.syntax().text());
 
     match_ast! {
         match parent {
