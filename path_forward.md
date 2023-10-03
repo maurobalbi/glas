@@ -6,8 +6,8 @@ Features for 1.0 rc:
   ✓ type alias
   ✓ fix parsing for panic, <>
   ✓ fix make_ast for types with module def, e.g. wisp.Response
-  - Fix make_type to use proper resolver!
-  - Fix field_access for adt
+  ✓ Fix make_type to use proper resolver!
+  - Fix field_access for adt (including goto)
   - Fix pattern completion (e.g. only show constructors)
   ✓ Fix pattern inference for module types (e.g. local.Wobbler)
   ✓ Fix Record Spread

@@ -56,13 +56,15 @@ pub(crate) fn highlight_related(db: &dyn TyDatabase, fpos: FilePos) -> Option<Ve
 mod tests {
     use crate::tests::TestDB;
     use crate::SourceDatabase;
-    use expect_test::Expect;
+    use expect_test::{Expect, expect};
+    use tracing_test::traced_test;
 
     #[track_caller]
     fn check(fixture: &str, expect: Expect) {
         let (db, f) = TestDB::from_fixture(fixture).unwrap();
         assert_eq!(f.markers().len(), 1);
         let mut hls = super::highlight_related(&db, f[0]).unwrap_or_default();
+        tracing::info!("{:?}", hls);
         hls.sort_by_key(|hl| hl.range.start());
         assert!(!hls.is_empty(), "No highlights");
 
@@ -79,9 +81,13 @@ mod tests {
         expect.assert_eq(&src);
     }
 
-    // #[test]
-    // fn definition() {
-    //     check("const b = 1 const a = $0b", expect!["const <b> = 1 const a = <<b>>"]);
-
-    // }
+    #[test]
+    #[traced_test]
+    fn definition() {
+        check(
+            "fn case_hl() { case 1 { a -> $0a } }",
+            expect!["fn case_hl() { case 1 { <<a>> -> <a> } }"],
+        );
+        check("fn highlight(a) { $0a }", expect!["fn highlight(<<a>>) { <a> }"]);
+    }
 }
