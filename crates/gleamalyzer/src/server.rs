@@ -480,7 +480,6 @@ impl Server {
             true,
         );
 
-        tokio::time::sleep(Duration::from_secs(5)).await;
         for package in &package_roots {
             Self::load_package_files(vfs, &package.path);
         }
