@@ -29,7 +29,7 @@ pub fn module_scope_with_map_query(
     for (_, imported_module) in module_data.module_imports() {
         let Some(file) = db.module_map().file_for_module_name(&imported_module.name) else {
             // ToDo: report diagnostics
-            continue
+            continue;
         };
 
         scope.modules.insert(imported_module.accessor.clone(), file);
@@ -482,14 +482,16 @@ pub(crate) fn dependency_order_query(
             ModuleDefId::FunctionId(owner_id) => {
                 let body = db.body(owner_id.clone());
                 edges.push((owner_id.clone().0.as_u32(), owner_id.clone().0.as_u32()));
-                body.exprs().for_each(|(e_id, expr)|
-                    match expr {
-                        Expr::Variable(name) => {
-                            let resolver = resolver_for_expr(db, owner_id.clone(), e_id);
-                            let Some(ResolveResult::Function(fn_id)) = resolver.resolve_name(name) else {return};
-                            edges.push((owner_id.clone().0.as_u32(), fn_id.id.0.as_u32()))
-                        },
-                        _ => {},
+                body.exprs().for_each(|(e_id, expr)| match expr {
+                    Expr::Variable(name) => {
+                        let resolver = resolver_for_expr(db, owner_id.clone(), e_id);
+                        let Some(ResolveResult::Function(fn_id)) = resolver.resolve_name(name)
+                        else {
+                            return;
+                        };
+                        edges.push((owner_id.clone().0.as_u32(), fn_id.id.0.as_u32()))
+                    }
+                    _ => {}
                 });
             }
             _ => {}

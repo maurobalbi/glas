@@ -431,7 +431,9 @@ impl<'db> InferCtx<'db> {
             Expr::Binary { left, right, op } => {
                 let lhs_ty = self.infer_expr(*left);
                 let rhs_ty = self.infer_expr(*right);
-                let Some(op) = op else { return self.new_ty_var() };
+                let Some(op) = op else {
+                    return self.new_ty_var();
+                };
                 match op {
                     BinaryOpKind::IntAdd
                     | BinaryOpKind::IntSub

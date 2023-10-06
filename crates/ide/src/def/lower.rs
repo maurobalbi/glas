@@ -197,7 +197,7 @@ impl<'a> LowerCtx<'a> {
             .filter_map(|t| Some(format!("{}", t.token()?.text())))
             .last()
         else {
-            return
+            return;
         };
 
         let module_id = self.alloc_module_import(ModuleImport {

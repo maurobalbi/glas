@@ -118,9 +118,7 @@ pub fn ty_from_ast(ast_expr: ast::TypeExpr) -> Ty {
                 .clone()
                 .and_then(|t| t.constructor_name())
                 .and_then(|c| c.text());
-            let Some(name) = name else {
-                    return Ty::Unknown
-                };
+            let Some(name) = name else { return Ty::Unknown };
 
             let mut arguments = Vec::new();
             if let Some(args) = ty.arg_list() {
