@@ -1377,13 +1377,10 @@ fn type_expr(p: &mut Parser) {
         return;
     }
 
-    match p.nth(0) {
-        T!["("] => {
-            let m = p.start_node_before(res);
-            type_arg_list(p);
-            p.finish_node(m, TYPE_APPLICATION);
-        }
-        _ => {}
+    if p.nth(0) == T!["("] {
+        let m = p.start_node_before(res);
+        type_arg_list(p);
+        p.finish_node(m, TYPE_APPLICATION);
     }
 }
 

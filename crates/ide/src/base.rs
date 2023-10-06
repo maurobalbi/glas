@@ -325,7 +325,9 @@ impl<T: Clone> InFile<&T> {
 
 impl<'a> InFile<&'a SyntaxNode> {
     pub fn ancestors(self) -> impl Iterator<Item = InFile<SyntaxNode>> + Clone {
-        iter::successors(Some(self.cloned()), move |node| node.value.parent().map(|parent| node.with_value(parent)))
+        iter::successors(Some(self.cloned()), move |node| {
+            node.value.parent().map(|parent| node.with_value(parent))
+        })
     }
 }
 

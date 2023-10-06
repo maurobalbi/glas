@@ -73,6 +73,7 @@ pub struct VariantId {
 
 pub type LocalVariantId = Idx<VariantData>;
 
+#[allow(clippy::enum_variant_names)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ModuleDefId {
     FunctionId(FunctionId),

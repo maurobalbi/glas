@@ -159,9 +159,11 @@ impl Resolver {
     }
 
     pub fn body_owner(&self) -> Option<FunctionId> {
-        self.scopes().find_map(|scope| match scope {
-            Scope::ExprScope(it) => Some(it.owner),
-        })
+        self.scopes()
+            .map(|scope| match scope {
+                Scope::ExprScope(it) => it.owner,
+            })
+            .next()
     }
 
     fn scopes(&self) -> impl Iterator<Item = &Scope> {

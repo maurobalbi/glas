@@ -20,7 +20,7 @@ impl TokenSet {
     pub(crate) const fn union(self, other: TokenSet) -> TokenSet {
         TokenSet(self.0 | other.0)
     }
-    
+
     pub(crate) const fn contains(&self, kind: SyntaxKind) -> bool {
         self.0 & mask(kind) != 0
     }
@@ -37,4 +37,3 @@ fn token_set_works_for_tokens() {
     assert!(ts.contains(EOF));
     assert!(!ts.contains(PLUS));
 }
-

@@ -1,8 +1,8 @@
 use smol_str::SmolStr;
 use syntax::{
     ast::{self, AstNode, SourceFile},
-    best_token_at_offset, find_node_at_offset, match_ast, SyntaxKind, SyntaxNode,
-    SyntaxToken, TextRange, TextSize, T,
+    best_token_at_offset, find_node_at_offset, match_ast, SyntaxKind, SyntaxNode, SyntaxToken,
+    TextRange, TextSize, T,
 };
 
 use crate::{

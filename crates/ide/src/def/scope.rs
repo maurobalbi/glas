@@ -410,10 +410,12 @@ impl ExprScopes {
                 }
             }
             Pattern::Spread { name } => {
-                if let Some(name) = name.clone() { self.scopes[scope].entries.push(ScopeEntry {
+                if let Some(name) = name.clone() {
+                    self.scopes[scope].entries.push(ScopeEntry {
                         name,
                         pat: *pattern_id,
-                    }) }
+                    })
+                }
             }
             Pattern::AlternativePattern { patterns } => {
                 for pattern in patterns {
@@ -476,23 +478,18 @@ pub(crate) fn dependency_order_query(
     let scopes = db.module_scope(file_id);
     let mut edges = Vec::new();
     for (func, _) in scopes.declarations().flatten() {
-        match func {
-            ModuleDefId::FunctionId(owner_id) => {
-                let body = db.body(*owner_id);
-                edges.push((owner_id.0.as_u32(), owner_id.0.as_u32()));
-                body.exprs().for_each(|(e_id, expr)| match expr {
-                    Expr::Variable(name) => {
-                        let resolver = resolver_for_expr(db, *owner_id, e_id);
-                        let Some(ResolveResult::Function(fn_id)) = resolver.resolve_name(name)
-                        else {
-                            return;
-                        };
-                        edges.push((owner_id.0.as_u32(), fn_id.id.0.as_u32()))
-                    }
-                    _ => {}
-                });
-            }
-            _ => {}
+        if let ModuleDefId::FunctionId(owner_id) = func {
+            let body = db.body(*owner_id);
+            edges.push((owner_id.0.as_u32(), owner_id.0.as_u32()));
+            body.exprs().for_each(|(e_id, expr)| {
+                if let Expr::Variable(name) = expr {
+                    let resolver = resolver_for_expr(db, *owner_id, e_id);
+                    let Some(ResolveResult::Function(fn_id)) = resolver.resolve_name(name) else {
+                        return;
+                    };
+                    edges.push((owner_id.0.as_u32(), fn_id.id.0.as_u32()))
+                }
+            });
         }
     }
 

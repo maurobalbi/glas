@@ -3,7 +3,8 @@ use anyhow::Result;
 use ide::{FileRange, GotoDefinitionResult};
 use lsp_types::{
     CompletionParams, CompletionResponse, Diagnostic, DocumentHighlight, DocumentHighlightParams,
-    GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverParams, Url, ReferenceParams, Location,
+    GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverParams, Location, ReferenceParams,
+    Url,
 };
 
 const MAX_DIAGNOSTICS_CNT: usize = 128;

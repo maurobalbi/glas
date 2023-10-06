@@ -4,7 +4,7 @@ use crate::ide::Upcast;
 use crate::ty::TyDatabaseStorage;
 use crate::{
     module_name, Change, DefDatabase, FileId, FilePos, FileSet, ModuleMap, PackageGraph,
-    PackageInfo, SourceRoot,  VfsPath,
+    PackageInfo, SourceRoot, VfsPath,
 };
 use anyhow::{bail, ensure, Context, Result};
 use indexmap::IndexMap;
@@ -205,5 +205,4 @@ impl Fixture {
     pub fn markers(&self) -> &[FilePos] {
         &self.markers
     }
-
 }

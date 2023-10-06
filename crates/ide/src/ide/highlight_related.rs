@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use crate::{
     def::{semantics, SearchScope, Semantics},
     ty::TyDatabase,
-     FilePos,
+    FilePos,
 };
 
 use syntax::{ast::AstNode, best_token_at_offset, TextRange};
@@ -22,26 +22,30 @@ pub(crate) fn highlight_related(db: &dyn TyDatabase, fpos: FilePos) -> Option<Ve
     let mut res = HashSet::new();
 
     let def = semantics::classify_node(&sema, &tok.parent()?)?;
-    if let Some(t) = def.clone()
+    if let Some(t) = def
+        .clone()
         .usages(&sema)
         .in_scope(&SearchScope::single_file(fpos.file_id))
         .all()
         .references
-        .remove(&fpos.file_id) { t.into_iter().for_each(|range| {
-                res.insert(HlRelated {
-                    range,
-                    is_definition: false,
-                });
-            }) }
+        .remove(&fpos.file_id)
+    {
+        t.into_iter().for_each(|range| {
+            res.insert(HlRelated {
+                range,
+                is_definition: false,
+            });
+        })
+    }
 
-    def.to_nav(db).map(|nav| {
+    if let Some(nav) = def.to_nav(db) {
         if fpos.file_id == nav.file_id {
             res.insert(HlRelated {
                 range: nav.focus_range,
                 is_definition: true,
             });
         }
-    });
+    };
 
     Some(res.into_iter().collect())
 }

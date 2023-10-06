@@ -262,10 +262,7 @@ impl BodyLowerCtx {
                 self.alloc_expr(lit.kind().map_or(Expr::Missing, Expr::Literal), ptr)
             }
             ast::Expr::Case(case) => {
-                let subjects = case
-                    .subjects()
-                    .map(|s| self.lower_expr(s))
-                    .collect();
+                let subjects = case.subjects().map(|s| self.lower_expr(s)).collect();
 
                 let clauses = case
                     .clauses()
@@ -323,10 +320,7 @@ impl BodyLowerCtx {
                 self.alloc_expr(Expr::Missing, ptr)
             }
             ast::Expr::List(l) => {
-                let elements = l
-                    .elements()
-                    .map(|e| self.lower_expr(e))
-                    .collect();
+                let elements = l.elements().map(|e| self.lower_expr(e)).collect();
                 self.alloc_expr(Expr::List { elements }, ptr)
             }
             _ => self.alloc_expr(Expr::Missing, ptr),
@@ -420,10 +414,7 @@ impl BodyLowerCtx {
                 name: spread.name().and_then(|n| n.text()),
             },
             ast::Pattern::PatternList(list) => {
-                let elements = list
-                    .elements()
-                    .map(|p| self.lower_pattern(p))
-                    .collect();
+                let elements = list.elements().map(|p| self.lower_pattern(p)).collect();
                 Pattern::List { elements }
             }
             ast::Pattern::Hole(_) => Pattern::Hole,
@@ -446,7 +437,7 @@ impl BodyLowerCtx {
             None => self.missing_pat(),
         }
     }
-    
+
     fn next_pattern_idx(&self) -> Idx<Pattern> {
         Idx::from_raw(RawIdx::from(self.body.patterns.len() as u32))
     }

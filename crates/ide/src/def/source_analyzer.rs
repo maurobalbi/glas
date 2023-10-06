@@ -6,8 +6,8 @@ use syntax::{
 };
 
 use crate::{
-    ty::{FieldResolution, InferenceResult,  TyDatabase},
-   FileId, InFile,
+    ty::{FieldResolution, InferenceResult, TyDatabase},
+    FileId, InFile,
 };
 
 use super::{
@@ -76,9 +76,7 @@ impl SourceAnalyzer {
 
     pub(crate) fn resolve_module(&self, expr: &ast::Expr) -> Option<FileId> {
         let expr_id = self.expr_id(expr)?;
-        self.infer
-            .as_ref()
-            .and_then(|i| i.resolve_module(expr_id))
+        self.infer.as_ref().and_then(|i| i.resolve_module(expr_id))
     }
 
     // pub(crate) fn resolve_field_access_expr(

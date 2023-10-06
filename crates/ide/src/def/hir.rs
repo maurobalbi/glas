@@ -12,7 +12,7 @@ use crate::{
 use super::{
     hir_def::{AdtId, LocalVariantId, TypeAliasId},
     module::{AdtData, Field, FunctionData, Param, PatternId, TypeAliasData, VariantData},
-    FunctionId
+    FunctionId,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -195,7 +195,7 @@ impl Local {
     pub fn ty(self, db: &dyn TyDatabase) -> ty::Ty {
         let def = self.parent;
         let infer = db.infer_function(def);
-        
+
         infer.ty_for_pattern(self.pat_id).clone()
     }
 

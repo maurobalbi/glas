@@ -370,9 +370,7 @@ impl<'db> InferCtx<'db> {
                             last = ret_ty
                         }
                         _ => {
-                            let mut arg_tys = Vec::new();
-
-                            arg_tys.push((None, cb_tyvar));
+                            let arg_tys = vec![(None, cb_tyvar)];
                             let ret_ty = self.new_ty_var();
                             let fun_ty = self.infer_expr(expr);
 
@@ -639,85 +637,58 @@ impl<'db> InferCtx<'db> {
                 label: _,
                 label_name,
             } => {
-                let ty = self.infer_expr(*container);
-
                 let field_var = self.new_ty_var();
                 // ToDo: This is wrong, since it might also be a module_access
-                let field_ty = match self.table.get_mut(ty.0) {
-                    // Ty::Adt {
-                    //     adt_id,
-                    //     generic_params: params,
-                    // } => {
-                    //     self.body_ctx.field_resolution.insert(
-                    //         tgt_expr,
-                    //         FieldResolution::ModuleDef(ModuleDef::Adt(hir::Adt::from(*adt_id))),
-                    //     );
-                    //     //ToDo: properly resolve common fields of variant
-                    //     match params.iter().next() {
-                    //         Some(var) => *var,
-                    //         None => self.new_ty_var(),
-                    //     }
-                    // }
-                    _ => {
-                        match self.resolver.resolve_module(base_string) {
-                            Some(file) => {
-                                self.body_ctx.module_resolution.insert(*container, file);
-                                let resolver = resolver_for_toplevel(self.db.upcast(), file);
-                                if let Some(res) = resolver.resolve_name(label_name) {
-                                    match res {
-                                        ResolveResult::Local(_) => {
-                                            unreachable!("This is a compiler bug")
-                                        }
-                                        ResolveResult::Function(it) => {
-                                            let fn_ty = it.ty(self.db);
-                                            let mut env = HashMap::new();
 
-                                            self.body_ctx.field_resolution.insert(
-                                                tgt_expr,
-                                                FieldResolution::ModuleDef(ModuleDef::Function(it)),
-                                            );
-                                            let func_loc = self.db.lookup_intern_function(it.id); //       needs to have a local resolver to make the correct type
-                                            let resolver = std::mem::replace(
-                                                &mut self.resolver,
-                                                resolver_for_toplevel(
-                                                    self.db.upcast(),
-                                                    func_loc.file_id,
-                                                ),
-                                            );
-                                            let ty = self.make_type(fn_ty, &mut env);
-                                            let _ = std::mem::replace(&mut self.resolver, resolver);
-                                            return ty;
-                                        }
-                                        // ToDo: Add type to adt in hir and fix this.
-                                        ResolveResult::Variant(it) => {
-                                            let var = self.new_ty_var();
-                                            self.unify_var_ty(
-                                                var,
-                                                Ty::Adt {
-                                                    generic_params: Vec::new(),
-                                                    adt_id: it.parent,
-                                                },
-                                            );
-                                            self.body_ctx.field_resolution.insert(
-                                                tgt_expr,
-                                                FieldResolution::ModuleDef(ModuleDef::Variant(it)),
-                                            );
-                                            return var;
-                                        }
-                                        ResolveResult::BuiltIn(_) => {}
-                                        ResolveResult::Module(_) => {}
-                                        ResolveResult::Adt(_) => {}
-                                        ResolveResult::TypeAlias(_) => {}
-                                    }
-                                }
+                if let Some(file) = self.resolver.resolve_module(base_string) {
+                    self.body_ctx.module_resolution.insert(*container, file);
+                    let resolver = resolver_for_toplevel(self.db.upcast(), file);
+                    if let Some(res) = resolver.resolve_name(label_name) {
+                        match res {
+                            ResolveResult::Local(_) => {
+                                unreachable!("This is a compiler bug")
                             }
-                            _ => {}
+                            ResolveResult::Function(it) => {
+                                let fn_ty = it.ty(self.db);
+                                let mut env = HashMap::new();
+
+                                self.body_ctx.field_resolution.insert(
+                                    tgt_expr,
+                                    FieldResolution::ModuleDef(ModuleDef::Function(it)),
+                                );
+                                let func_loc = self.db.lookup_intern_function(it.id); //       needs to have a local resolver to make the correct type
+                                let resolver = std::mem::replace(
+                                    &mut self.resolver,
+                                    resolver_for_toplevel(self.db.upcast(), func_loc.file_id),
+                                );
+                                let ty = self.make_type(fn_ty, &mut env);
+                                let _ = std::mem::replace(&mut self.resolver, resolver);
+                                return ty;
+                            }
+                            // ToDo: Add type to adt in hir and fix this.
+                            ResolveResult::Variant(it) => {
+                                let var = self.new_ty_var();
+                                self.unify_var_ty(
+                                    var,
+                                    Ty::Adt {
+                                        generic_params: Vec::new(),
+                                        adt_id: it.parent,
+                                    },
+                                );
+                                self.body_ctx.field_resolution.insert(
+                                    tgt_expr,
+                                    FieldResolution::ModuleDef(ModuleDef::Variant(it)),
+                                );
+                                return var;
+                            }
+                            ResolveResult::BuiltIn(_) => {}
+                            ResolveResult::Module(_) => {}
+                            ResolveResult::Adt(_) => {}
+                            ResolveResult::TypeAlias(_) => {}
                         }
-                        self.new_ty_var()
                     }
-                };
-                self.unify_var(field_ty, field_var);
-                field_ty
+                }
+                field_var
             }
             Expr::VariantLiteral { name } => {
                 let (ty, params) = self.resolve_variant(name);

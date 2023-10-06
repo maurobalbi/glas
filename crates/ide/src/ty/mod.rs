@@ -121,8 +121,8 @@ pub fn ty_from_ast(ast_expr: ast::TypeExpr) -> Ty {
             if let Some(args) = ty.arg_list() {
                 for arg in args.args() {
                     let arg = ty_from_ast_opt(arg.arg());
-                    if arg.is_some() {
-                        arguments.push(arg.unwrap());
+                    if let Some(arg) = arg {
+                        arguments.push(arg);
                     }
                 }
             }

@@ -383,14 +383,9 @@ impl ToDef for ast::Pattern {
 pub fn find_container(db: &dyn DefDatabase, node: InFile<&SyntaxNode>) -> Option<ModuleDefId> {
     let map = db.module_source_map(node.file_id);
     for node in node.ancestors() {
-        if let Some(def) = ast::ModuleStatement::cast(node.value) {
-            match def {
-                ast::ModuleStatement::Function(it) => {
-                    let fn_id = map.node_to_function(&it);
-                    return fn_id.map(From::from);
-                }
-                _ => {}
-            }
+        if let Some(ast::ModuleStatement::Function(it)) = ast::ModuleStatement::cast(node.value) {
+            let fn_id = map.node_to_function(&it);
+            return fn_id.map(From::from);
         }
     }
     None

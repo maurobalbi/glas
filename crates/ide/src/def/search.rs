@@ -9,13 +9,9 @@ use syntax::{
 };
 use tracing::Level;
 
-use crate::{ DefDatabase, FileId};
+use crate::{DefDatabase, FileId};
 
-use super::{
-    classify_node,
-    semantics:: Definition,
-    Semantics,
-};
+use super::{classify_node, semantics::Definition, Semantics};
 
 #[derive(Clone, Debug)]
 pub struct SearchScope {

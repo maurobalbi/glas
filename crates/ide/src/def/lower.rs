@@ -7,7 +7,7 @@ use super::{
         AdtData, Field, FunctionData, ImportData, ModuleImport, Param, TypeAliasData, VariantData,
         Visibility,
     },
-    AstPtr
+    AstPtr,
 };
 use la_arena::{Arena, Idx, IdxRange, RawIdx};
 use smol_str::SmolStr;
@@ -116,24 +116,20 @@ pub(super) fn lower_module(parse: Parse) -> ModuleItemData {
     ctx.module_items
 }
 
-impl LowerCtx{
+impl LowerCtx {
     fn alloc_function(&mut self, function: FunctionData) -> Idx<FunctionData> {
-        
         self.module_items.functions.alloc(function)
     }
 
     fn alloc_custom_type(&mut self, custom_type: AdtData) -> Idx<AdtData> {
-        
         self.module_items.adts.alloc(custom_type)
     }
 
     fn alloc_type_alias(&mut self, custom_type: TypeAliasData) -> Idx<TypeAliasData> {
-        
         self.module_items.type_alias.alloc(custom_type)
     }
 
     fn alloc_variant(&mut self, constructor: VariantData) -> Idx<VariantData> {
-        
         self.module_items.variants.alloc(constructor)
     }
 
@@ -225,14 +221,13 @@ impl LowerCtx{
         let mut params = Vec::new();
         if let Some(param_list) = fun.param_list() {
             for param in param_list.params() {
-                match param.pattern() {
-                    Some(Pattern::PatternVariable(it)) => {
-                        if let Some(t) = it.name().and_then(|n| n.text()) { params.push(Param {
-                                name: t,
-                                label: param.label().and_then(|n| n.text()),
-                            }) }
+                if let Some(Pattern::PatternVariable(it)) = param.pattern() {
+                    if let Some(t) = it.name().and_then(|n| n.text()) {
+                        params.push(Param {
+                            name: t,
+                            label: param.label().and_then(|n| n.text()),
+                        })
                     }
-                    _ => {}
                 }
             }
         };
@@ -241,7 +236,7 @@ impl LowerCtx{
             name: fun.name()?.text()?,
             params,
             visibility: Visibility::Public,
-            ast_ptr
+            ast_ptr,
         }))
     }
 

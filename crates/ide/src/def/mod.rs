@@ -15,7 +15,6 @@ use std::sync::Arc;
 use crate::base::SourceDatabase;
 use crate::FileId;
 
-
 use syntax::{AstPtr, Parse};
 
 pub use semantics::{classify_node, find_container, Semantics};
@@ -78,7 +77,7 @@ fn parse(db: &dyn DefDatabase, file_id: FileId) -> Parse {
 
 fn module_items(db: &dyn DefDatabase, file_id: FileId) -> Arc<ModuleItemData> {
     let parse = db.parse(file_id);
-    Arc::new(lower_module( parse))
+    Arc::new(lower_module(parse))
 }
 
 fn body_with_source_map(

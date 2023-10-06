@@ -3,7 +3,7 @@ use super::NavigationTarget;
 use crate::def::semantics;
 use crate::def::Semantics;
 use crate::ty::TyDatabase;
-use crate::{ FilePos, VfsPath};
+use crate::{FilePos, VfsPath};
 
 use syntax::ast::AstNode;
 use syntax::best_token_at_offset;

@@ -490,7 +490,7 @@ impl Server {
 
     fn assemble_graph(
         vfs: &RwLock<Vfs>,
-        root_path: &PathBuf,
+        root_path: &Path,
         graph: &mut PackageGraph,
         roots: &mut Vec<PackageRoot>,
         seen: &mut HashMap<SmolStr, PackageId>,
@@ -797,7 +797,7 @@ impl Server {
 
         //sorting by length matches the longest prefix first
         // e.g. /path/to/module is matched before /path
-        prefix_components.sort_by(|a, b| b.len().cmp(&a.len()));
+        prefix_components.sort_by_key(|b| std::cmp::Reverse(b.len()));
 
         for (file_id, file_path) in vfs.iter() {
             if let Some(path_components) = file_path.as_path() {

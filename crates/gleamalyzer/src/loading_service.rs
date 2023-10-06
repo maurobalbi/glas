@@ -72,13 +72,10 @@ where
     S::Error: From<ResponseError>,
 {
     fn notify(&mut self, notif: AnyNotification) -> ControlFlow<async_lsp::Result<()>> {
-        match &*notif.method {
-            notification::Initialized::METHOD => {
-                let (tx, rx) = oneshot::channel();
-                self.receiver = Some(rx);
-                self.sender = Some(tx);
-            }
-            _ => {}
+        if &*notif.method == notification::Initialized::METHOD {
+            let (tx, rx) = oneshot::channel();
+            self.receiver = Some(rx);
+            self.sender = Some(tx);
         }
         self.service.notify(notif)
     }
