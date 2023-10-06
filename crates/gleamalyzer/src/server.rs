@@ -906,7 +906,6 @@ impl Progress {
                 })
                 .await
                 .is_ok();
-        tracing::info!("PROGRESS {:?}", created);
         let this = Self {
             client: client.clone(),
             token: created.then_some(token),
@@ -928,6 +927,7 @@ impl Progress {
         });
     }
 
+    #[allow(dead_code)]
     fn report(&self, percentage: u32, message: String) {
         assert!((0..=100).contains(&percentage));
         self.notify(WorkDoneProgress::Report(WorkDoneProgressReport {

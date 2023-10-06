@@ -1,4 +1,4 @@
-use crate::{ty, DefDatabase};
+use crate::ty;
 
 use syntax::ast::AstNode;
 use syntax::{best_token_at_offset, TextRange};
@@ -94,6 +94,7 @@ mod tests {
         expect.assert_eq(&got);
     }
 
+    #[allow(dead_code)]
     #[track_caller]
     fn check_no(fixture: &str) {
         let (db, f) = TestDB::from_fixture(fixture).unwrap();

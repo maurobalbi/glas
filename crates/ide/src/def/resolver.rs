@@ -7,7 +7,7 @@ use crate::{DefDatabase, FileId};
 
 use super::{
     hir::{Adt, BuiltIn, Function, Local, Module, TypeAlias, Variant},
-    hir_def::{AdtId, ModuleDefId},
+    hir_def::ModuleDefId,
     module::ExprId,
     scope::{ModuleScope, ScopeId},
     ExprScopes, FunctionId,
@@ -161,7 +161,6 @@ impl Resolver {
     pub fn body_owner(&self) -> Option<FunctionId> {
         self.scopes().find_map(|scope| match scope {
             Scope::ExprScope(it) => Some(it.owner),
-            _ => None,
         })
     }
 

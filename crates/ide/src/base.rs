@@ -2,13 +2,10 @@ use la_arena::{Arena, Idx};
 use salsa::Durability;
 use smol_str::SmolStr;
 use std::collections::HashMap;
-use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::{fmt, iter};
 use syntax::{SyntaxNode, TextRange, TextSize};
-
-use crate::def::hir::Package;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct FileId(pub u32);

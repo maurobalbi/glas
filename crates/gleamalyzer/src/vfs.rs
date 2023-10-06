@@ -204,6 +204,7 @@ impl LineMap {
         (text, this)
     }
 
+    #[allow(dead_code)]
     pub fn last_line(&self) -> u32 {
         self.line_starts.len() as u32 - 1
     }
@@ -237,6 +238,7 @@ impl LineMap {
         (line as u32, col)
     }
 
+    #[allow(dead_code)]
     pub fn end_col_for_line(&self, line: u32) -> u32 {
         let mut len = if line + 1 >= self.line_starts.len() as u32 {
             self.len - self.line_starts[line as usize]

@@ -73,6 +73,7 @@ pub(crate) fn negotiate_capabilities(
 
 #[derive(Clone, Debug, Default)]
 pub(crate) struct NegotiatedCapabilities {
+    #[allow(dead_code)]
     pub client_show_message_request: bool,
     pub server_initiated_progress: bool,
     pub watch_files: bool,

@@ -1,7 +1,7 @@
 use smol_str::SmolStr;
 use syntax::{
     ast::{self, AstNode, SourceFile},
-    best_token_at_offset, find_node_at_offset, match_ast, GleamLanguage, SyntaxKind, SyntaxNode,
+    best_token_at_offset, find_node_at_offset, match_ast, SyntaxKind, SyntaxNode,
     SyntaxToken, TextRange, TextSize, T,
 };
 
@@ -60,7 +60,6 @@ pub struct CompletionContext<'db> {
     expr_ptr: Option<InFile<SyntaxNode>>,
     tok: SyntaxToken,
     trigger_tok: Option<SyntaxToken>,
-    original_file: SyntaxNode,
 }
 
 impl<'db> CompletionContext<'db> {
@@ -80,7 +79,6 @@ impl<'db> CompletionContext<'db> {
             is_top_level: false,
             source_range: TextRange::default(),
             expr_ptr: None,
-            original_file: original_file.syntax().clone(),
             tok,
             trigger_tok,
         };
@@ -133,7 +131,7 @@ impl<'db> CompletionContext<'db> {
 
 pub(crate) fn completions(
     db: &dyn TyDatabase,
-    fpos @ FilePos { file_id, pos: _ }: FilePos,
+    fpos: FilePos,
     trigger_char: Option<char>,
 ) -> Option<Vec<CompletionItem>> {
     let ctx = CompletionContext::new(db, fpos)?;
@@ -408,36 +406,13 @@ fn complete_snippet(acc: &mut Vec<CompletionItem>, ctx: &CompletionContext) {
     });
 }
 
-/// Attempts to find `node` inside `syntax` via `node`'s text range.
-/// If the fake identifier has been inserted after this node or inside of this node use the `_compensated` version instead.
-fn find_opt_node_in_file<N: AstNode<Language = GleamLanguage>>(
-    syntax: &SyntaxNode,
-    node: Option<N>,
-) -> Option<N> {
-    find_node_in_file(syntax, &node?)
-}
-
-/// Attempts to find `node` inside `syntax` via `node`'s text range.
-/// If the fake identifier has been inserted after this node or inside of this node use the `_compensated` version instead.
-fn find_node_in_file<N: AstNode<Language = GleamLanguage>>(
-    syntax: &SyntaxNode,
-    node: &N,
-) -> Option<N> {
-    let syntax_range = syntax.text_range();
-    let range = node.syntax().text_range();
-    let intersection = range.intersect(syntax_range)?;
-    syntax
-        .covering_element(intersection)
-        .ancestors()
-        .find_map(N::cast)
-}
-
 #[cfg(test)]
 mod tests {
     use crate::base::SourceDatabase;
     use crate::tests::TestDB;
     use expect_test::{expect, Expect};
 
+    #[allow(dead_code)]
     #[track_caller]
     fn check_no(fixture: &str, label: &str) {
         let (db, f) = TestDB::from_fixture(fixture).unwrap();

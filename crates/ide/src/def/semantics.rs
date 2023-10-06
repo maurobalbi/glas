@@ -3,20 +3,20 @@ use std::{cell::RefCell, collections::HashMap};
 use smol_str::SmolStr;
 use syntax::{
     ast::{self, AstNode},
-    match_ast, AstPtr, GleamLanguage, SyntaxNode, TextRange,
+    match_ast, GleamLanguage, SyntaxNode, TextRange,
 };
 
 use crate::{
-    ide::{NavigationTarget, RootDatabase},
+    ide::NavigationTarget,
     impl_from,
-    ty::{self, FieldResolution, TyDatabase},
+    ty::{FieldResolution, TyDatabase},
     DefDatabase, FileId, InFile,
 };
 
 use super::{
     hir::{Adt, BuiltIn, Function, Local, Module, TypeAlias, Variant},
     hir_def::ModuleDefId,
-    module::{Field, Pattern},
+    module::Field,
     resolver::{resolver_for_toplevel, ResolveResult},
     source::HasSource,
     source_analyzer::SourceAnalyzer,
@@ -45,7 +45,7 @@ impl Definition {
             Definition::Adt(it) => it.module(db),
             Definition::Function(it) => it.module(db),
             Definition::Variant(it) => Adt::from(it.parent).module(db),
-            Definition::Field(it) => return None,
+            Definition::Field(_) => return None,
             Definition::Local(it) => Function::from(it.parent).module(db),
             Definition::Module(it) => *it,
             Definition::BuiltIn(_) => return None,
@@ -60,11 +60,11 @@ impl Definition {
             Definition::Function(it) => it.name(db),
             Definition::Variant(it) => it.name(db),
             // ToDo: Fixme
-            Definition::Field(it) => return None,
+            Definition::Field(_) => return None,
             Definition::Local(it) => it.name(db),
             Definition::Module(_) => return None,
             // ToDo: Fixme
-            Definition::BuiltIn(it) => return None,
+            Definition::BuiltIn(_) => return None,
             Definition::TypeAlias(it) => it.name(db),
         };
         Some(name)
@@ -201,7 +201,6 @@ fn classify_name(sema: &Semantics, name: &ast::Name) -> Option<Definition> {
             ast::PatternVariable(it) => {
                 let pattern = ast::Pattern::cast(it.syntax().clone())?;
                 let def = sema.to_def(&pattern).map(From::from);
-                tracing::info!("Pattern {:?} {:?}", pattern.syntax().text(), def);
 
                 return def
             },
@@ -214,7 +213,6 @@ fn classify_name(sema: &Semantics, name: &ast::Name) -> Option<Definition> {
 
 fn classify_name_ref(sema: &Semantics, name_ref: &ast::NameRef) -> Option<Definition> {
     let parent = name_ref.syntax().parent()?;
-    tracing::info!("PARENT {:?} {:?}", parent.text(), name_ref.syntax().text());
 
     match_ast! {
         match parent {
@@ -289,11 +287,6 @@ impl<'db> Semantics<'db> {
         self.analyze(type_name.syntax())?
             .resolver
             .resolve_type(&SmolStr::from(type_name.text()?))
-    }
-
-    pub fn ty_of_expr(&self, expr: &ast::Expr) -> Option<ty::Ty> {
-        self.analyze(expr.syntax())?
-            .type_of_expr(self.db.upcast(), expr)
     }
 
     fn analyze(&self, node: &SyntaxNode) -> Option<SourceAnalyzer> {

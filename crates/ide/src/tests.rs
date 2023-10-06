@@ -1,20 +1,17 @@
-use crate::base::{SourceDatabaseStorage, Target};
+use crate::base::SourceDatabaseStorage;
 use crate::def::{DefDatabaseStorage, InternDatabaseStorage};
 use crate::ide::Upcast;
 use crate::ty::TyDatabaseStorage;
 use crate::{
-    module_name, Change, DefDatabase, FileId, FilePos, FileRange, FileSet, ModuleMap, PackageGraph,
-    PackageInfo, SourceRoot, SourceRootId, VfsPath,
+    module_name, Change, DefDatabase, FileId, FilePos, FileSet, ModuleMap, PackageGraph,
+    PackageInfo, SourceRoot,  VfsPath,
 };
 use anyhow::{bail, ensure, Context, Result};
 use indexmap::IndexMap;
-use la_arena::Arena;
 use smol_str::SmolStr;
-use std::collections::HashMap;
 use std::path::PathBuf;
 use std::{mem, ops};
-use syntax::ast::AstNode;
-use syntax::{GleamLanguage, SyntaxNode, TextSize};
+use syntax::TextSize;
 
 pub const MARKER_INDICATOR: char = '$';
 
@@ -76,19 +73,6 @@ impl TestDB {
         change.set_package_graph(package_graph);
         change.apply(&mut db);
         Ok((db, f))
-    }
-
-    pub fn find_node<T>(&self, fpos: FilePos, f: impl FnMut(SyntaxNode) -> Option<T>) -> Option<T> {
-        self.parse(fpos.file_id)
-            .syntax_node()
-            .token_at_offset(fpos.pos)
-            .right_biased()?
-            .parent_ancestors()
-            .find_map(f)
-    }
-
-    pub fn node_at<N: AstNode<Language = GleamLanguage>>(&self, fpos: FilePos) -> Option<N> {
-        self.find_node(fpos, N::cast)
     }
 }
 
@@ -222,12 +206,4 @@ impl Fixture {
         &self.markers
     }
 
-    #[track_caller]
-    pub fn unwrap_single_range_marker(&self) -> FileRange {
-        match *self.markers() {
-            [fpos] => FileRange::empty(fpos),
-            [start, end] => FileRange::span(start, end),
-            _ => panic!("Must have either 1 or 2 markers"),
-        }
-    }
 }

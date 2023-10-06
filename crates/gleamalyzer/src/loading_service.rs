@@ -53,7 +53,7 @@ where
             None => return Poll::Ready(ready!(self.service.poll_ready(cx))),
             Some(mut receiver) => {
                 if Pin::new(&mut receiver).poll(cx).is_pending() {
-                    tracing::info!("rate limit exceeded; sleeping.");
+                    tracing::info!("Paused! waiting until packages are downloaded");
                     return Poll::Pending;
                 }
             }
@@ -72,7 +72,6 @@ where
     S::Error: From<ResponseError>,
 {
     fn notify(&mut self, notif: AnyNotification) -> ControlFlow<async_lsp::Result<()>> {
-        tracing::info!("{:?}", notif);
         match &*notif.method {
             notification::Initialized::METHOD => {
                 let (tx, rx) = oneshot::channel();
@@ -85,7 +84,6 @@ where
     }
 
     fn emit(&mut self, event: AnyEvent) -> ControlFlow<async_lsp::Result<()>> {
-        tracing::info!("Got Event! {:?}", event.type_name());
         if event.is::<SetPackageGraphEvent>() {
             match self.sender.take() {
                 Some(sender) => {

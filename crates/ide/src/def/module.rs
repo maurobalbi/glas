@@ -7,8 +7,6 @@ use syntax::{
 
 use crate::ty;
 
-use super::fields::FieldMap;
-
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct AdtData {
     pub name: SmolStr,
@@ -39,8 +37,6 @@ pub struct VariantData {
 
     pub fields: Vec<Field>,
 
-    pub field_map: FieldMap,
-
     pub ast_ptr: AstPtr<ast::Variant>,
 }
 
@@ -57,8 +53,6 @@ pub struct TypeParam(SmolStr);
 pub struct FunctionData {
     pub name: SmolStr,
     pub params: Vec<Param>,
-    pub param_map: FieldMap,
-
     pub visibility: Visibility,
     pub ast_ptr: AstPtr<ast::Function>,
 }

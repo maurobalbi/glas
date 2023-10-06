@@ -1,5 +1,4 @@
 pub mod body;
-mod fields;
 pub mod hir;
 pub mod hir_def;
 mod lower;
@@ -79,7 +78,7 @@ fn parse(db: &dyn DefDatabase, file_id: FileId) -> Parse {
 
 fn module_items(db: &dyn DefDatabase, file_id: FileId) -> Arc<ModuleItemData> {
     let parse = db.parse(file_id);
-    Arc::new(lower_module(db, parse))
+    Arc::new(lower_module( parse))
 }
 
 fn body_with_source_map(

@@ -132,7 +132,6 @@ pub(super) fn lower(db: &dyn DefDatabase, function_id: FunctionId) -> (Body, Bod
     let ast = func.ast_ptr.to_node(&parse.syntax_node());
 
     let mut ctx = BodyLowerCtx {
-        db,
         file_id: loc.file_id,
         source_map: BodySourceMap::default(),
         body: Body::default(),
@@ -159,14 +158,13 @@ pub(super) fn lower(db: &dyn DefDatabase, function_id: FunctionId) -> (Body, Bod
     (ctx.body, ctx.source_map)
 }
 
-struct BodyLowerCtx<'a> {
-    db: &'a dyn DefDatabase,
+struct BodyLowerCtx {
     body: Body,
     source_map: BodySourceMap,
     file_id: FileId,
 }
 
-impl BodyLowerCtx<'_> {
+impl BodyLowerCtx {
     fn alloc_expr(&mut self, expr: Expr, ptr: AstPtr<ast::Expr>) -> ExprId {
         let ptr = InFile {
             file_id: self.file_id,
@@ -452,11 +450,7 @@ impl BodyLowerCtx<'_> {
             None => self.missing_pat(),
         }
     }
-
-    fn next_expr_idx(&self) -> Idx<Expr> {
-        Idx::from_raw(RawIdx::from(self.body.exprs.len() as u32))
-    }
-
+    
     fn next_pattern_idx(&self) -> Idx<Pattern> {
         Idx::from_raw(RawIdx::from(self.body.patterns.len() as u32))
     }

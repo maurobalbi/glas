@@ -3,12 +3,11 @@ use std::ops::Index;
 use crate::{ty, Diagnostic};
 
 use super::{
-    fields::FieldMap,
     module::{
         AdtData, Field, FunctionData, ImportData, ModuleImport, Param, TypeAliasData, VariantData,
         Visibility,
     },
-    AstPtr, DefDatabase,
+    AstPtr
 };
 use la_arena::{Arena, Idx, IdxRange, RawIdx};
 use smol_str::SmolStr;
@@ -105,21 +104,19 @@ impl Index<Idx<ModuleImport>> for ModuleItemData {
         &self.module_imports[index]
     }
 }
-struct LowerCtx<'a> {
-    db: &'a dyn DefDatabase,
+struct LowerCtx {
     module_items: ModuleItemData,
 }
 
-pub(super) fn lower_module(db: &dyn DefDatabase, parse: Parse) -> ModuleItemData {
+pub(super) fn lower_module(parse: Parse) -> ModuleItemData {
     let mut ctx = LowerCtx {
-        db,
         module_items: ModuleItemData::default(),
     };
     ctx.lower_module(parse.root());
     ctx.module_items
 }
 
-impl<'a> LowerCtx<'a> {
+impl LowerCtx{
     fn alloc_function(&mut self, function: FunctionData) -> Idx<FunctionData> {
         let id = self.module_items.functions.alloc(function);
         id
@@ -245,9 +242,8 @@ impl<'a> LowerCtx<'a> {
         Some(self.alloc_function(FunctionData {
             name: fun.name()?.text()?,
             params,
-            param_map: FieldMap::new(0),
             visibility: Visibility::Public,
-            ast_ptr: ast_ptr,
+            ast_ptr
         }))
     }
 
@@ -326,7 +322,6 @@ impl<'a> LowerCtx<'a> {
         Some(self.alloc_variant(VariantData {
             name,
             fields: fields_vec,
-            field_map: FieldMap::new(0),
             ast_ptr,
         }))
     }

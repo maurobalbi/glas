@@ -9,12 +9,11 @@ use syntax::{
 };
 use tracing::Level;
 
-use crate::{ide::RootDatabase, DefDatabase, FileId, FileRange};
+use crate::{ DefDatabase, FileId};
 
 use super::{
     classify_node,
-    hir::Function,
-    semantics::{self, Definition},
+    semantics:: Definition,
     Semantics,
 };
 
@@ -91,7 +90,6 @@ impl<'a> FindUsages<'a> {
             res.references.entry(file_id).or_default().push(reference);
             false
         });
-        tracing::info!("REFERENCES {:?}", res.references);
         res
     }
 
@@ -200,8 +198,8 @@ impl<'a> FindUsages<'a> {
     // This is currently handled by the last step in highlight related
     fn found_name(
         &self,
-        name_ref: &ast::Name,
-        sink: &mut dyn FnMut(FileId, TextRange) -> bool,
+        _name_ref: &ast::Name,
+        _sink: &mut dyn FnMut(FileId, TextRange) -> bool,
     ) -> bool {
         // if let Some(def) = classify_node(self.sema, name_ref.syntax()) {
         //     if self.def == def {

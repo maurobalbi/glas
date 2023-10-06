@@ -12,7 +12,7 @@ use crate::{
 use super::{
     hir_def::{AdtId, LocalVariantId, TypeAliasId},
     module::{AdtData, Field, FunctionData, Param, PatternId, TypeAliasData, VariantData},
-    FunctionId, InternDatabase,
+    FunctionId
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

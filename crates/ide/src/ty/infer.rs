@@ -1,11 +1,4 @@
-use std::{
-    cmp::{max, min},
-    collections::HashMap,
-    hash::Hash,
-    mem,
-    ops::Deref,
-    sync::Arc,
-};
+use std::{cmp::min, collections::HashMap, mem, ops::Deref, sync::Arc};
 
 use la_arena::ArenaMap;
 use smol_str::SmolStr;
@@ -14,8 +7,8 @@ use syntax::ast::{BinaryOpKind, LiteralKind};
 use crate::{
     def::{
         body::Body,
-        hir::{self, Adt, Function, ModuleDef, TypeAlias},
-        hir_def::{AdtId, FunctionId, ModuleDefId},
+        hir::{self, Adt, ModuleDef, TypeAlias},
+        hir_def::{AdtId, FunctionId},
         module::{Expr, ExprId, Field, Pattern, PatternId, Statement},
         resolver::{resolver_for_toplevel, ResolveResult, Resolver},
         resolver_for_expr,
@@ -357,7 +350,7 @@ impl<'db> InferCtx<'db> {
                     match &self.body[expr] {
                         Expr::Call { func, args } => {
                             let mut arg_tys = Vec::new();
-                            for (label, arg) in args {
+                            for (_, arg) in args {
                                 let param_ty = self.new_ty_var();
                                 arg_tys.push((None, param_ty));
                                 let arg_ty = self.infer_expr(*arg);
@@ -509,7 +502,7 @@ impl<'db> InferCtx<'db> {
                         let func_ty = self.infer_expr(*func);
                         let ty = self.table.get_mut(func_ty.0).clone();
 
-                        for (label, arg) in args {
+                        for (_, arg) in args {
                             self.infer_expr(*arg);
                         }
 
@@ -545,15 +538,13 @@ impl<'db> InferCtx<'db> {
             Expr::Call { func, args } => {
                 let mut arg_tys = Vec::new();
                 let mut hole = None;
-                let mut count = 0;
                 // add(_, 1) => fn(_hole) { add(_hole, 1) }
                 let ret_ty = self.new_ty_var();
                 let fun_ty = self.infer_expr(*func);
 
-                for (label, arg) in args {
+                for (_, arg) in args {
                     match self.body[*arg] {
                         Expr::Hole => {
-                            count += 1;
                             let var = self.infer_expr(*arg);
                             hole = Some(var);
                             arg_tys.push((None, var));
@@ -568,8 +559,6 @@ impl<'db> InferCtx<'db> {
                         }
                     }
                 }
-
-                let len = arg_tys.len();
 
                 self.unify_var_ty(
                     fun_ty,
@@ -861,7 +850,7 @@ impl<'db> InferCtx<'db> {
             }
             Pattern::Missing => {}
             Pattern::Hole => {}
-            Pattern::Variable { name } => {}
+            Pattern::Variable { .. } => {}
         }
         self.unify_var(expected_ty_var, pat_var);
         pat_var
@@ -999,7 +988,7 @@ impl<'db> InferCtx<'db> {
             }
             (lhs, rhs) => {
                 if lhs != rhs {
-                    tracing::info!("ERROR: {:?} {:?}", lhs, rhs);
+                    tracing::debug!("ERROR: {:?} {:?}", lhs, rhs);
                 };
                 lhs
             }
