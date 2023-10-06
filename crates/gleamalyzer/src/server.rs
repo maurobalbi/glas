@@ -48,10 +48,7 @@ use walkdir::WalkDir;
 type NotifyResult = ControlFlow<async_lsp::Result<()>>;
 
 struct UpdateConfigEvent(serde_json::Value);
-struct SetPackageGraphEvent(
-    Option<(PackageGraph, Vec<PackageRoot>)>,
-    oneshot::Sender<()>,
-);
+pub struct SetPackageGraphEvent(Option<(PackageGraph, Vec<PackageRoot>)>);
 
 pub struct SettingState(pub oneshot::Receiver<()>);
 
@@ -293,7 +290,9 @@ impl Server {
         let mut vfs = self.vfs.write().unwrap();
         let uri = params.text_document.uri;
         // Ignore files not maintained in Vfs.
-        let Ok(file) = vfs.file_for_uri(&uri) else { return ControlFlow::Continue(()) };
+        let Ok(file) = vfs.file_for_uri(&uri) else {
+            return ControlFlow::Continue(());
+        };
         for change in params.content_changes {
             let ret = (|| {
                 let del_range = match change.range {
@@ -343,7 +342,9 @@ impl Server {
             if self.opened_files.contains_key(uri) {
                 continue;
             }
-            let Ok(path) = uri.to_file_path() else { continue };
+            let Ok(path) = uri.to_file_path() else {
+                continue;
+            };
 
             if matches!(typ, FileChangeType::CREATED | FileChangeType::CHANGED) {
                 match (|| -> std::io::Result<_> {
@@ -425,9 +426,6 @@ impl Server {
         // Delay the loading to debounce. Later triggers will cancel previous tasks.
         tokio::time::sleep(LOAD_GLEAM_WORKSPACE_DEBOUNCE_DURATION).await;
 
-        let (tx, rx) = oneshot::channel();
-        let _ = &client.emit(SettingState(rx));
-
         tracing::info!("Loading gleam workspace");
         let progress = Progress::new(
             &client,
@@ -442,7 +440,7 @@ impl Server {
                 let ret_info = ret
                     .as_ref()
                     .map(|r: &(PackageGraph, Vec<PackageRoot>)| r.0.clone());
-                let _: Result<_, _> = client.emit(SetPackageGraphEvent(ret, tx));
+                let _: Result<_, _> = client.emit(SetPackageGraphEvent(ret));
                 ret_info
             }
             Err(err) => {
@@ -482,6 +480,7 @@ impl Server {
             true,
         );
 
+        tokio::time::sleep(Duration::from_secs(5)).await;
         for package in &package_roots {
             Self::load_package_files(vfs, &package.path);
         }
@@ -556,13 +555,16 @@ impl Server {
             {
                 Some(local_path) => {
                     let local_path = root_path.join(local_path);
-                    let Ok(dep_id) = Self::assemble_graph(vfs, &local_path, graph, roots, seen, false) else {
+                    let Ok(dep_id) =
+                        Self::assemble_graph(vfs, &local_path, graph, roots, seen, false)
+                    else {
                         continue;
                     };
                     dep_id
                 }
                 None => {
-                    let Ok(dep_id) = Self::assemble_graph(vfs, &path, graph, roots, seen, false) else {
+                    let Ok(dep_id) = Self::assemble_graph(vfs, &path, graph, roots, seen, false)
+                    else {
                         continue;
                     };
                     dep_id
@@ -643,7 +645,6 @@ impl Server {
         }
         tracing::info!("Finished loading workspace!");
         // Informing loading service, that workspace has loaded
-        let _ = info.1.send(());
         ControlFlow::Continue(())
     }
 
@@ -722,7 +723,10 @@ impl Server {
         });
 
         // Can this really fail?
-        let Some(f) = self.opened_files.get_mut(&uri) else { task.abort(); return; };
+        let Some(f) = self.opened_files.get_mut(&uri) else {
+            task.abort();
+            return;
+        };
         if let Some(prev_task) = f.diagnostics_task.replace(task.abort_handle()) {
             prev_task.abort();
         }

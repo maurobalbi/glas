@@ -3,12 +3,14 @@ use std::ops::ControlFlow;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
+use lsp_types::notification::Notification;
+use lsp_types::{notification, request};
 use tokio::sync::oneshot;
 
 use async_lsp::{AnyEvent, AnyNotification, AnyRequest, LspService, ResponseError, Result};
 use tower::{Layer, Service};
 
-use crate::server::SettingState;
+use crate::server::{SetPackageGraphEvent, SettingState};
 
 macro_rules! ready {
     ($e:expr $(,)?) => {
@@ -31,6 +33,7 @@ pub struct LoaderProgress<S> {
     service: S,
     state: State,
     receiver: Option<oneshot::Receiver<()>>,
+    sender: Option<oneshot::Sender<()>>,
 }
 
 impl<S> LoaderProgress<S> {
@@ -39,8 +42,9 @@ impl<S> LoaderProgress<S> {
     pub fn new(service: S) -> Self {
         Self {
             service,
-            receiver: None,
             state: State::Ready,
+            receiver: None,
+            sender: None,
         }
     }
 }
@@ -54,20 +58,15 @@ where
     type Future = S::Future;
 
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        match self.state {
-            State::Ready { .. } => return Poll::Ready(ready!(self.service.poll_ready(cx))),
-            State::Loading => match self.receiver.take() {
-                Some(mut receiver) => {
-                    if Pin::new(&mut receiver).poll(cx).is_pending() {
-                        tracing::info!("rate limit exceeded; sleeping.");
-                        return Poll::Pending;
-                    }
+        match self.receiver.take() {
+            None => return Poll::Ready(ready!(self.service.poll_ready(cx))),
+            Some(mut receiver) => {
+                if Pin::new(&mut receiver).poll(cx).is_pending() {
+                    tracing::info!("rate limit exceeded; sleeping.");
+                    return Poll::Pending;
                 }
-                None => {}
-            },
+            }
         }
-
-        self.state = State::Ready;
 
         Poll::Ready(ready!(self.service.poll_ready(cx)))
     }
@@ -86,21 +85,30 @@ where
 {
     fn notify(&mut self, notif: AnyNotification) -> ControlFlow<async_lsp::Result<()>> {
         tracing::info!("{:?}", notif);
+        match &*notif.method {
+            notification::Initialized::METHOD => {
+                let (tx, rx) = oneshot::channel();
+                self.receiver = Some(rx);
+                self.sender = Some(tx);
+            }
+            _ => {}
+        }
         self.service.notify(notif)
     }
 
     fn emit(&mut self, event: AnyEvent) -> ControlFlow<async_lsp::Result<()>> {
         tracing::info!("Got Event! {:?}", event.type_name());
-
-        match event.downcast::<SettingState>() {
-            Ok(SettingState(receiver)) => {
-                self.receiver = Some(receiver);
-                tracing::info!("Setting Receiver!");
-                self.state = State::Loading;
-                return ControlFlow::Continue(());
+        if event.is::<SetPackageGraphEvent>() {
+            match self.sender.take() {
+                Some(sender) => {
+                    let _ = sender.send(());
+                }
+                None => {
+                    panic!("This should not happen")
+                }
             }
-            Err(event) => return self.service.emit(event),
         }
+        self.service.emit(event)
     }
 }
 
