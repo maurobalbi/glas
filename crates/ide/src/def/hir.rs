@@ -6,7 +6,7 @@ use syntax::ast::{self, AstNode};
 use crate::{
     impl_from,
     ty::{self, TyDatabase},
-    DefDatabase, FileId, SourceRootId, InFile,
+    DefDatabase, FileId, InFile, SourceRootId,
 };
 
 use super::{
@@ -75,7 +75,7 @@ impl TypeAlias {
         let module_items = db.module_items(type_alias.file_id);
         module_items[type_alias.value].clone()
     }
-    
+
     pub fn module(&self, db: &dyn DefDatabase) -> Module {
         db.lookup_intern_type_alias(self.id).file_id.into()
     }
@@ -165,7 +165,7 @@ impl Function {
         let func = db.lookup_intern_function(self.id);
         db.module_items(func.file_id)[func.value].clone()
     }
-    
+
     pub fn module(&self, db: &dyn DefDatabase) -> Module {
         db.lookup_intern_function(self.id).file_id.into()
     }

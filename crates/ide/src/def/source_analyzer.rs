@@ -112,7 +112,7 @@ impl SourceAnalyzer {
             .and_then(|i| i.resolve_module(expr_id))
             .clone()
     }
-    
+
     // pub(crate) fn resolve_field_access_expr(
     //     &self,
     //     db: &dyn DefDatabase,

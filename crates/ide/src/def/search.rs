@@ -11,7 +11,12 @@ use tracing::Level;
 
 use crate::{ide::RootDatabase, DefDatabase, FileId};
 
-use super::{hir::Function, semantics::{Definition, self}, Semantics, classify_node};
+use super::{
+    classify_node,
+    hir::Function,
+    semantics::{self, Definition},
+    Semantics,
+};
 
 #[derive(Clone, Debug)]
 pub struct SearchScope {
@@ -145,14 +150,14 @@ impl<'a> FindUsages<'a> {
             let tree = Lazy::new(move || sema.parse(file_id).syntax().clone());
             // Search for occurrences of the items name
             for offset in match_indices(&text, finder, search_range) {
-                if let Some(name) = find_nodes(name, &tree, offset).and_then(ast::TypeNameOrName::cast) {
+                if let Some(name) =
+                    find_nodes(name, &tree, offset).and_then(ast::TypeNameOrName::cast)
+                {
                     if match name {
-                        ast::TypeNameOrName::Name(name) => {
-                            self.found_name(&name, sink)
-                        }
+                        ast::TypeNameOrName::Name(name) => self.found_name(&name, sink),
                         ast::TypeNameOrName::TypeName(type_name) => {
                             self.found_type_name(&type_name, sink)
-                        },
+                        }
                         ast::TypeNameOrName::NameRef(name_ref) => {
                             self.found_name_ref(&name_ref, sink)
                         }
@@ -163,7 +168,7 @@ impl<'a> FindUsages<'a> {
             }
         }
     }
-    
+
     fn found_name_ref(
         &self,
         name_ref: &ast::NameRef,
@@ -172,12 +177,12 @@ impl<'a> FindUsages<'a> {
         if let Some(def) = classify_node(self.sema, name_ref.syntax()) {
             if self.def == def {
                 let file_id = self.sema.find_file(name_ref.syntax()).file_id;
-                return sink(file_id, name_ref.syntax().text_range())
+                return sink(file_id, name_ref.syntax().text_range());
             }
         }
         false
     }
-        
+
     fn found_type_name(
         &self,
         name_ref: &ast::TypeName,
@@ -186,12 +191,12 @@ impl<'a> FindUsages<'a> {
         if let Some(def) = classify_node(self.sema, name_ref.syntax()) {
             if self.def == def {
                 let file_id = self.sema.find_file(name_ref.syntax()).file_id;
-                return sink(file_id, name_ref.syntax().text_range())
+                return sink(file_id, name_ref.syntax().text_range());
             }
         }
         false
     }
-    
+
     // This is currently handled by the last step in highlight related
     fn found_name(
         &self,

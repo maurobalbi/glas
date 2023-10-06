@@ -968,11 +968,13 @@ mod tests {
 
     #[test]
     fn clause_guards() {
-        let clause = parse::<Clause>(" fn guards(a: String) {
+        let clause = parse::<Clause>(
+            " fn guards(a: String) {
             case 1 {
                 b if b == a -> 1
             }
-        }");
+        }",
+        );
         let mut pats = clause.patterns().into_iter();
         pats.next().unwrap().syntax().should_eq("b");
         assert!(pats.next().is_none());

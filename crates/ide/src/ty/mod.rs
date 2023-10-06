@@ -102,9 +102,7 @@ pub fn ty_from_ast(ast_expr: ast::TypeExpr) -> Ty {
                     // ToDo: Diagnostics
                     a if token.kind() == syntax::SyntaxKind::U_IDENT => {
                         return Ty::Adt {
-                            module: t
-                                .module()
-                                .and_then(|m| m.text()),
+                            module: t.module().and_then(|m| m.text()),
                             name: a.into(),
                             params: Arc::new(Vec::new()),
                         }
@@ -147,9 +145,7 @@ pub fn ty_from_ast(ast_expr: ast::TypeExpr) -> Ty {
                 _ => {}
             };
             Ty::Adt {
-                module: type_constr
-                    .and_then(|t| t.module())
-                    .and_then(|m| m.text()),
+                module: type_constr.and_then(|t| t.module()).and_then(|m| m.text()),
                 name,
                 params: Arc::new(arguments),
             }

@@ -3,7 +3,7 @@ use la_arena::Idx;
 use crate::{impl_from, impl_intern, FileId, InFile};
 
 use super::{
-    hir::{Adt, Function, Module, Variant, TypeAlias},
+    hir::{Adt, Function, Module, TypeAlias, Variant},
     module::{AdtData, FunctionData, TypeAliasData, VariantData},
     DefDatabase,
 };
@@ -24,7 +24,12 @@ macro_rules! from_id {
     )*}
 }
 
-from_id!((FunctionId, Function), (AdtId, Adt), (FileId, Module), (TypeAliasId, TypeAlias));
+from_id!(
+    (FunctionId, Function),
+    (AdtId, Adt),
+    (FileId, Module),
+    (TypeAliasId, TypeAlias)
+);
 
 impl From<VariantId> for Variant {
     fn from(value: VariantId) -> Self {

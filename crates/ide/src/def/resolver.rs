@@ -6,7 +6,7 @@ use smol_str::SmolStr;
 use crate::{DefDatabase, FileId};
 
 use super::{
-    hir::{BuiltIn, Function, Local, Module, Variant, Adt, TypeAlias},
+    hir::{Adt, BuiltIn, Function, Local, Module, TypeAlias, Variant},
     hir_def::{AdtId, ModuleDefId},
     module::ExprId,
     scope::{ModuleScope, ScopeId},
@@ -109,7 +109,9 @@ impl Resolver {
         let resolved = self.module_scope.resovlve_type(name.clone());
         match resolved {
             Some(ModuleDefId::AdtId(adt)) => Some(ResolveResult::Adt(adt.clone().into())),
-            Some(ModuleDefId::TypeAliasId(type_alias)) => Some(ResolveResult::TypeAlias(type_alias.clone().into())),
+            Some(ModuleDefId::TypeAliasId(type_alias)) => {
+                Some(ResolveResult::TypeAlias(type_alias.clone().into()))
+            }
             _ => None,
         }
     }

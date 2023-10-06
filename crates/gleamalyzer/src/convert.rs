@@ -1,13 +1,15 @@
 use crate::{LineMap, Result, Vfs};
 use ide::{
     CompletionItem, CompletionItemKind, Diagnostic, DiagnosticKind, FileId, FilePos, FileRange,
-    HoverResult, Severity, HlRelated,
+    HlRelated, HoverResult, Severity,
 };
-use lsp::{DiagnosticTag, Documentation, Hover, MarkupContent, MarkupKind, DocumentHighlight, DocumentHighlightKind};
+use lsp::{
+    DiagnosticTag, DocumentHighlight, DocumentHighlightKind, Documentation, Hover, MarkupContent,
+    MarkupKind,
+};
 use lsp_types::{
     self as lsp, DiagnosticRelatedInformation, DiagnosticSeverity, Location, NumberOrString,
-    Position, Range, TextDocumentIdentifier, TextDocumentPositionParams,
-    Url,
+    Position, Range, TextDocumentIdentifier, TextDocumentPositionParams, Url,
 };
 use std::sync::Arc;
 use text_size::{TextRange, TextSize};

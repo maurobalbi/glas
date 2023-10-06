@@ -169,10 +169,7 @@ impl Analysis {
     }
 
     pub fn highlight_related(&self, fpos: FilePos) -> Cancellable<Vec<HlRelated>> {
-        self.with_db(|db| {
-            highlight_related::highlight_related(db, fpos)
-                .unwrap_or_default()
-        })
+        self.with_db(|db| highlight_related::highlight_related(db, fpos).unwrap_or_default())
     }
 
     pub fn goto_definition(&self, pos: FilePos) -> Cancellable<Option<GotoDefinitionResult>> {

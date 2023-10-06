@@ -140,21 +140,27 @@ mod tests {
     #[test]
     #[traced_test]
     fn guards_scope() {
-        check(r#"
+        check(
+            r#"
         fn guards(a: String) {
             case 1 {
                 b if b == $0a -> 1
             }
         }
-        "#, expect!["<a>: String"]);
+        "#,
+            expect!["<a>: String"],
+        );
 
-        check(r#"
+        check(
+            r#"
         fn guards(a: String) {
             case 1 {
                 b if $0b == a -> 1
             }
         }
-        "#, expect![""]);
+        "#,
+            expect![""],
+        );
     }
 
     #[test]

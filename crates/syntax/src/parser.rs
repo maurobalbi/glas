@@ -1364,7 +1364,7 @@ fn type_expr(p: &mut Parser) {
             let m = p.start_node();
             p.expect(DISCARD_IDENT);
             p.finish_node(m, HOLE)
-        },
+        }
         // tuple
         T!("#") => tuple_type(p),
         _ => {

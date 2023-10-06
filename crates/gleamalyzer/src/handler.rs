@@ -2,8 +2,8 @@ use crate::{convert, lsp_ext::SyntaxTreeParams, StateSnapshot};
 use anyhow::Result;
 use ide::{FileRange, GotoDefinitionResult};
 use lsp_types::{
-    CompletionParams, CompletionResponse, Diagnostic, GotoDefinitionParams, GotoDefinitionResponse,
-    Hover, HoverParams, Url, DocumentHighlightParams, DocumentHighlight,
+    CompletionParams, CompletionResponse, Diagnostic, DocumentHighlight, DocumentHighlightParams,
+    GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverParams, Url,
 };
 
 const MAX_DIAGNOSTICS_CNT: usize = 128;
