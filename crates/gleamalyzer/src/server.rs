@@ -48,7 +48,12 @@ use walkdir::WalkDir;
 type NotifyResult = ControlFlow<async_lsp::Result<()>>;
 
 struct UpdateConfigEvent(serde_json::Value);
-struct SetPackageGraphEvent(Option<(PackageGraph, Vec<PackageRoot>)>);
+struct SetPackageGraphEvent(
+    Option<(PackageGraph, Vec<PackageRoot>)>,
+    oneshot::Sender<()>,
+);
+
+pub struct SettingState(pub oneshot::Receiver<()>);
 
 const LSP_SERVER_NAME: &str = "gleamalyzer";
 pub const GLEAM_TOML: &str = "gleam.toml";
@@ -67,7 +72,6 @@ pub struct Server {
 
     // Ongoing tasks.
     load_gleam_workspace_fut: Option<JoinHandle<()>>,
-    init_channel: Option<oneshot::Sender<()>>,
 
     client: ClientSocket,
     capabilities: NegotiatedCapabilities,
@@ -121,7 +125,6 @@ impl Server {
             config: Arc::new(Config::new("/non-existing-path".into())),
 
             load_gleam_workspace_fut: None,
-            init_channel: None,
 
             client,
             init_messages,
@@ -138,9 +141,6 @@ impl Server {
         let (server_caps, final_caps) = negotiate_capabilities(&params);
 
         self.capabilities = final_caps;
-
-        let (tx, rx) = oneshot::channel::<()>();
-        self.init_channel = Some(tx);
 
         // TODO: Use `workspaceFolders`.
         let root_path = match params
@@ -165,6 +165,21 @@ impl Server {
         }
         *Arc::get_mut(&mut self.config).expect("No concurrent access yet") = cfg;
 
+        ready(Ok(InitializeResult {
+            capabilities: server_caps,
+            server_info: Some(ServerInfo {
+                name: LSP_SERVER_NAME.into(),
+                version: option_env!("CFG_RELEASE").map(Into::into),
+            }),
+        }))
+    }
+
+    fn on_initialized(&mut self, _params: InitializedParams) -> NotifyResult {
+        for msg in std::mem::take(&mut self.init_messages) {
+            tracing::warn!("Init message ({:?}): {}", msg.typ, msg.message);
+            let _: Result<_, _> = self.client.show_message(msg);
+        }
+
         // Make a virtual event to trigger loading of gleam.toml files for package info.
         let gleam_toml_changed_event = DidChangeWatchedFilesParams {
             changes: [GLEAM_TOML]
@@ -177,25 +192,18 @@ impl Server {
                 })
                 .collect(),
         };
-
-        self.on_did_change_watched_files(gleam_toml_changed_event);
-
-        async {
-            let _ = rx.await;
-            Ok(InitializeResult {
-                capabilities: server_caps,
-                server_info: Some(ServerInfo {
-                    name: LSP_SERVER_NAME.into(),
-                    version: option_env!("CFG_RELEASE").map(Into::into),
-                }),
-            })
-        }
-    }
-
-    fn on_initialized(&mut self, _params: InitializedParams) -> NotifyResult {
-        for msg in std::mem::take(&mut self.init_messages) {
-            tracing::warn!("Init message ({:?}): {}", msg.typ, msg.message);
-            let _: Result<_, _> = self.client.show_message(msg);
+        if self.capabilities.watch_files {
+            tokio::spawn({
+                let config = self.config.clone();
+                let caps = self.capabilities.clone();
+                let mut client = self.client.clone();
+                async move {
+                    Self::register_watched_files(&config, &caps, &mut client).await;
+                    let _: Result<_, _> = client.emit(gleam_toml_changed_event);
+                }
+            });
+        } else {
+            self.on_did_change_watched_files(gleam_toml_changed_event)?;
         }
 
         // FIXME: This is still racy since `on_did_open` can also trigger reloading and would
@@ -397,13 +405,11 @@ impl Server {
 
     /// Spawn a task to (re)load the gleam workspace via `gleam.toml`
     fn spawn_load_gleam_workspace(&mut self) {
-        let channel = std::mem::take(&mut self.init_channel);
         let fut = task::spawn(Self::load_gleam_workspace(
             self.vfs.clone(),
             self.config.clone(),
             self.capabilities.clone(),
             self.client.clone(),
-            channel,
         ));
         if let Some(prev_fut) = self.load_gleam_workspace_fut.replace(fut) {
             prev_fut.abort();
@@ -415,10 +421,12 @@ impl Server {
         config: Arc<Config>,
         caps: NegotiatedCapabilities,
         mut client: ClientSocket,
-        channel: Option<oneshot::Sender<()>>,
     ) {
         // Delay the loading to debounce. Later triggers will cancel previous tasks.
         tokio::time::sleep(LOAD_GLEAM_WORKSPACE_DEBOUNCE_DURATION).await;
+
+        let (tx, rx) = oneshot::channel();
+        let _ = &client.emit(SettingState(rx));
 
         tracing::info!("Loading gleam workspace");
         let progress = Progress::new(
@@ -434,10 +442,7 @@ impl Server {
                 let ret_info = ret
                     .as_ref()
                     .map(|r: &(PackageGraph, Vec<PackageRoot>)| r.0.clone());
-                let _: Result<_, _> = client.emit(SetPackageGraphEvent(ret));
-                if let Some(channel) = channel {
-                    let _ = channel.send(());
-                }
+                let _: Result<_, _> = client.emit(SetPackageGraphEvent(ret, tx));
                 ret_info
             }
             Err(err) => {
@@ -636,6 +641,9 @@ impl Server {
             tracing::trace!("Recalculate diagnostics of {uri}");
             self.spawn_update_diagnostics(uri.clone());
         }
+        tracing::info!("Finished loading workspace!");
+        // Informing loading service, that workspace has loaded
+        let _ = info.1.send(());
         ControlFlow::Continue(())
     }
 
@@ -894,6 +902,7 @@ impl Progress {
                 })
                 .await
                 .is_ok();
+        tracing::info!("PROGRESS {:?}", created);
         let this = Self {
             client: client.clone(),
             token: created.then_some(token),

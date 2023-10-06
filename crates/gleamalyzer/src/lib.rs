@@ -2,6 +2,7 @@ mod capabilities;
 mod config;
 mod convert;
 mod handler;
+mod loading_service;
 mod lsp_ext;
 mod meter;
 pub mod server;
@@ -21,6 +22,7 @@ use tower::ServiceBuilder;
 pub(crate) use server::{Server, StateSnapshot};
 pub(crate) use vfs::{LineMap, Vfs};
 
+use crate::loading_service::LoaderProgressLayer;
 use crate::meter::MeterLayer;
 
 /// The file length limit. Files larger than this will be rejected from all interactions.
@@ -87,6 +89,7 @@ pub async fn run_server_stdio() -> Result<()> {
         ServiceBuilder::new()
             .layer(TracingLayer::default())
             .layer(MeterLayer::default())
+            .layer(LoaderProgressLayer::default())
             .layer(LifecycleLayer::default())
             // TODO: Use `CatchUnwindLayer`.
             .layer(ConcurrencyLayer::new(concurrency))
