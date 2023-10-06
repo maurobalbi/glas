@@ -4,13 +4,14 @@ mod goto_definition;
 mod highlight_related;
 mod hover;
 mod syntax_tree;
+mod references;
 
 use crate::base::SourceDatabaseStorage;
-use crate::def::{DefDatabaseStorage, InternDatabaseStorage, Semantics};
+use crate::def::{DefDatabaseStorage, InternDatabaseStorage};
 use crate::ty::{TyDatabase, TyDatabaseStorage};
 use crate::{
     Change, DefDatabase, Diagnostic, FileId, FilePos, FileSet, ModuleMap, SourceDatabase,
-    SourceRoot, VfsPath,
+    SourceRoot, VfsPath, FileRange,
 };
 use salsa::{Database, Durability, ParallelDatabase};
 use std::fmt;
@@ -174,6 +175,10 @@ impl Analysis {
 
     pub fn goto_definition(&self, pos: FilePos) -> Cancellable<Option<GotoDefinitionResult>> {
         self.with_db(|db| goto_definition::goto_definition(db, pos))
+    }
+    
+    pub fn references(&self, pos: FilePos) -> Cancellable<Option<Vec<FileRange>>> {
+        self.with_db(|db| references::references(db, pos))
     }
 
     pub fn syntax_tree(&self, file_id: FileId) -> Cancellable<String> {

@@ -57,6 +57,7 @@ pub(crate) fn negotiate_capabilities(
                 save: None,
             },
         )),
+        references_provider: Some(OneOf::Left(true)),
         completion_provider: Some(CompletionOptions {
             trigger_characters: Some(vec![".".into(), "@".into()]),
             ..Default::default()

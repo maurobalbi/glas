@@ -9,7 +9,7 @@ use syntax::{
 };
 use tracing::Level;
 
-use crate::{ide::RootDatabase, DefDatabase, FileId};
+use crate::{ide::RootDatabase, DefDatabase, FileId, FileRange};
 
 use super::{
     classify_node,
@@ -216,4 +216,13 @@ impl<'a> FindUsages<'a> {
 #[derive(Debug, Default, Clone)]
 pub struct UsageSearchResult {
     pub references: IntMap<FileId, Vec<TextRange>>,
+}
+
+impl IntoIterator for UsageSearchResult {
+    type Item = (FileId, Vec<TextRange>);
+    type IntoIter = <IntMap<FileId, Vec<TextRange>> as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.references.into_iter()
+    }
 }

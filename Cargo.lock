@@ -729,6 +729,7 @@ dependencies = [
  "anymap",
  "expect-test",
  "indexmap",
+ "itertools",
  "la-arena",
  "memchr",
  "nohash-hasher",
