@@ -3,14 +3,14 @@ use std::ops::ControlFlow;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
+use lsp_types::notification;
 use lsp_types::notification::Notification;
-use lsp_types::{notification, request};
 use tokio::sync::oneshot;
 
 use async_lsp::{AnyEvent, AnyNotification, AnyRequest, LspService, ResponseError, Result};
 use tower::{Layer, Service};
 
-use crate::server::{SetPackageGraphEvent, SettingState};
+use crate::server::SetPackageGraphEvent;
 
 macro_rules! ready {
     ($e:expr $(,)?) => {
@@ -21,17 +21,9 @@ macro_rules! ready {
     };
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-enum State {
-    #[default]
-    Ready,
-    Loading,
-}
-
 #[derive(Debug, Default)]
 pub struct LoaderProgress<S> {
     service: S,
-    state: State,
     receiver: Option<oneshot::Receiver<()>>,
     sender: Option<oneshot::Sender<()>>,
 }
@@ -42,7 +34,6 @@ impl<S> LoaderProgress<S> {
     pub fn new(service: S) -> Self {
         Self {
             service,
-            state: State::Ready,
             receiver: None,
             sender: None,
         }
@@ -72,10 +63,7 @@ where
     }
 
     fn call(&mut self, req: AnyRequest) -> Self::Future {
-        match self.state {
-            State::Ready => self.service.call(req),
-            State::Loading => panic!("service not ready; poll_ready must be called first"),
-        }
+        self.service.call(req)
     }
 }
 
