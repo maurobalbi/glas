@@ -88,7 +88,7 @@ pub async fn run_server_stdio() -> Result<()> {
     let (mainloop, _) = async_lsp::MainLoop::new_server(|client| {
         ServiceBuilder::new()
             .layer(TracingLayer::default())
-            .layer(MeterLayer::default())
+            .layer(MeterLayer)
             .layer(LoaderProgressLayer::default())
             .layer(LifecycleLayer::default())
             // TODO: Use `CatchUnwindLayer`.

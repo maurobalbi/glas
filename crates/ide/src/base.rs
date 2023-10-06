@@ -230,7 +230,7 @@ pub fn module_name(root_path: &PathBuf, module_path: &Path) -> Option<SmolStr> {
         .to_string();
 
     // normalise windows paths
-    Some(name.replace("\\", "/").into())
+    Some(name.replace('\\', "/").into())
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
@@ -325,10 +325,7 @@ impl<T: Clone> InFile<&T> {
 
 impl<'a> InFile<&'a SyntaxNode> {
     pub fn ancestors(self) -> impl Iterator<Item = InFile<SyntaxNode>> + Clone {
-        iter::successors(Some(self.cloned()), move |node| match node.value.parent() {
-            Some(parent) => Some(node.with_value(parent)),
-            None => None,
-        })
+        iter::successors(Some(self.cloned()), move |node| node.value.parent().map(|parent| node.with_value(parent)))
     }
 }
 

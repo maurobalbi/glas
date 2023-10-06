@@ -14,7 +14,7 @@ use std::sync::Arc;
 
 use crate::base::SourceDatabase;
 use crate::FileId;
-use salsa;
+
 
 use syntax::{AstPtr, Parse};
 

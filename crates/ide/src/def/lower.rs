@@ -118,23 +118,23 @@ pub(super) fn lower_module(parse: Parse) -> ModuleItemData {
 
 impl LowerCtx{
     fn alloc_function(&mut self, function: FunctionData) -> Idx<FunctionData> {
-        let id = self.module_items.functions.alloc(function);
-        id
+        
+        self.module_items.functions.alloc(function)
     }
 
     fn alloc_custom_type(&mut self, custom_type: AdtData) -> Idx<AdtData> {
-        let id = self.module_items.adts.alloc(custom_type);
-        id
+        
+        self.module_items.adts.alloc(custom_type)
     }
 
     fn alloc_type_alias(&mut self, custom_type: TypeAliasData) -> Idx<TypeAliasData> {
-        let id = self.module_items.type_alias.alloc(custom_type);
-        id
+        
+        self.module_items.type_alias.alloc(custom_type)
     }
 
     fn alloc_variant(&mut self, constructor: VariantData) -> Idx<VariantData> {
-        let id = self.module_items.variants.alloc(constructor);
-        id
+        
+        self.module_items.variants.alloc(constructor)
     }
 
     fn alloc_unqualified_import(&mut self, import: ImportData) -> Idx<ImportData> {
@@ -170,8 +170,8 @@ impl LowerCtx{
             ast::ModuleStatement::TypeAlias(it) => {
                 self.lower_type_alias(it);
             }
-            _ => return,
-        };
+            _ => (),
+        }
     }
     /// Here were resolving the imports and allocating the
     fn lower_import(&mut self, i: &ast::Import) {
@@ -182,7 +182,7 @@ impl LowerCtx{
             .module_path()
             .into_iter()
             .flat_map(|m| m.path())
-            .filter_map(|t| Some(format!("{}", t.token()?.text())))
+            .filter_map(|t| Some(t.token()?.text().to_string()))
             .collect::<Vec<_>>()
             .join("/")
             .into();
@@ -191,7 +191,7 @@ impl LowerCtx{
             .module_path()
             .into_iter()
             .flat_map(|m| m.path())
-            .filter_map(|t| Some(format!("{}", t.token()?.text())))
+            .filter_map(|t| Some(t.token()?.text().to_string()))
             .last()
         else {
             return;
@@ -210,10 +210,10 @@ impl LowerCtx{
                     unqualified.as_name().and_then(|t| t.text());
 
                 self.alloc_unqualified_import(ImportData {
-                    module: module_id.clone(),
+                    module: module_id,
                     unqualified_as_name,
                     unqualified_name,
-                    ast_ptr: ast_ptr,
+                    ast_ptr,
                 });
             }
         }
@@ -227,12 +227,10 @@ impl LowerCtx{
             for param in param_list.params() {
                 match param.pattern() {
                     Some(Pattern::PatternVariable(it)) => {
-                        it.name().and_then(|n| n.text()).map(|t| {
-                            params.push(Param {
+                        if let Some(t) = it.name().and_then(|n| n.text()) { params.push(Param {
                                 name: t,
                                 label: param.label().and_then(|n| n.text()),
-                            })
-                        });
+                            }) }
                     }
                     _ => {}
                 }

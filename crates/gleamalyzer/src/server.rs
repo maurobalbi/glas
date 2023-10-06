@@ -462,7 +462,7 @@ impl Server {
         let mut graph = PackageGraph::default();
         tracing::info!("Downloading deps and loading package info");
 
-        let _: () = gleam_interop::load_package_info()
+        gleam_interop::load_package_info()
             .await
             .context("Could not load dependencies")?;
 
@@ -527,7 +527,7 @@ impl Server {
         let target: Target = gleam_toml
             .get("target")
             .and_then(|v| v.as_str())
-            .unwrap_or_else(|| "erlang")
+            .unwrap_or("erlang")
             .into();
 
         let package = graph.add_package(name, gleam_file);
@@ -537,7 +537,7 @@ impl Server {
         for (name, dep) in direct_deps.iter() {
             if let Some(dep_id) = seen.get(name.as_str()) {
                 let dependency = Dependency {
-                    package: dep_id.clone(),
+                    package: *dep_id,
                     name: name.to_string(),
                 };
                 graph.add_dep(package, dependency);
@@ -571,7 +571,7 @@ impl Server {
                 }
             };
 
-            seen.insert(name.into(), dep_id.clone());
+            seen.insert(name.into(), dep_id);
 
             let dependency = Dependency {
                 package: dep_id,
@@ -611,7 +611,7 @@ impl Server {
         });
         let mut vfs = vfs.write().unwrap();
         for file in files {
-            if let Some(src) = std::fs::read_to_string(file.clone()).ok() {
+            if let Ok(src) = std::fs::read_to_string(file.clone()) {
                 vfs.set_path_content(VfsPath::from(file), src);
             }
         }

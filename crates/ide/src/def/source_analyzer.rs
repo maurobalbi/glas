@@ -75,11 +75,10 @@ impl SourceAnalyzer {
     }
 
     pub(crate) fn resolve_module(&self, expr: &ast::Expr) -> Option<FileId> {
-        let expr_id = self.expr_id(&expr)?;
+        let expr_id = self.expr_id(expr)?;
         self.infer
             .as_ref()
             .and_then(|i| i.resolve_module(expr_id))
-            .clone()
     }
 
     // pub(crate) fn resolve_field_access_expr(

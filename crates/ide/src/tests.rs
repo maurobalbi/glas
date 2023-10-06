@@ -30,7 +30,7 @@ impl salsa::Database for TestDB {}
 
 impl Upcast<dyn DefDatabase> for TestDB {
     fn upcast(&self) -> &(dyn DefDatabase + 'static) {
-        &*self
+        self
     }
 }
 
@@ -139,7 +139,7 @@ impl Fixture {
             } else {
                 if cur_path.is_none() {
                     missing_header = true;
-                    cur_path = Some(VfsPath::new(format!("/test.gleam")));
+                    cur_path = Some(VfsPath::new("/test.gleam".to_string()));
                 }
 
                 let mut iter = line.chars().peekable();

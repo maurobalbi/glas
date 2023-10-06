@@ -17,25 +17,22 @@ pub struct HlRelated {
 pub(crate) fn highlight_related(db: &dyn TyDatabase, fpos: FilePos) -> Option<Vec<HlRelated>> {
     let sema = Semantics::new(db);
     let parse = sema.parse(fpos.file_id);
-    let tok = best_token_at_offset(&parse.syntax(), fpos.pos)?;
+    let tok = best_token_at_offset(parse.syntax(), fpos.pos)?;
     // let source_map = db.souce_map(fpos.file_id);
     let mut res = HashSet::new();
 
     let def = semantics::classify_node(&sema, &tok.parent()?)?;
-    def.clone()
+    if let Some(t) = def.clone()
         .usages(&sema)
         .in_scope(&SearchScope::single_file(fpos.file_id))
         .all()
         .references
-        .remove(&fpos.file_id)
-        .map(|t| {
-            t.into_iter().for_each(|range| {
+        .remove(&fpos.file_id) { t.into_iter().for_each(|range| {
                 res.insert(HlRelated {
                     range,
                     is_definition: false,
                 });
-            })
-        });
+            }) }
 
     def.to_nav(db).map(|nav| {
         if fpos.file_id == nav.file_id {

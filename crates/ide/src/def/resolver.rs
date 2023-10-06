@@ -92,10 +92,10 @@ impl Resolver {
         for (name, moddef) in self.module_scope.values() {
             match moddef {
                 super::hir_def::ModuleDefId::FunctionId(it) => {
-                    map.add(name, ResolveResult::Function(Function::from(*it).clone()))
+                    map.add(name, ResolveResult::Function(Function::from(*it)))
                 }
                 super::hir_def::ModuleDefId::VariantId(it) => {
-                    map.add(name, ResolveResult::Variant(Variant::from(*it).clone()))
+                    map.add(name, ResolveResult::Variant(Variant::from(*it)))
                 }
                 super::hir_def::ModuleDefId::AdtId(_)
                 | super::hir_def::ModuleDefId::TypeAliasId(_) => {}
@@ -108,9 +108,9 @@ impl Resolver {
     pub fn resolve_type(&self, name: &SmolStr) -> Option<ResolveResult> {
         let resolved = self.module_scope.resovlve_type(name.clone());
         match resolved {
-            Some(ModuleDefId::AdtId(adt)) => Some(ResolveResult::Adt(adt.clone().into())),
+            Some(ModuleDefId::AdtId(adt)) => Some(ResolveResult::Adt((*adt).into())),
             Some(ModuleDefId::TypeAliasId(type_alias)) => {
-                Some(ResolveResult::TypeAlias(type_alias.clone().into()))
+                Some(ResolveResult::TypeAlias((*type_alias).into()))
             }
             _ => None,
         }

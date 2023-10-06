@@ -58,10 +58,7 @@ pub enum Ty {
 }
 
 pub fn ty_from_ast_opt(type_ast: Option<ast::TypeExpr>) -> Option<Ty> {
-    match type_ast {
-        Some(t) => Some(ty_from_ast(t)),
-        None => None,
-    }
+    type_ast.map(ty_from_ast)
 }
 
 pub fn ty_from_ast(ast_expr: ast::TypeExpr) -> Ty {
@@ -73,7 +70,7 @@ pub fn ty_from_ast(ast_expr: ast::TypeExpr) -> Ty {
                     fn_params.push(ty_from_ast(ty));
                 }
             };
-            let ret = it.return_().map_or_else(|| Ty::Unknown, |r| ty_from_ast(r));
+            let ret = it.return_().map_or_else(|| Ty::Unknown, ty_from_ast);
             Ty::Function {
                 params: Arc::new(fn_params),
                 return_: Arc::new(ret),

@@ -195,8 +195,8 @@ impl Local {
     pub fn ty(self, db: &dyn TyDatabase) -> ty::Ty {
         let def = self.parent;
         let infer = db.infer_function(def);
-        let ty = infer.ty_for_pattern(self.pat_id).clone();
-        ty
+        
+        infer.ty_for_pattern(self.pat_id).clone()
     }
 
     pub fn name(self, db: &dyn DefDatabase) -> SmolStr {

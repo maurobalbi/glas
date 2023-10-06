@@ -406,7 +406,7 @@ impl From<rowan::SyntaxKind> for SyntaxKind {
     fn from(k: rowan::SyntaxKind) -> Self {
         assert!(k.0 <= SyntaxKind::__LAST as u16);
         // SAFETY: Guarded by the assert.
-        unsafe { std::mem::transmute::<u16, SyntaxKind>(k.0 as u16) }
+        unsafe { std::mem::transmute::<u16, SyntaxKind>(k.0) }
     }
 }
 

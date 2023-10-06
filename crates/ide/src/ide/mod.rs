@@ -68,19 +68,19 @@ pub trait Upcast<T: ?Sized> {
 
 impl Upcast<dyn TyDatabase> for RootDatabase {
     fn upcast(&self) -> &(dyn TyDatabase + 'static) {
-        &*self
+        self
     }
 }
 
 impl Upcast<dyn SourceDatabase> for RootDatabase {
     fn upcast(&self) -> &(dyn SourceDatabase + 'static) {
-        &*self
+        self
     }
 }
 
 impl Upcast<dyn DefDatabase> for RootDatabase {
     fn upcast(&self) -> &(dyn DefDatabase + 'static) {
-        &*self
+        self
     }
 }
 
@@ -113,7 +113,7 @@ impl AnalysisHost {
         let file = FileId(0);
         change.change_file(file, src.into());
         let mut file_set = FileSet::default();
-        file_set.insert(file, VfsPath::new(format!("/main.gleam"))); // Hack
+        file_set.insert(file, VfsPath::new("/main.gleam")); // Hack
         change.set_roots_and_map(
             vec![SourceRoot::new_local(file_set, "/".into())],
             ModuleMap::default(),

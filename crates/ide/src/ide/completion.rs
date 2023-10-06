@@ -93,7 +93,7 @@ impl<'db> CompletionContext<'db> {
             .tok
             .parent_ancestors()
             .take_while(|it| {
-                it.text_range() == ctx.source_range && !(it.kind() == SyntaxKind::SOURCE_FILE)
+                it.text_range() == ctx.source_range && it.kind() != SyntaxKind::SOURCE_FILE
             })
             .last();
 
@@ -236,7 +236,7 @@ fn complete_dot(acc: &mut Vec<CompletionItem>, ctx: CompletionContext<'_>) -> Op
                                 .collect::<Vec<_>>()
                                 .join(", ");
                             let name = it.name(ctx.db.upcast());
-                            let label = if params.len() > 0 {
+                            let label = if !params.is_empty() {
                                 format!("{}(…)", name)
                             } else {
                                 format!("{}()", name)
@@ -255,7 +255,7 @@ fn complete_dot(acc: &mut Vec<CompletionItem>, ctx: CompletionContext<'_>) -> Op
                                 .collect::<Vec<_>>()
                                 .join(", ");
                             let name = it.name(ctx.db.upcast());
-                            let label = if fields.len() > 0 {
+                            let label = if !fields.is_empty() {
                                 format!("{}(…)", name)
                             } else {
                                 format!("{}()", name)
@@ -268,7 +268,7 @@ fn complete_dot(acc: &mut Vec<CompletionItem>, ctx: CompletionContext<'_>) -> Op
                         label: name.into(),
                         source_range: ctx.source_range,
                         replace: replace.into(),
-                        kind: kind,
+                        kind,
                         signature: Some(String::from("signature")),
                         description: Some(String::from("desription")),
                         documentation: Some(String::from("docs")),
@@ -290,8 +290,7 @@ fn complete_import(acc: &mut Vec<CompletionItem>, ctx: &CompletionContext<'_>) -
     if ctx
         .tok
         .parent_ancestors()
-        .find(|t| ast::ModulePath::can_cast(t.kind()))
-        .is_some()
+        .any(|t| ast::ModulePath::can_cast(t.kind()))
     {
         for (_, name) in ctx.db.module_map().iter() {
             acc.push(CompletionItem {

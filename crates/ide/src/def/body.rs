@@ -149,10 +149,10 @@ pub(super) fn lower(db: &dyn DefDatabase, function_id: FunctionId) -> (Body, Bod
         }
     }
 
-    let return_ = ast.return_type().map(|ty| ty::ty_from_ast(ty));
+    let return_ = ast.return_type().map(ty::ty_from_ast);
     ctx.body.return_ = return_;
 
-    let expr_id = ctx.lower_expr_opt(ast.body().map(|b| ast::Expr::Block(b)));
+    let expr_id = ctx.lower_expr_opt(ast.body().map(ast::Expr::Block));
     ctx.body.body_expr = expr_id;
 
     (ctx.body, ctx.source_map)
@@ -206,9 +206,8 @@ impl BodyLowerCtx {
                 let mut stmts = Vec::new();
 
                 defs.expressions()
-                    .into_iter()
                     .for_each(|a| self.lower_expr_stmt(&mut stmts, a));
-                self.alloc_expr(Expr::Block { stmts: stmts }, ptr)
+                self.alloc_expr(Expr::Block { stmts }, ptr)
             }
             ast::Expr::Tuple(it) => {
                 let mut fields = Vec::new();
@@ -224,7 +223,7 @@ impl BodyLowerCtx {
                 if let Some(args) = call.arguments() {
                     for arg in args.args() {
                         arg_ids.push((
-                            arg.label().and_then(|t| t.text().into()),
+                            arg.label().and_then(|t| t.text()),
                             self.lower_expr_opt(arg.value()),
                         ));
                     }
@@ -265,7 +264,6 @@ impl BodyLowerCtx {
             ast::Expr::Case(case) => {
                 let subjects = case
                     .subjects()
-                    .into_iter()
                     .map(|s| self.lower_expr(s))
                     .collect();
 
@@ -313,7 +311,7 @@ impl BodyLowerCtx {
                         }
                     }
                     let end = self.next_pattern_idx();
-                    let body = self.lower_expr_opt(lambda.body().map(|b| ast::Expr::Block(b)));
+                    let body = self.lower_expr_opt(lambda.body().map(ast::Expr::Block));
                     return self.alloc_expr(
                         Expr::Lambda {
                             body,
@@ -322,15 +320,14 @@ impl BodyLowerCtx {
                         ptr,
                     );
                 }
-                return self.alloc_expr(Expr::Missing, ptr);
+                self.alloc_expr(Expr::Missing, ptr)
             }
             ast::Expr::List(l) => {
                 let elements = l
                     .elements()
-                    .into_iter()
                     .map(|e| self.lower_expr(e))
                     .collect();
-                return self.alloc_expr(Expr::List { elements }, ptr);
+                self.alloc_expr(Expr::List { elements }, ptr)
             }
             _ => self.alloc_expr(Expr::Missing, ptr),
         }
@@ -425,7 +422,6 @@ impl BodyLowerCtx {
             ast::Pattern::PatternList(list) => {
                 let elements = list
                     .elements()
-                    .into_iter()
                     .map(|p| self.lower_pattern(p))
                     .collect();
                 Pattern::List { elements }

@@ -186,11 +186,11 @@ impl ModuleScope {
     pub fn values(
         &self,
     ) -> impl Iterator<Item = (&SmolStr, &ModuleDefId)> + ExactSizeIterator + '_ {
-        self.values.iter().map(|v| v)
+        self.values.iter()
     }
 
     pub fn types(&self) -> impl Iterator<Item = (&SmolStr, &ModuleDefId)> + ExactSizeIterator + '_ {
-        self.types.iter().map(|v| v)
+        self.types.iter()
     }
 
     pub fn declarations(
@@ -324,13 +324,13 @@ impl ExprScopes {
                     self.traverse_expr(body, *s, scope);
                 }
 
-                clauses.into_iter().for_each(|Clause { patterns, expr }| {
+                clauses.iter().for_each(|Clause { patterns, expr }| {
                     let clause_scope = self.scopes.alloc(ScopeData {
                         parent: Some(scope),
                         entries: Vec::new(),
                     });
                     for pat in patterns.iter() {
-                        self.add_bindings(body, clause_scope, &pat);
+                        self.add_bindings(body, clause_scope, pat);
                     }
                     self.traverse_expr(body, *expr, clause_scope);
                 });
@@ -349,12 +349,12 @@ impl ExprScopes {
                 self.traverse_expr(body, *lam_body, body_scope);
             }
             Expr::Tuple { fields } => {
-                for field in fields.into_iter() {
+                for field in fields.iter() {
                     self.traverse_expr(body, *field, scope);
                 }
             }
             Expr::List { elements } => {
-                for elem in elements.into_iter() {
+                for elem in elements.iter() {
                     self.traverse_expr(body, *elem, scope);
                 }
             }
@@ -410,12 +410,10 @@ impl ExprScopes {
                 }
             }
             Pattern::Spread { name } => {
-                name.clone().map(|name| {
-                    self.scopes[scope].entries.push(ScopeEntry {
+                if let Some(name) = name.clone() { self.scopes[scope].entries.push(ScopeEntry {
                         name,
                         pat: *pattern_id,
-                    })
-                });
+                    }) }
             }
             Pattern::AlternativePattern { patterns } => {
                 for pattern in patterns {
@@ -477,19 +475,19 @@ pub(crate) fn dependency_order_query(
 ) -> Vec<Vec<FunctionId>> {
     let scopes = db.module_scope(file_id);
     let mut edges = Vec::new();
-    for (func, _) in scopes.declarations().into_iter().flatten() {
+    for (func, _) in scopes.declarations().flatten() {
         match func {
             ModuleDefId::FunctionId(owner_id) => {
-                let body = db.body(owner_id.clone());
-                edges.push((owner_id.clone().0.as_u32(), owner_id.clone().0.as_u32()));
+                let body = db.body(*owner_id);
+                edges.push((owner_id.0.as_u32(), owner_id.0.as_u32()));
                 body.exprs().for_each(|(e_id, expr)| match expr {
                     Expr::Variable(name) => {
-                        let resolver = resolver_for_expr(db, owner_id.clone(), e_id);
+                        let resolver = resolver_for_expr(db, *owner_id, e_id);
                         let Some(ResolveResult::Function(fn_id)) = resolver.resolve_name(name)
                         else {
                             return;
                         };
-                        edges.push((owner_id.clone().0.as_u32(), fn_id.id.0.as_u32()))
+                        edges.push((owner_id.0.as_u32(), fn_id.id.0.as_u32()))
                     }
                     _ => {}
                 });

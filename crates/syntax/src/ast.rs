@@ -268,7 +268,7 @@ impl FieldAccessExpr {
     pub fn for_label_name_ref(label: &NameRef) -> Option<FieldAccessExpr> {
         let syn = label.syntax();
         let candidate = syn.parent().and_then(FieldAccessExpr::cast)?;
-        if candidate.label().as_ref() == Some(&label) {
+        if candidate.label().as_ref() == Some(label) {
             Some(candidate)
         } else {
             None
@@ -359,11 +359,11 @@ asts! {
         generic_params: GenericParamList,
 
         pub fn is_public(&self) -> bool {
-            self.syntax().children_with_tokens().find(|it| it.kind() == T!["pub"]).is_some()
+            self.syntax().children_with_tokens().any(|it| it.kind() == T!["pub"])
         }
 
         pub fn is_opaque(&self) -> bool {
-            self.0.children_with_tokens().find(|t| t.kind() == T!["opaque"]).is_some()
+            self.0.children_with_tokens().any(|t| t.kind() == T!["opaque"])
         }
     },
     VARIANT = Variant {
@@ -439,7 +439,7 @@ asts! {
         value: ConstantExpr,
         annotation: TypeExpr,
         pub fn is_public(&self) -> bool {
-            self.syntax().children_with_tokens().find(|it| it.kind() == T!["pub"]).is_some()
+            self.syntax().children_with_tokens().any(|it| it.kind() == T!["pub"])
         }
     },
     NAME = Name {
@@ -816,7 +816,7 @@ mod tests {
             .module_path()
             .unwrap()
             .path()
-            .filter_map(|t| Some(format!("{}", t.token()?.text())))
+            .filter_map(|t| Some(t.token()?.text().to_string()))
             .collect::<Vec<_>>()
             .join("/");
         assert_eq!(str, "aa/a");
@@ -936,11 +936,11 @@ mod tests {
     #[test]
     fn case_expr() {
         let e = parse::<Case>("fn a() { case wobble, 1 + 7 { Cat, Dog -> 1 }}");
-        let mut subs = e.subjects().into_iter();
+        let mut subs = e.subjects();
         subs.next().unwrap().syntax().should_eq("wobble");
         subs.next().unwrap().syntax().should_eq("1 + 7");
         assert!(subs.next().is_none());
-        let mut clauses = e.clauses().into_iter();
+        let mut clauses = e.clauses();
         clauses.next().unwrap().syntax().should_eq("Cat, Dog -> 1")
     }
 
@@ -961,7 +961,7 @@ mod tests {
             .syntax()
             .should_eq("Bird | Snake");
         c.body().unwrap().syntax().should_eq("2");
-        let mut pats = c.patterns().into_iter();
+        let mut pats = c.patterns();
         pats.next().unwrap().syntax().should_eq("Bird | Snake");
         pats.next().unwrap().syntax().should_eq("a");
     }
@@ -975,7 +975,7 @@ mod tests {
             }
         }",
         );
-        let mut pats = clause.patterns().into_iter();
+        let mut pats = clause.patterns();
         pats.next().unwrap().syntax().should_eq("b");
         assert!(pats.next().is_none());
         clause.body().unwrap().syntax().should_eq("1")
@@ -1013,7 +1013,6 @@ mod tests {
             .field_list()
             .unwrap()
             .fields()
-            .into_iter()
             .next()
             .unwrap()
             .syntax()
@@ -1031,7 +1030,6 @@ mod tests {
             }",
         );
         p.assignments()
-            .into_iter()
             .next()
             .unwrap()
             .syntax()

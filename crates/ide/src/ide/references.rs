@@ -10,7 +10,7 @@ use syntax::best_token_at_offset;
 pub(crate) fn references(db: &dyn TyDatabase, fpos: FilePos) -> Option<Vec<FileRange>> {
     let sema = Semantics::new(db);
     let parse = sema.parse(fpos.file_id);
-    let tok = best_token_at_offset(&parse.syntax(), fpos.pos)?;
+    let tok = best_token_at_offset(parse.syntax(), fpos.pos)?;
     // let source_map = db.souce_map(fpos.file_id);
     let mut res = HashSet::new();
 

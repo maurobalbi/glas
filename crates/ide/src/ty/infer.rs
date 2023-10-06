@@ -125,7 +125,7 @@ pub(crate) fn infer_function_group_query(
         fn_to_ty_var.insert(*f, ty);
         ctx.unify_var(TyVar(i as u32), ty);
 
-        let inferred_ctx = mem::replace(&mut ctx.body_ctx, BodyCtx::default());
+        let inferred_ctx = std::mem::take(&mut ctx.body_ctx);
         fn_to_ctx.insert(*f, inferred_ctx);
     }
 
@@ -210,7 +210,7 @@ impl<'db> InferCtx<'db> {
             }
             super::Ty::Function { params, return_ } => {
                 let mut pars = Vec::new();
-                for param in params.deref().into_iter() {
+                for param in params.deref().iter() {
                     let par_var = self.new_ty_var();
                     let par_ty = self.make_type(param.clone(), env);
                     self.unify_var(par_var, par_ty);
@@ -239,7 +239,7 @@ impl<'db> InferCtx<'db> {
             } => {
                 let mut pars = Vec::new();
 
-                for param in params.deref().into_iter() {
+                for param in params.deref().iter() {
                     let par_var = self.new_ty_var();
                     let par_ty = self.make_type(param.clone(), env);
                     self.unify_var(par_var, par_ty);
@@ -480,7 +480,7 @@ impl<'db> InferCtx<'db> {
             }
             Expr::Tuple { fields } => {
                 let mut field_ty = Vec::new();
-                for field in fields.into_iter() {
+                for field in fields.iter() {
                     field_ty.push(self.infer_expr(*field));
                 }
                 Ty::Tuple { fields: field_ty }.intern(self)
@@ -508,10 +508,10 @@ impl<'db> InferCtx<'db> {
 
                         match ty {
                             Ty::Function { params, return_ } => {
-                                if params.len() > args.len() && params.len() > 0 {
+                                if params.len() > args.len() && !params.is_empty() {
                                     self.unify_var(arg_ty, params[0].1)
                                 }
-                                return return_.clone();
+                                return return_;
                             }
                             _ => {
                                 //ToDo: Diagnostics
@@ -609,7 +609,7 @@ impl<'db> InferCtx<'db> {
                                 );
                                 let ty = self.make_type(inferred_ty, &mut env);
                                 let _ = std::mem::replace(&mut self.resolver, resolver);
-                                return ty;
+                                ty
                             }
                         }
                     }
@@ -721,7 +721,7 @@ impl<'db> InferCtx<'db> {
             }
             Expr::VariantLiteral { name } => {
                 let (ty, params) = self.resolve_variant(name);
-                if params.len() > 0 {
+                if !params.is_empty() {
                     Ty::Function {
                         params,
                         return_: ty,
@@ -829,7 +829,7 @@ impl<'db> InferCtx<'db> {
             }
             Pattern::Tuple { fields } => {
                 let mut field_ty = Vec::new();
-                for field in fields.into_iter() {
+                for field in fields.iter() {
                     let new_ty = self.new_ty_var();
                     self.infer_pattern(*field, new_ty);
                     field_ty.push(new_ty);
@@ -838,7 +838,7 @@ impl<'db> InferCtx<'db> {
             }
             Pattern::List { elements } => {
                 let of = self.new_ty_var();
-                for elem in elements.into_iter() {
+                for elem in elements.iter() {
                     self.infer_pattern(*elem, of);
                 }
                 self.unify_var_ty(pat_var, Ty::List { of });
@@ -974,7 +974,7 @@ impl<'db> InferCtx<'db> {
                 for (p1, p2) in params1.clone().into_iter().zip(params2.into_iter()) {
                     self.unify_var(p1.1, p2.1)
                 }
-                self.unify_var(ret1.clone(), ret2);
+                self.unify_var(ret1, ret2);
                 Ty::Function {
                     params: params1,
                     return_: ret1,

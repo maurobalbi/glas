@@ -21,7 +21,7 @@ pub(crate) fn goto_definition(
     let sema = Semantics::new(db);
 
     let parse = sema.parse(file_id);
-    let tok = best_token_at_offset(&parse.syntax(), pos)?;
+    let tok = best_token_at_offset(parse.syntax(), pos)?;
 
     semantics::classify_node(&sema, &tok.parent()?)
         .and_then(|def| def.to_nav(db))

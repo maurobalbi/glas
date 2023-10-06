@@ -208,7 +208,7 @@ fn classify_name(sema: &Semantics, name: &ast::Name) -> Option<Definition> {
         }
     }
 
-    return None;
+    None
 }
 
 fn classify_name_ref(sema: &Semantics, name_ref: &ast::NameRef) -> Option<Definition> {
@@ -221,7 +221,7 @@ fn classify_name_ref(sema: &Semantics, name_ref: &ast::NameRef) -> Option<Defini
         }
     }
 
-    return sema.resolve_name(name_ref.clone()).map(Into::into);
+    sema.resolve_name(name_ref.clone()).map(Into::into)
 }
 
 fn classify_type_name(sema: &Semantics, type_name: &ast::TypeName) -> Option<Definition> {
@@ -236,7 +236,7 @@ fn classify_type_name(sema: &Semantics, type_name: &ast::TypeName) -> Option<Def
                 .resolve_module(&module)?;
             let res =
                 resolver_for_toplevel(sema.db.upcast(), file_id).resolve_type(&type_name.text()?);
-            return res?.into();
+            res?.into()
         })
         .or_else(|| sema.resolve_type(type_name))
         .map(Into::into)
@@ -257,7 +257,7 @@ impl<'db> Semantics<'db> {
 
     pub fn parse(&self, file_id: FileId) -> ast::SourceFile {
         let root = self.db.parse(file_id).root();
-        self.cache(root.syntax().clone(), file_id.into());
+        self.cache(root.syntax().clone(), file_id);
         root
     }
 
@@ -280,13 +280,13 @@ impl<'db> Semantics<'db> {
             return Some(ResolveResult::Module(module.into()));
         }
 
-        analyzer.resolver.resolve_name(&SmolStr::from(name.text()?))
+        analyzer.resolver.resolve_name(&(name.text()?))
     }
 
     pub fn resolve_type(&self, type_name: &ast::TypeName) -> Option<ResolveResult> {
         self.analyze(type_name.syntax())?
             .resolver
-            .resolve_type(&SmolStr::from(type_name.text()?))
+            .resolve_type(&(type_name.text()?))
     }
 
     fn analyze(&self, node: &SyntaxNode) -> Option<SourceAnalyzer> {
@@ -305,7 +305,7 @@ impl<'db> Semantics<'db> {
         assert!(root_node.parent().is_none());
         let mut cache = self.cache.borrow_mut();
         let prev = cache.insert(root_node, file_id);
-        assert!(prev == None || prev == Some(file_id))
+        assert!(prev.is_none() || prev == Some(file_id))
     }
 
     /// Wraps the node in a [`InFile`] with the file id it belongs to.
@@ -356,7 +356,7 @@ impl ToDef for ast::Function {
     fn to_def(sema: &Semantics<'_>, src: InFile<Self>) -> Option<Self::Def> {
         let map = sema.db.module_source_map(src.file_id);
         let fn_id = map.node_to_function(&src.value);
-        return fn_id.map(From::from);
+        fn_id.map(From::from)
     }
 }
 
@@ -370,12 +370,12 @@ impl ToDef for ast::Pattern {
             ModuleDefId::FunctionId(it) => {
                 let (_, source_map) = sema.db.body_with_source_map(it);
                 let pat = source_map.pattern_for_node(src.as_ref())?;
-                return Some(Local {
+                Some(Local {
                     parent: it,
                     pat_id: pat,
-                });
+                })
             }
-            _ => return None,
+            _ => None,
         }
     }
 }
