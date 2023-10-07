@@ -48,7 +48,7 @@ pub struct VariantData {
 pub struct FieldData {
     pub label: Option<SmolStr>,
     pub type_ref: ty::Ty,
-    pub ast_ptr: AstPtr<ast::ConstructorField>,
+    pub ast_ptr: AstPtr<ast::VariantField>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]

@@ -44,7 +44,7 @@ impl Definition {
             Definition::Adt(it) => it.module(db),
             Definition::Function(it) => it.module(db),
             Definition::Variant(it) => Adt::from(it.parent).module(db),
-            Definition::Field(_) => return None,
+            Definition::Field(it) => Variant::from(it.parent).module(db),
             Definition::Local(it) => Function::from(it.parent).module(db),
             Definition::Module(it) => *it,
             Definition::BuiltIn(_) => return None,
@@ -59,7 +59,7 @@ impl Definition {
             Definition::Function(it) => it.name(db),
             Definition::Variant(it) => it.name(db),
             // ToDo: Fixme
-            Definition::Field(_) => return None,
+            Definition::Field(it) => return it.label(db),
             Definition::Local(it) => it.name(db),
             Definition::Module(_) => return None,
             // ToDo: Fixme
@@ -212,6 +212,10 @@ fn classify_name(sema: &Semantics, name: &ast::Name) -> Option<Definition> {
                 let def = sema.to_def(&pattern).map(From::from);
 
                 return def
+            },
+            ast::VariantField(it) => {
+                let def = sema.to_def(&it).map(From::from);
+                return def;
             },
             _ => {},
         }
@@ -369,6 +373,24 @@ impl ToDef for ast::Function {
     }
 }
 
+impl ToDef for ast::VariantField {
+    type Def = Field;
+
+    fn to_def(sema: &Semantics<'_>, src: InFile<Self>) -> Option<Self::Def> {
+        let syntax = src.value.syntax();
+        let container = find_container(sema.db.upcast(), src.with_value(syntax))?;
+
+        if let ModuleDefId::AdtId(it) = container {
+            let text = src.value.label()?.text()?;
+            return Adt { id: it }
+                .common_fields(sema.db.upcast())
+                .get(&text)
+                .cloned();
+        }
+        None
+    }
+}
+
 impl ToDef for ast::Pattern {
     type Def = Local;
 
@@ -392,9 +414,16 @@ impl ToDef for ast::Pattern {
 pub fn find_container(db: &dyn DefDatabase, node: InFile<&SyntaxNode>) -> Option<ModuleDefId> {
     let map = db.module_source_map(node.file_id);
     for node in node.ancestors() {
-        if let Some(ast::ModuleStatement::Function(it)) = ast::ModuleStatement::cast(node.value) {
+        if let Some(ast::ModuleStatement::Function(it)) =
+            ast::ModuleStatement::cast(node.value.clone())
+        {
             let fn_id = map.node_to_function(&it);
             return fn_id.map(From::from);
+        }
+
+        if let Some(it) = ast::Adt::cast(node.value) {
+            let adt_id = map.node_to_adt(&it);
+            return adt_id.map(From::from);
         }
     }
     None

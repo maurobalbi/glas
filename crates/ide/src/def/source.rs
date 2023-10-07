@@ -53,7 +53,7 @@ impl HasSource for Variant {
 }
 
 impl HasSource for Field {
-    type Ast = ast::ConstructorField;
+    type Ast = ast::VariantField;
     fn source(self, db: &dyn DefDatabase) -> Option<InFile<Self::Ast>> {
         let loc = db.lookup_intern_adt(self.parent.parent);
         let field_data = &db.module_items(loc.file_id)[self.id];

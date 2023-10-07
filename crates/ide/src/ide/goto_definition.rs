@@ -102,7 +102,7 @@ mod tests {
     fn field_resolution() {
         check(
             "type Mogie { Mogie(name: Int) } fn wops() { Mogie(name: 1).$0name}",
-            expect!["type <Mogie> { Mogie(name: Int) }"],
+            expect!["Mogie(<name: Int>)"],
         );
     }
 
@@ -131,7 +131,7 @@ mod tests {
         );
         check(
             "type Mogie { Mogie(name: Int) } fn wops() { let bobo = Mogie(name: 1) bobo.$0name}",
-            expect!["type <Mogie> { Mogie(name: Int) }"],
+            expect!["Mogie(<name: Int>)"],
         );
     }
 

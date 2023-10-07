@@ -55,7 +55,6 @@ mod tests {
     use crate::tests::TestDB;
     use crate::SourceDatabase;
     use expect_test::{expect, Expect};
-    use tracing_test::traced_test;
 
     #[track_caller]
     fn check(fixture: &str, expect: Expect) {
@@ -80,7 +79,6 @@ mod tests {
     }
 
     #[test]
-    #[traced_test]
     fn definition() {
         check(
             "fn case_hl() { case 1 { a -> $0a } }",
@@ -89,6 +87,14 @@ mod tests {
         check(
             "fn highlight(a) { $0a }",
             expect!["fn highlight(<<a>>) { <a> }"],
+        );
+    }
+
+    #[test]
+    fn hl_field() {
+        check(
+            "type Wobblie { Variant1(name: Int) Variant2(name: Int) } fn hl(a: Wobblie) { a.$0name }",
+            expect!["type Wobblie { Variant1(<<name: Int>>) Variant2(name: Int) } fn hl(a: Wobblie) { a.<name> }"],
         );
     }
 }
