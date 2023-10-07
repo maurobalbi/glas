@@ -7,9 +7,9 @@ use syntax::ast::{BinaryOpKind, LiteralKind};
 use crate::{
     def::{
         body::Body,
-        hir::{self, Adt, ModuleDef, TypeAlias},
+        hir::{self, Adt, Field, ModuleDef, TypeAlias},
         hir_def::{AdtId, FunctionId},
-        module::{Expr, ExprId, Field, Pattern, PatternId, Statement},
+        module::{Expr, ExprId, Pattern, PatternId, Statement},
         resolver::{resolver_for_toplevel, ResolveResult, Resolver},
         resolver_for_expr,
     },
@@ -638,7 +638,18 @@ impl<'db> InferCtx<'db> {
                 label_name,
             } => {
                 let field_var = self.new_ty_var();
+                let base_ty = self.infer_expr(*container);
                 // ToDo: This is wrong, since it might also be a module_access
+                if let Ty::Adt { adt_id, .. } = self.table.get_mut(base_ty.0) {
+                    let adt = Adt { id: *adt_id };
+                    if let Some(field) = adt.common_fields(self.db.upcast()).get(label_name) {
+                        let mut env = HashMap::new();
+                        self.body_ctx
+                            .field_resolution
+                            .insert(tgt_expr, FieldResolution::Field(*field));
+                        return self.make_type(field.ty(self.db.upcast()), &mut env);
+                    }
+                }
 
                 if let Some(file) = self.resolver.resolve_module(base_string) {
                     self.body_ctx.module_resolution.insert(*container, file);
@@ -843,11 +854,11 @@ impl<'db> InferCtx<'db> {
                 let mut ty_env = HashMap::new();
                 let params = variant
                     .fields(self.db.upcast())
-                    .iter()
-                    .map(|l| {
+                    .into_iter()
+                    .map(|field| {
                         (
-                            l.label.clone(),
-                            self.make_type(l.type_ref.clone(), &mut ty_env),
+                            field.label(self.db.upcast()),
+                            self.make_type(field.ty(self.db.upcast()), &mut ty_env),
                         )
                     })
                     .collect();

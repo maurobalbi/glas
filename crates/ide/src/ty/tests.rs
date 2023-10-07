@@ -427,6 +427,14 @@ fn list_spread() {
 
 #[test]
 fn field_access() {
+    check_all(
+        "type Wobble{ Wobble(name: Int) } fn name() { let w = Wobble(5) w.name }",
+        expect!["name: fn() -> Int"],
+    )
+}
+
+#[test]
+fn field_access_module() {
     check_fix(
         r#"
 #- /test.gleam

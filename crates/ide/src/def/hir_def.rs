@@ -3,8 +3,8 @@ use la_arena::Idx;
 use crate::{impl_from, impl_intern, FileId, InFile};
 
 use super::{
-    hir::{Adt, Function, Module, TypeAlias, Variant},
-    module::{AdtData, FunctionData, TypeAliasData, VariantData},
+    hir::{Adt, Function, Module, TypeAlias, Variant, Field},
+    module::{AdtData, FunctionData, TypeAliasData, VariantData, FieldData},
     DefDatabase,
 };
 use crate::impl_intern_key;
@@ -34,6 +34,15 @@ from_id!(
 impl From<VariantId> for Variant {
     fn from(value: VariantId) -> Self {
         Variant {
+            parent: value.parent,
+            id: value.local_id,
+        }
+    }
+}
+
+impl From<FieldId> for Field {
+    fn from(value: FieldId) -> Self {
+        Field {
             parent: value.parent,
             id: value.local_id,
         }
@@ -72,6 +81,14 @@ pub struct VariantId {
 }
 
 pub type LocalVariantId = Idx<VariantData>;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct FieldId {
+    pub parent: VariantId,
+    pub local_id: LocalFieldId,
+}
+
+pub type LocalFieldId = Idx<FieldData>;
 
 #[allow(clippy::enum_variant_names)]
 #[derive(Debug, Clone, PartialEq, Eq)]

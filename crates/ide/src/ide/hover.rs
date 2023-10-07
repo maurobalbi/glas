@@ -51,7 +51,13 @@ pub(crate) fn hover(db: &dyn TyDatabase, FilePos { file_id, pos }: FilePos) -> O
             range: tok.text_range(),
             markup: format!("```gleam\n{}\n```", it.name(db.upcast())),
         }),
-        semantics::Definition::Field(_) => todo!(),
+        semantics::Definition::Field(it) => {
+            let ty = it.ty(db.upcast());
+            Some(HoverResult {
+                range: tok.text_range(),
+                markup: format!("```gleam\n{}\n```", ty.display(db)),
+            })
+        }
         semantics::Definition::Local(it) => {
             let ty = it.ty(db);
             Some(HoverResult {

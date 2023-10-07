@@ -5,13 +5,13 @@ use syntax::ast::{self, AstNode};
 
 use crate::{
     impl_from,
-    ty::{self, TyDatabase},
+    ty::{self, Ty, TyDatabase},
     DefDatabase, FileId, InFile, SourceRootId,
 };
 
 use super::{
-    hir_def::{AdtId, LocalVariantId, TypeAliasId},
-    module::{AdtData, Field, FunctionData, Param, PatternId, TypeAliasData, VariantData},
+    hir_def::{AdtId, LocalFieldId, LocalVariantId, TypeAliasId, VariantId},
+    module::{AdtData, FieldData, FunctionData, Param, PatternId, TypeAliasData, VariantData},
     FunctionId,
 };
 
@@ -106,6 +106,22 @@ impl Adt {
             .collect()
     }
 
+    pub fn common_fields(self, db: &dyn DefDatabase) -> HashMap<SmolStr, Field> {
+        let mut fields = HashMap::new();
+        for (name, _) in self.data(db).common_fields.iter() {
+            if let Some(variant) = self.variants(db).first() {
+                if let Some(field) = variant
+                    .fields(db)
+                    .iter()
+                    .find(|f| f.label(db) == Some(name.clone()))
+                {
+                    fields.insert(name.clone(), *field);
+                }
+            }
+        }
+        fields
+    }
+
     pub fn data(&self, db: &dyn DefDatabase) -> AdtData {
         let adt = db.lookup_intern_adt(self.id);
         let module_items = db.module_items(adt.file_id);
@@ -131,12 +147,53 @@ impl Variant {
         variant.name.clone()
     }
 
+    pub fn parent(self) -> Adt {
+        Adt { id: self.parent }
+    }
+
     pub fn fields(&self, db: &dyn DefDatabase) -> Vec<Field> {
-        self.data(db).fields
+        self.data(db)
+            .fields
+            .map(|field_id| Field {
+                parent: VariantId {
+                    parent: self.parent,
+                    local_id: self.id,
+                },
+                id: field_id,
+            })
+            .collect()
+    }
+
+    pub fn module(&self, db: &dyn DefDatabase) -> Module {
+        let loc = db.lookup_intern_adt(self.parent);
+        Module { id: loc.file_id }
     }
 
     fn data(&self, db: &dyn DefDatabase) -> VariantData {
         let adt = db.lookup_intern_adt(self.parent);
+        let module_items = db.module_items(adt.file_id);
+        module_items[self.id].clone()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Field {
+    pub(crate) parent: VariantId,
+    pub(crate) id: LocalFieldId,
+}
+
+impl Field {
+    pub fn label(self, db: &dyn DefDatabase) -> Option<SmolStr> {
+        let data = self.data(db);
+        data.label
+    }
+
+    pub fn ty(self, db: &dyn DefDatabase) -> Ty {
+        self.data(db).type_ref
+    }
+
+    fn data(&self, db: &dyn DefDatabase) -> FieldData {
+        let adt = db.lookup_intern_adt(self.parent.parent);
         let module_items = db.module_items(adt.file_id);
         module_items[self.id].clone()
     }

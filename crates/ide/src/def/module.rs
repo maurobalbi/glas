@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+
+use crate::ty;
 use la_arena::{Idx, IdxRange};
 use smol_str::SmolStr;
 use syntax::{
@@ -5,13 +8,14 @@ use syntax::{
     AstPtr,
 };
 
-use crate::ty;
+use super::hir_def::LocalFieldId;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct AdtData {
     pub name: SmolStr,
 
     pub variants: IdxRange<VariantData>,
+    pub common_fields: HashMap<SmolStr, LocalFieldId>,
 
     pub params: Vec<ty::Ty>,
     pub visibility: Visibility,
@@ -35,15 +39,16 @@ pub struct TypeAliasData {
 pub struct VariantData {
     pub name: SmolStr,
 
-    pub fields: Vec<Field>,
+    pub fields: IdxRange<FieldData>,
 
     pub ast_ptr: AstPtr<ast::Variant>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct Field {
+pub struct FieldData {
     pub label: Option<SmolStr>,
     pub type_ref: ty::Ty,
+    pub ast_ptr: AstPtr<ast::ConstructorField>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]

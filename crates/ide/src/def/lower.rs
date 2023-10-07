@@ -1,11 +1,12 @@
-use std::ops::Index;
+use std::{collections::HashMap, ops::Index};
 
 use crate::{ty, Diagnostic};
 
 use super::{
+    hir_def::LocalFieldId,
     module::{
-        AdtData, Field, FunctionData, ImportData, ModuleImport, Param, TypeAliasData, VariantData,
-        Visibility,
+        AdtData, FieldData, FunctionData, ImportData, ModuleImport, Param, TypeAliasData,
+        VariantData, Visibility,
     },
     AstPtr,
 };
@@ -26,6 +27,7 @@ pub struct ModuleItemData {
     module_imports: Arena<ModuleImport>,
 
     variants: Arena<VariantData>,
+    fields: Arena<FieldData>,
     pub diagnostics: Vec<Diagnostic>,
 }
 
@@ -81,6 +83,14 @@ impl Index<Idx<VariantData>> for ModuleItemData {
     }
 }
 
+impl Index<Idx<FieldData>> for ModuleItemData {
+    type Output = FieldData;
+
+    fn index(&self, index: Idx<FieldData>) -> &Self::Output {
+        &self.fields[index]
+    }
+}
+
 impl Index<Idx<FunctionData>> for ModuleItemData {
     type Output = FunctionData;
 
@@ -131,6 +141,10 @@ impl LowerCtx {
 
     fn alloc_variant(&mut self, constructor: VariantData) -> Idx<VariantData> {
         self.module_items.variants.alloc(constructor)
+    }
+
+    fn alloc_field(&mut self, field: FieldData) -> Idx<FieldData> {
+        self.module_items.fields.alloc(field)
     }
 
     fn alloc_unqualified_import(&mut self, import: ImportData) -> Idx<ImportData> {
@@ -252,9 +266,18 @@ impl LowerCtx {
 
         let visibility = Visibility::Public;
 
-        let constructors = self.lower_constructors(ct.constructors());
+        let mut fields = Vec::new();
+        let constructors = self.lower_constructors(ct.constructors(), &mut fields);
+
+        // get common fields for field access, e.g. Dog(name: Int).name
+        let mut fields_iter = fields.into_iter();
+        let mut common_fields = fields_iter.next().unwrap_or_default();
+        for other in fields_iter {
+            common_fields.retain(|k, _| other.get(k).is_some());
+        }
         Some(self.alloc_custom_type(AdtData {
             name,
+            common_fields,
             variants: constructors,
             params: generic_params,
             visibility,
@@ -287,39 +310,61 @@ impl LowerCtx {
     fn lower_constructors(
         &mut self,
         constructors: ast::AstChildren<ast::Variant>,
+        fields: &mut Vec<HashMap<SmolStr, LocalFieldId>>,
     ) -> IdxRange<VariantData> {
         let start = self.next_constructor_idx();
         for constructor in constructors {
-            self.lower_constructor(&constructor);
+            let constr = self.lower_constructor(&constructor);
+            if let Some((_, set)) = constr {
+                fields.push(set);
+            }
         }
         let end = self.next_constructor_idx();
         IdxRange::new(start..end)
     }
 
-    fn lower_constructor(&mut self, constructor: &ast::Variant) -> Option<Idx<VariantData>> {
+    fn lower_constructor(
+        &mut self,
+        constructor: &ast::Variant,
+    ) -> Option<(Idx<VariantData>, HashMap<SmolStr, LocalFieldId>)> {
         let ast_ptr = AstPtr::new(constructor);
         let name = constructor.name()?.text()?;
 
-        let mut fields_vec = Vec::new();
+        let mut field_set = HashMap::new();
+
+        let start = self.next_field_idx();
         if let Some(fields) = constructor.field_list() {
             for field in fields.fields() {
                 if let Some(type_ref) = ty::ty_from_ast_opt(field.type_()) {
-                    fields_vec.push(Field {
-                        label: field.label().and_then(|t| t.text()),
+                    let label = field.label().and_then(|t| t.text());
+                    let idx = self.alloc_field(FieldData {
+                        label: label.clone(),
                         type_ref,
-                    })
+                        ast_ptr: AstPtr::new(&field),
+                    });
+                    if let Some(label) = label {
+                        field_set.insert(label, idx);
+                    }
                 }
             }
         }
+        let end = self.next_field_idx();
 
-        Some(self.alloc_variant(VariantData {
-            name,
-            fields: fields_vec,
-            ast_ptr,
-        }))
+        Some((
+            self.alloc_variant(VariantData {
+                name,
+                fields: IdxRange::new(start..end),
+                ast_ptr,
+            }),
+            field_set,
+        ))
     }
 
     fn next_constructor_idx(&self) -> Idx<VariantData> {
         Idx::from_raw(RawIdx::from(self.module_items.variants.len() as u32))
+    }
+
+    fn next_field_idx(&self) -> Idx<FieldData> {
+        Idx::from_raw(RawIdx::from(self.module_items.fields.len() as u32))
     }
 }

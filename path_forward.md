@@ -12,7 +12,8 @@ Features for 1.0 rc:
   ✓ Fix pattern inference for module types (e.g. local.Wobbler)
   ✓ Fix Record Spread
   - Fix function label / Record label lowering + inference (Unsaturated Constructors are inferred as fn (...) -> Constr)
-  ✓ Finish hover for types 
+  - Fix pipe inference for functions with holes!
+  ✓ Finish hover for types
   - Improve hover ( docs, etc)
   - Add signature help
   - Add Inlay - Hints ?

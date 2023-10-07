@@ -14,9 +14,8 @@ use crate::{
 };
 
 use super::{
-    hir::{Adt, BuiltIn, Function, Local, Module, TypeAlias, Variant},
+    hir::{Adt, BuiltIn, Field, Function, Local, Module, TypeAlias, Variant},
     hir_def::ModuleDefId,
-    module::Field,
     resolver::{resolver_for_toplevel, ResolveResult},
     source::HasSource,
     source_analyzer::SourceAnalyzer,
@@ -109,6 +108,17 @@ impl Definition {
                     full_range,
                 })
             }
+            Definition::Field(it) => {
+                let src = it.source(db.upcast())?;
+                let variant: Variant = it.parent.into();
+                let full_range = variant.source(db.upcast())?.value.syntax().text_range();
+                let focus_range = src.value.syntax().text_range();
+                Some(NavigationTarget {
+                    file_id: src.file_id,
+                    full_range,
+                    focus_range,
+                })
+            }
             Definition::Module(module) => {
                 let full_range = TextRange::new(0.into(), 0.into());
                 Some(NavigationTarget {
@@ -117,7 +127,6 @@ impl Definition {
                     full_range,
                 })
             }
-            Definition::Field(_) => todo!(),
             Definition::Local(it) => {
                 let focus_node = it.source(db.upcast());
                 let focus_range = focus_node.value.syntax().text_range();

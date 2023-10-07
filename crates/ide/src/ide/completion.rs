@@ -250,7 +250,7 @@ fn complete_dot(acc: &mut Vec<CompletionItem>, ctx: CompletionContext<'_>) -> Op
                                 .iter()
                                 .enumerate()
                                 .map(|(i, p)|
-                                    format!("${{{}:{}}}", i + 1, p.label.clone().unwrap_or("()".into()))
+                                    format!("${{{}:{}}}", i + 1, p.label(ctx.db.upcast()).clone().unwrap_or("()".into()))
                                 )
                                 .collect::<Vec<_>>()
                                 .join(", ");
