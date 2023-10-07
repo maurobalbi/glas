@@ -4180,13 +4180,12 @@ function createLanguageClient() {
         },
     };
     let serverOptions = {
-        command: "/users/maurobalbi/Documents/repos/glas/target/debug/glas",
-        // args: ["lsp"],
+        command: process.env["__GLAS_LSP_SERVER_PATH"] || "glas",
         transport: node_1.TransportKind.stdio,
         options: {
             env: Object.assign(process.env, {
                 GLEAM_LOG: "info",
-                GLEAM_LOG_PATH: "/Users/maurobalbi/Documents/repos/glas/log.log",
+                GLEAM_LOG_PATH: process.env["__GLAS_LSP_SERVER_PATH"] + "/log.log",
                 GLEAM_LOG_NOCOLOUR: "1",
             }),
         },

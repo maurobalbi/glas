@@ -20,7 +20,10 @@
 			"outFiles": [
 				"${workspaceFolder}/editors/code/out/**/*.js"
 			],
-			"preLaunchTask": "Build Server and Extension"
+			"preLaunchTask": "Build Server and Extension",
+			"env": {
+				"__GLAS_LSP_SERVER_PATH": "${workspaceFolder}/target/debug/glas"
+			}
 		},
 		{
 			"name": "Extension Tests",
