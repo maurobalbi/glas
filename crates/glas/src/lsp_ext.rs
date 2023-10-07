@@ -7,7 +7,7 @@ pub enum SyntaxTree {}
 impl Request for SyntaxTree {
     type Params = SyntaxTreeParams;
     type Result = String;
-    const METHOD: &'static str = "gleamalyzer/syntaxTree";
+    const METHOD: &'static str = "glas/syntaxTree";
 }
 
 #[derive(Deserialize, Serialize, Debug)]

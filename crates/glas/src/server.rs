@@ -72,10 +72,10 @@ struct DiagnosticCollector {
     internal: HashMap<Url, PublishDiagnosticsParams>,
 }
 
-const LSP_SERVER_NAME: &str = "gleamalyzer";
+const LSP_SERVER_NAME: &str = "glas";
 pub const GLEAM_TOML: &str = "gleam.toml";
 pub const MANIFEST_TOML: &str = "manifest.toml";
-const LOAD_WORKSPACE_PROGRESS_TOKEN: &str = "gleamalyzer/loadWorkspaceProgress";
+const LOAD_WORKSPACE_PROGRESS_TOKEN: &str = "glas/loadWorkspaceProgress";
 
 const LOAD_GLEAM_WORKSPACE_DEBOUNCE_DURATION: Duration = Duration::from_millis(100);
 

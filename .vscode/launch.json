@@ -46,7 +46,7 @@
 			"name": "Attach To Server",
 			"type": "lldb",
 			"request": "attach",
-			"program": "${workspaceFolder}/target/debug/gleamalyzer",
+			"program": "${workspaceFolder}/target/debug/glas",
 			"pid": "${command:pickMyProcess}",
 			"sourceLanguages": [
 				"rust"

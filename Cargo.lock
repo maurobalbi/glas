@@ -610,19 +610,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6fb8d784f27acf97159b40fc4db5ecd8aa23b9ad5ef69cdd136d3bc80665f0c0"
 
 [[package]]
-name = "gleam-interop"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "serde",
- "smol_str",
- "tokio",
- "tracing",
- "tracing-subscriber 0.3.16",
-]
-
-[[package]]
-name = "gleamalyzer"
+name = "glas"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -651,6 +639,18 @@ dependencies = [
  "tracing",
  "tracing-subscriber 0.3.16",
  "walkdir",
+]
+
+[[package]]
+name = "gleam-interop"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "serde",
+ "smol_str",
+ "tokio",
+ "tracing",
+ "tracing-subscriber 0.3.16",
 ]
 
 [[package]]

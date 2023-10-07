@@ -3,7 +3,7 @@ resolver = "2"
 members = [
     "crates/ide",
     "crates/syntax",
-    "crates/gleamalyzer",
+    "crates/glas",
     "crates/gleam-interop"
 ]
 

@@ -4112,14 +4112,14 @@ const vscode_1 = __webpack_require__(/*! vscode */ "vscode");
 const node_1 = __webpack_require__(/*! vscode-languageclient/node */ "./node_modules/vscode-languageclient/node.js");
 const lc = __webpack_require__(/*! vscode-languageclient */ "./node_modules/vscode-languageclient/lib/node/main.js");
 let client;
-exports.syntaxTree = new lc.RequestType("gleamalyzer/syntaxTree");
+exports.syntaxTree = new lc.RequestType("glas/syntaxTree");
 function activate(context) {
     client = createLanguageClient();
     // Start the client. This will also launch the server
     client.start();
-    const uri = vscode.Uri.parse('gleamalyzer-syntaxTree:' + "syntax");
+    const uri = vscode.Uri.parse('glas-syntaxTree:' + "syntax");
     // register a content provider for the cowsay-scheme
-    const myScheme = 'gleamalyzer-syntaxTree';
+    const myScheme = 'glas-syntaxTree';
     const syntaxTreeProvider = new class {
         constructor() {
             this.uri = uri;
@@ -4153,7 +4153,7 @@ function activate(context) {
         }
     };
     context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider(myScheme, syntaxTreeProvider));
-    context.subscriptions.push(vscode.commands.registerCommand('gleamalyzer.syntaxTree', async () => {
+    context.subscriptions.push(vscode.commands.registerCommand('glas.syntaxTree', async () => {
         const doc = await vscode.workspace.openTextDocument(uri); // calls back into the provider
         await vscode.window.showTextDocument(doc, {
             viewColumn: vscode.ViewColumn.Two,
@@ -4180,13 +4180,13 @@ function createLanguageClient() {
         },
     };
     let serverOptions = {
-        command: "/users/maurobalbi/Documents/repos/gleamalyzer/target/debug/gleamalyzer",
+        command: "/users/maurobalbi/Documents/repos/glas/target/debug/glas",
         // args: ["lsp"],
         transport: node_1.TransportKind.stdio,
         options: {
             env: Object.assign(process.env, {
                 GLEAM_LOG: "info",
-                GLEAM_LOG_PATH: "/Users/maurobalbi/Documents/repos/gleamalyzer/log.log",
+                GLEAM_LOG_PATH: "/Users/maurobalbi/Documents/repos/glas/log.log",
                 GLEAM_LOG_NOCOLOUR: "1",
             }),
         },

@@ -80,7 +80,7 @@ fn main() {
         .enable_all()
         .build()
         .expect("Failed to spawn tokio runtime")
-        .block_on(gleamalyzer::run_server_stdio());
+        .block_on(glas::run_server_stdio());
     match ret {
         Ok(()) => {}
         Err(err) => {

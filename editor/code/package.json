@@ -1,6 +1,6 @@
 {
-  "name": "gleamalyzer-vscode",
-  "displayName": "gleamalyzer-vscode",
+  "name": "glas-vscode",
+  "displayName": "glas-vscode",
   "description": "Gleam language server for VSCode",
   "version": "0.0.1",
   "engines": {
@@ -43,8 +43,8 @@
     },
     "commands": [
       {
-        "command": "gleamalyzer.syntaxTree",
-        "title": "gleamalyzer: Show Syntax Tree"
+        "command": "glas.syntaxTree",
+        "title": "glas: Show Syntax Tree"
       }
     ]
   },

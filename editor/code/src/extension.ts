@@ -15,7 +15,7 @@ export type SyntaxTreeParams = {
 };
 
 export const syntaxTree = new lc.RequestType<SyntaxTreeParams, string, void>(
-  "gleamalyzer/syntaxTree"
+  "glas/syntaxTree"
 );
 
 export function activate(context: vscode.ExtensionContext) {
@@ -23,9 +23,9 @@ export function activate(context: vscode.ExtensionContext) {
   // Start the client. This will also launch the server
   client.start();
 
-  const uri = vscode.Uri.parse('gleamalyzer-syntaxTree:' + "syntax");
+  const uri = vscode.Uri.parse('glas-syntaxTree:' + "syntax");
   // register a content provider for the cowsay-scheme
-  const myScheme = 'gleamalyzer-syntaxTree';
+  const myScheme = 'glas-syntaxTree';
   const syntaxTreeProvider = new class implements vscode.TextDocumentContentProvider {
     constructor() {
       vscode.workspace.onDidChangeTextDocument(
@@ -69,7 +69,7 @@ export function activate(context: vscode.ExtensionContext) {
     }
   };
   context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider(myScheme, syntaxTreeProvider));
-  context.subscriptions.push(vscode.commands.registerCommand('gleamalyzer.syntaxTree', async () => {
+  context.subscriptions.push(vscode.commands.registerCommand('glas.syntaxTree', async () => {
     const doc = await vscode.workspace.openTextDocument(uri); // calls back into the provider
     await vscode.window.showTextDocument(doc, {
       viewColumn: vscode.ViewColumn.Two,
@@ -98,13 +98,13 @@ function createLanguageClient(): LanguageClient {
   };
 
   let serverOptions: ServerOptions = {
-    command: "/users/maurobalbi/Documents/repos/gleamalyzer/target/debug/gleamalyzer",
+    command: "/users/maurobalbi/Documents/repos/glas/target/debug/glas",
     // args: ["lsp"],
     transport: TransportKind.stdio,
     options: {
       env: Object.assign(process.env, {
         GLEAM_LOG: "info",
-        GLEAM_LOG_PATH: "/Users/maurobalbi/Documents/repos/gleamalyzer/log.log",
+        GLEAM_LOG_PATH: "/Users/maurobalbi/Documents/repos/glas/log.log",
         GLEAM_LOG_NOCOLOUR: "1",
       }),
     },
