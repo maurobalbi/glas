@@ -57,10 +57,12 @@ pub(crate) fn negotiate_capabilities(
                 save: Some(lsp_types::TextDocumentSyncSaveOptions::Supported(true)),
             },
         )),
+        references_provider: Some(OneOf::Left(true)),
         completion_provider: Some(CompletionOptions {
             trigger_characters: Some(vec![".".into(), "@".into()]),
             ..Default::default()
         }),
+        document_highlight_provider: Some(OneOf::Left(true)),
         hover_provider: Some(HoverProviderCapability::Simple(true)),
         definition_provider: Some(OneOf::Left(true)),
         ..Default::default()
@@ -71,6 +73,7 @@ pub(crate) fn negotiate_capabilities(
 
 #[derive(Clone, Debug, Default)]
 pub(crate) struct NegotiatedCapabilities {
+    #[allow(dead_code)]
     pub client_show_message_request: bool,
     pub server_initiated_progress: bool,
     pub watch_files: bool,

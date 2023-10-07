@@ -326,9 +326,9 @@ def! {
     ADT,
     TYPE_NAME_REF,
     QUALIFIED_TYPE_REF,
-    CUSTOM_TYPE_ALIAS,
-    CONSTRUCTOR_FIELD_LIST,
-    CONSTRUCTOR_FIELD,
+    TYPE_ALIAS,
+    VARIANT_FIELD_LIST,
+    VARIANT_FIELD,
     VARIANT_CONSTRUCTOR,
     STATEMENTS,
     CONSTANT_TUPLE,
@@ -345,6 +345,7 @@ def! {
     PATTERN_TUPLE,
     PATTERN_LIST,
     PATTERN_GUARD,
+    PATTERN_CONCAT,
     VARIANT_REF_FIELD_LIST,
     VARIANT_REF_FIELD,
     LIST,
@@ -405,7 +406,7 @@ impl From<rowan::SyntaxKind> for SyntaxKind {
     fn from(k: rowan::SyntaxKind) -> Self {
         assert!(k.0 <= SyntaxKind::__LAST as u16);
         // SAFETY: Guarded by the assert.
-        unsafe { std::mem::transmute::<u16, SyntaxKind>(k.0 as u16) }
+        unsafe { std::mem::transmute::<u16, SyntaxKind>(k.0) }
     }
 }
 

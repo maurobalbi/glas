@@ -1,13 +1,12 @@
 use super::NavigationTarget;
 
 use crate::def::semantics;
-use crate::def::source::HasSource;
 use crate::def::Semantics;
 use crate::ty::TyDatabase;
-use crate::{DefDatabase, FilePos, VfsPath};
+use crate::{FilePos, VfsPath};
 
 use syntax::ast::AstNode;
-use syntax::{best_token_at_offset, TextRange};
+use syntax::best_token_at_offset;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum GotoDefinitionResult {
@@ -22,70 +21,11 @@ pub(crate) fn goto_definition(
     let sema = Semantics::new(db);
 
     let parse = sema.parse(file_id);
-    let tok = best_token_at_offset(&parse.syntax(), pos)?;
+    let tok = best_token_at_offset(parse.syntax(), pos)?;
 
-    match semantics::classify_node(sema, &tok.parent()?)? {
-        semantics::Definition::Adt(it) => {
-            let src = it.source(db.upcast())?;
-            let full_range = src.value.syntax().text_range();
-            let focus_range = src
-                .value
-                .name()
-                .map(|n| n.syntax().text_range())
-                .unwrap_or_else(|| full_range);
-            Some(GotoDefinitionResult::Targets(vec![NavigationTarget {
-                file_id: src.file_id,
-                focus_range,
-                full_range,
-            }]))
-        }
-        semantics::Definition::Function(it) => {
-            let src = it.source(db.upcast())?;
-            let full_range = src.value.syntax().text_range();
-            let focus_range = src
-                .value
-                .name()
-                .map(|n| n.syntax().text_range())
-                .unwrap_or_else(|| full_range);
-            Some(GotoDefinitionResult::Targets(vec![NavigationTarget {
-                file_id: src.file_id,
-                focus_range,
-                full_range,
-            }]))
-        }
-        semantics::Definition::Variant(it) => {
-            let src = it.source(db.upcast())?;
-            let full_range = src.value.syntax().text_range();
-            Some(GotoDefinitionResult::Targets(vec![NavigationTarget {
-                file_id: src.file_id,
-                focus_range: full_range,
-                full_range,
-            }]))
-        }
-        semantics::Definition::Module(module) => {
-            let full_range = TextRange::new(0.into(), 0.into());
-            Some(GotoDefinitionResult::Targets(vec![NavigationTarget {
-                file_id: module.id,
-                focus_range: full_range,
-                full_range,
-            }]))
-        }
-        semantics::Definition::Field(_) => todo!(),
-        semantics::Definition::Local(it) => {
-            let focus_node = it.source(db.upcast());
-            let focus_range = focus_node.syntax().text_range();
-            let full_range = focus_node
-                .syntax()
-                .parent()
-                .map(|p| p.text_range())
-                .unwrap_or(focus_range);
-            Some(GotoDefinitionResult::Targets(vec![NavigationTarget {
-                file_id,
-                focus_range,
-                full_range,
-            }]))
-        }
-    }
+    semantics::classify_node(&sema, &tok.parent()?)
+        .and_then(|def| def.to_nav(db))
+        .map(|navs| GotoDefinitionResult::Targets(vec![navs]))
 }
 
 #[cfg(test)]
@@ -95,7 +35,7 @@ mod tests {
     use crate::tests::TestDB;
     use expect_test::{expect, Expect};
     use tracing_test::traced_test;
-    
+
     #[track_caller]
     fn check_no(fixture: &str) {
         let (db, f) = TestDB::from_fixture(fixture).unwrap();
@@ -106,7 +46,6 @@ mod tests {
     #[track_caller]
     fn check(fixture: &str, expect: Expect) {
         let (db, f) = TestDB::from_fixture(fixture).unwrap();
-        tracing::info!("{:#?}", f);
         assert_eq!(f.markers().len(), 1, "Missing markers");
         let mut got = match goto_definition(&db, f[0]).expect("No definition") {
             GotoDefinitionResult::Path(path) => format!("file://{}", path.display()),
@@ -159,10 +98,11 @@ mod tests {
     }
 
     #[test]
+    // Temporarily broken!
     fn field_resolution() {
         check(
             "type Mogie { Mogie(name: Int) } fn wops() { Mogie(name: 1).$0name}",
-            expect!["type <Mogie> { Mogie(name: Int) }"],
+            expect!["Mogie(<name: Int>)"],
         );
     }
 
@@ -173,8 +113,7 @@ mod tests {
             expect!["<Mogie(name: Int)>"],
         );
     }
-    
-    #[traced_test]
+
     #[test]
     fn pattern_spread() {
         check(
@@ -183,6 +122,7 @@ mod tests {
         );
     }
 
+    // Temporarily broken!
     #[test]
     fn field_access() {
         check(
@@ -191,7 +131,33 @@ mod tests {
         );
         check(
             "type Mogie { Mogie(name: Int) } fn wops() { let bobo = Mogie(name: 1) bobo.$0name}",
-            expect!["type <Mogie> { Mogie(name: Int) }"],
+            expect!["Mogie(<name: Int>)"],
+        );
+    }
+
+    #[test]
+    #[traced_test]
+    fn guards_scope() {
+        check(
+            r#"
+        fn guards(a: String) {
+            case 1 {
+                b if b == $0a -> 1
+            }
+        }
+        "#,
+            expect!["<a>: String"],
+        );
+
+        check(
+            r#"
+        fn guards(a: String) {
+            case 1 {
+                b if $0b == a -> 1
+            }
+        }
+        "#,
+            expect![""],
         );
     }
 
@@ -208,7 +174,8 @@ fn main() {
 fn bla() {
     $0main()
 }
-"#);
+"#,
+        );
     }
 
     #[test]
@@ -235,5 +202,57 @@ fn <main>() {
 "#
             ],
         );
+    }
+
+    #[test]
+    fn qualified_type() {
+        check(
+            r#"
+#- /asdf/test.gleam
+pub type Wobble {
+    Some
+}
+
+#- /test2.gleam
+import asdf/test
+
+fn bla(a: test.$0Wobble) {
+}
+"#,
+            expect![
+                r#"
+pub type <Wobble> {
+    Some
+}
+"#
+            ],
+        );
+    }
+
+    #[test]
+    fn module_field_access() {
+        check(
+            r#"
+#- /test.gleam
+fn print() {
+    1
+}
+
+#- /test2.gleam
+import test
+
+type Internal {
+    Internal(print)
+}
+
+fn test(test: Internal) { test.$0print }"#,
+            expect![
+                r#"
+fn <print>() {
+    1
+}
+"#
+            ],
+        )
     }
 }

@@ -1,17 +1,18 @@
+use std::collections::HashMap;
+
 use smol_str::SmolStr;
-use syntax::ast::{self};
+use syntax::ast::{self, AstNode};
 
 use crate::{
     impl_from,
-    ty::{self, TyDatabase},
-    DefDatabase, FileId, SourceRootId,
+    ty::{self, Ty, TyDatabase},
+    DefDatabase, FileId, InFile, SourceRootId,
 };
 
 use super::{
-    hir_def::{AdtId, LocalVariantId},
-    module::{Field, PatternId, VariantData, Param, FunctionData},
-    scope::ExprScopes,
-    FunctionId, InternDatabase,
+    hir_def::{AdtId, LocalFieldId, LocalVariantId, TypeAliasId, VariantId},
+    module::{AdtData, FieldData, FunctionData, Param, PatternId, TypeAliasData, VariantData},
+    FunctionId,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -24,10 +25,10 @@ impl Package {
         Vec::new()
     }
 
-    pub fn target(self, db: &dyn DefDatabase) -> crate::base::Target {
-        db.source_root_package_info(SourceRootId(0))
-            .map_or(crate::base::Target::default(), |s| s.target.clone())
-    }
+    // pub fn target(self, db: &dyn DefDatabase) -> crate::base::Target {
+    //     db.source_root_package_info(SourceRootId(0))
+    //         .map_or(crate::base::Target::default(), |s| s.target.clone())
+    // }
 }
 
 #[derive(Debug)]
@@ -54,6 +55,30 @@ pub enum ModuleDef {
     Function(Function),
     Variant(Variant),
     Adt(Adt),
+    TypeAlias(TypeAlias),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct TypeAlias {
+    pub(crate) id: TypeAliasId,
+}
+
+impl TypeAlias {
+    pub fn name(self, db: &dyn DefDatabase) -> SmolStr {
+        let type_alias = db.lookup_intern_type_alias(self.id);
+        let type_alias_data = &db.module_items(type_alias.file_id)[type_alias.value];
+        type_alias_data.name.clone()
+    }
+
+    pub fn data(&self, db: &dyn DefDatabase) -> TypeAliasData {
+        let type_alias = db.lookup_intern_type_alias(self.id);
+        let module_items = db.module_items(type_alias.file_id);
+        module_items[type_alias.value].clone()
+    }
+
+    pub fn module(&self, db: &dyn DefDatabase) -> Module {
+        db.lookup_intern_type_alias(self.id).file_id.into()
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -80,6 +105,32 @@ impl Adt {
             })
             .collect()
     }
+
+    pub fn common_fields(self, db: &dyn DefDatabase) -> HashMap<SmolStr, Field> {
+        let mut fields = HashMap::new();
+        for (name, _) in self.data(db).common_fields.iter() {
+            if let Some(variant) = self.variants(db).first() {
+                if let Some(field) = variant
+                    .fields(db)
+                    .iter()
+                    .find(|f| f.label(db) == Some(name.clone()))
+                {
+                    fields.insert(name.clone(), *field);
+                }
+            }
+        }
+        fields
+    }
+
+    pub fn data(&self, db: &dyn DefDatabase) -> AdtData {
+        let adt = db.lookup_intern_adt(self.id);
+        let module_items = db.module_items(adt.file_id);
+        module_items[adt.value].clone()
+    }
+
+    pub fn module(&self, db: &dyn DefDatabase) -> Module {
+        db.lookup_intern_adt(self.id).file_id.into()
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -96,12 +147,53 @@ impl Variant {
         variant.name.clone()
     }
 
-    pub fn fields(&self, db: &dyn DefDatabase) -> Vec<Field> {
-        self.variant_data(db).fields
+    pub fn parent(self) -> Adt {
+        Adt { id: self.parent }
     }
 
-    fn variant_data(&self, db: &dyn DefDatabase) -> VariantData {
+    pub fn fields(&self, db: &dyn DefDatabase) -> Vec<Field> {
+        self.data(db)
+            .fields
+            .map(|field_id| Field {
+                parent: VariantId {
+                    parent: self.parent,
+                    local_id: self.id,
+                },
+                id: field_id,
+            })
+            .collect()
+    }
+
+    pub fn module(&self, db: &dyn DefDatabase) -> Module {
+        let loc = db.lookup_intern_adt(self.parent);
+        Module { id: loc.file_id }
+    }
+
+    fn data(&self, db: &dyn DefDatabase) -> VariantData {
         let adt = db.lookup_intern_adt(self.parent);
+        let module_items = db.module_items(adt.file_id);
+        module_items[self.id].clone()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Field {
+    pub(crate) parent: VariantId,
+    pub(crate) id: LocalFieldId,
+}
+
+impl Field {
+    pub fn label(self, db: &dyn DefDatabase) -> Option<SmolStr> {
+        let data = self.data(db);
+        data.label
+    }
+
+    pub fn ty(self, db: &dyn DefDatabase) -> Ty {
+        self.data(db).type_ref
+    }
+
+    fn data(&self, db: &dyn DefDatabase) -> FieldData {
+        let adt = db.lookup_intern_adt(self.parent.parent);
         let module_items = db.module_items(adt.file_id);
         module_items[self.id].clone()
     }
@@ -114,11 +206,11 @@ pub struct Function {
 
 impl Function {
     pub fn name(self, db: &dyn DefDatabase) -> SmolStr {
-        self.function_data(db).name.clone()
+        self.data(db).name.clone()
     }
 
     pub fn params(self, db: &dyn DefDatabase) -> Vec<Param> {
-        self.function_data(db).params.clone()
+        self.data(db).params.clone()
     }
 
     pub fn ty(&self, db: &dyn TyDatabase) -> ty::Ty {
@@ -126,9 +218,13 @@ impl Function {
         infer.fn_ty.clone()
     }
 
-    fn function_data(self, db: &dyn DefDatabase) -> FunctionData {
+    fn data(self, db: &dyn DefDatabase) -> FunctionData {
         let func = db.lookup_intern_function(self.id);
         db.module_items(func.file_id)[func.value].clone()
+    }
+
+    pub fn module(&self, db: &dyn DefDatabase) -> Module {
+        db.lookup_intern_function(self.id).file_id.into()
     }
 }
 
@@ -144,19 +240,42 @@ pub struct Local {
 }
 
 impl Local {
-    pub fn source(&self, db: &dyn DefDatabase) -> ast::AsPattern {
+    pub fn source(&self, db: &dyn DefDatabase) -> InFile<ast::Pattern> {
         let (_body, source_map) = db.body_with_source_map(self.parent);
         let src = source_map
             .node_for_pattern(self.pat_id)
             .expect("This is a compiler bug!");
         let root = db.parse(src.file_id).syntax_node();
-        src.value.to_node(&root)
+        src.with_value(src.value.clone().to_node(&root))
     }
 
     pub fn ty(self, db: &dyn TyDatabase) -> ty::Ty {
         let def = self.parent;
         let infer = db.infer_function(def);
-        let ty = infer.ty_for_pattern(self.pat_id).clone();
-        ty
+
+        infer.ty_for_pattern(self.pat_id).clone()
+    }
+
+    pub fn name(self, db: &dyn DefDatabase) -> SmolStr {
+        SmolStr::from(self.source(db).value.syntax().to_string())
+    }
+}
+
+#[derive(Clone, Eq, Debug, PartialEq)]
+pub enum BuiltIn {
+    Nil,
+    Ok,
+    Error,
+}
+
+impl BuiltIn {
+    pub fn values() -> HashMap<SmolStr, BuiltIn> {
+        [
+            ("Nil".into(), BuiltIn::Nil),
+            ("Ok".into(), BuiltIn::Ok),
+            ("Error".into(), BuiltIn::Error),
+        ]
+        .into_iter()
+        .collect()
     }
 }

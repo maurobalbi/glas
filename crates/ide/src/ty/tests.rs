@@ -12,7 +12,7 @@ fn check_all(src: &str, expect: Expect) {
     let (db, file) = TestDB::single_file(src).unwrap();
     let scope = db.module_scope(file);
     let mut output = Vec::new();
-    for fun in scope.declarations() {
+    for fun in scope.declarations().flatten() {
         match fun.0 {
             crate::def::hir_def::ModuleDefId::FunctionId(fn_id) => {
                 let infer = db.infer_function(fn_id);
@@ -22,6 +22,7 @@ fn check_all(src: &str, expect: Expect) {
             }
             crate::def::hir_def::ModuleDefId::AdtId(_) => {}
             crate::def::hir_def::ModuleDefId::VariantId(_) => {}
+            crate::def::hir_def::ModuleDefId::TypeAliasId(_) => {}
         }
     }
 
@@ -32,10 +33,9 @@ fn check_all(src: &str, expect: Expect) {
 #[track_caller]
 fn check_fix(src: &str, expect: Expect) {
     let (db, f) = TestDB::from_fixture(src).unwrap();
-    tracing::info!("{:#?}", f);
     let scope = db.module_scope(f[0].file_id);
     let mut output = Vec::new();
-    for fun in scope.declarations() {
+    for fun in scope.declarations().flatten() {
         match fun.0 {
             crate::def::hir_def::ModuleDefId::FunctionId(fn_id) => {
                 let infer = db.infer_function(fn_id);
@@ -45,6 +45,7 @@ fn check_fix(src: &str, expect: Expect) {
             }
             crate::def::hir_def::ModuleDefId::AdtId(_) => {}
             crate::def::hir_def::ModuleDefId::VariantId(_) => {}
+            crate::def::hir_def::ModuleDefId::TypeAliasId(_) => {}
         }
     }
 
@@ -93,12 +94,44 @@ fn let_infer_pattern() {
     )
 }
 
-#[traced_test]
+#[test]
+fn unsaturated_constructor() {
+    check_all(
+        "type Snow { Snow(Int) } fn snow() {Snow}",
+        expect!["snow: fn() -> fn(Int) -> Snow"],
+    )
+}
+
 #[test]
 fn let_infer() {
     check_all(
         "type Biboop {Biboop(Int)} fn biboob(a) { let b = a b }",
         expect!["biboob: fn(a) -> a"],
+    )
+}
+
+#[test]
+fn generic_params() {
+    check_all(
+        "fn biboob(a: a, b: a) { a + 1 }",
+        expect!["biboob: fn(Int, Int) -> Int"],
+    )
+}
+
+#[test]
+fn generic_adt() {
+    check_all(
+        r#"type Animal(a, b) {
+        Dog(a, String)
+        Cat(b)
+      }
+      fn animais(b) {
+        case b {
+          Cat(a) -> Cat("kitty")
+          Dog(1, "goofy") -> Dog(a, "goofy")
+        }
+      }"#,
+        expect!["animais: fn(Animal(Int, a)) -> Animal(b, String)"],
     )
 }
 
@@ -169,6 +202,17 @@ fn pattern() {
 }
 
 #[test]
+fn as_pattern() {
+    check_all(
+        "type Massa { Much } fn bla() { case Much {
+            Much as a -> a
+        }  }",
+        expect![[r#"
+        bla: fn() -> Massa"#]],
+    );
+}
+
+#[test]
 fn function() {
     check_all(
         "fn func() {fn(a,b) {a + b}",
@@ -234,6 +278,19 @@ fn use_() {
 }
 
 #[test]
+fn record_spread() {
+    check_all(
+        "type Alias {
+        Bla(name, dodo)
+      }
+      fn main(a) {
+        Bla(..a)
+      }",
+        expect!["main: fn(Alias) -> Alias"],
+    )
+}
+
+#[test]
 fn use_pattern() {
     check_all(
         "type BlaT { Bla(Int) } fn main(a) { 
@@ -264,6 +321,31 @@ fn case_infer() {
         }
       }",
         expect!["do_reverse_acc: fn(Int) -> Float"],
+    )
+}
+
+#[test]
+fn tuple() {
+    check_all(
+        "fn tuple(a) {
+        case a {
+            #(1, a) -> #(a, 5)
+        }
+      }",
+        expect!["tuple: fn(#(Int, a)) -> #(a, Int)"],
+    )
+}
+
+#[test]
+fn case_multiple_subjects() {
+    check_all(
+        "type Dog(a, a) { Dog(a, a) } fn subjects(a, b) {
+        case a, b {
+            #(1, more), Dog(2.5, d) -> Dog(more, d)
+        }
+    }
+    ",
+        expect!["subjects: fn(#(Int, Float), Dog(Float, Float)) -> Dog(Float, Float)"],
     )
 }
 
@@ -326,7 +408,33 @@ fn lambda_shorthand() {
 }
 
 #[test]
+fn annotations() {
+    check_all(
+        "fn ann(a: #(Int), b: fn(Int, Float) -> Int) -> Int { \"123\" } ",
+        expect!["ann: fn(#(Int), fn(Int, Float) -> Int) -> Int"],
+    )
+}
+
+#[test]
+fn list_spread() {
+    check_all(
+        "pub fn prepend(list, this item) {
+        [item, ..list]
+      }",
+        expect!["prepend: fn(List(a), a) -> List(a)"],
+    )
+}
+
+#[test]
 fn field_access() {
+    check_all(
+        "type Wobble{ Wobble(name: Int) } fn name() { let w = Wobble(5) w.name }",
+        expect!["name: fn() -> Int"],
+    )
+}
+
+#[test]
+fn field_access_module() {
     check_fix(
         r#"
 #- /test.gleam
@@ -355,6 +463,30 @@ bla: fn() -> Bla"#
 }
 
 #[test]
+fn spread_call() {
+    check_all(
+        "fn unique(list) {
+            case list {
+              [] -> []
+              [x] -> [x, ..unique([])]
+            }
+          }",
+        expect!["unique: fn(List(a)) -> List(a)"],
+    )
+}
+
+#[test]
+fn pipe_infer() {
+    check_all(
+        "fn pipe(a: Int, b: Float) -> Int { 1 } 
+            fn unique(a) {
+            a |> pipe(1.1)
+          }",
+        expect!["pipe: fn(Int, Float) -> Int\nunique: fn(Int) -> Int"],
+    )
+}
+
+#[test]
 fn generic_params_naming() {
     check_all(
         "fn do_filter_map(
@@ -374,5 +506,98 @@ fn generic_params_naming() {
             }
           }",
         expect!["do_filter_map: fn(List(a), fn(a) -> b, List(b)) -> List(b)"],
+    )
+}
+
+#[test]
+fn alias_infer() {
+    check_all(
+        "type Alias = String 
+    fn main() -> Alias {
+    }",
+        expect!["main: fn() -> String"],
+    )
+}
+
+#[test]
+fn aliased_import() {
+    check_fix(
+        r#"#- /test.gleam
+pub type Bla = String
+
+#- /test2.gleam
+import test.{Bla, main as dodo}
+
+fn test(a: String) -> Bla { $0 }"#,
+        expect!["test: fn(String) -> String"],
+    )
+}
+
+#[test]
+fn generic_alias() {
+    check_fix(
+        r#"#- /test.gleam
+pub type Wobble(name) {
+    Wobble(name)
+}
+
+#- /test2.gleam
+import test.{Wobble as Bobo, main as dodo}
+pub opaque type Nasty {
+    Nasty
+}
+type Alias = Bobo(Nasty)
+
+fn test(a: String) -> Alias { $0 }"#,
+        expect!["test: fn(String) -> Wobble(Nasty)"],
+    )
+}
+
+#[test]
+fn qualified_pattern() {
+    check_fix(
+        r#"#- /test.gleam
+pub type Wobble(name) {
+    Wobble(name)
+}
+
+#- /test2.gleam
+import test
+
+fn test(a) { case a {
+    test.Wobble(_) -> $0"23"
+} }"#,
+        expect!["test: fn(Wobble(a)) -> String"],
+    )
+}
+
+#[test]
+fn qualified_type() {
+    check_fix(
+        r#"#- /test.gleam
+pub type Wobble(name) {
+    Wobble(name)
+}
+
+#- /test2.gleam
+import test
+
+fn test(a: test.Wobble(a)) { $0"" }"#,
+        expect!["test: fn(Wobble(a)) -> String"],
+    )
+}
+
+#[test]
+fn qualified_type_alias() {
+    check_fix(
+        r#"#- /test.gleam
+pub type Wobble = Alias
+type Alias = String
+
+#- /test2.gleam
+import test
+
+fn test(a: test.Wobble) { $0"" }"#,
+        expect!["test: fn(String) -> String"],
     )
 }

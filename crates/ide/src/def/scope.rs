@@ -1,30 +1,45 @@
-use std::{ops, sync::Arc};
+use std::{collections::HashMap, ops, sync::Arc};
 
 use indexmap::IndexMap;
 use la_arena::{Arena, ArenaMap, Idx};
 use petgraph::stable_graph::StableGraph;
 use salsa::InternId;
 use smol_str::SmolStr;
+use syntax::{ast, AstPtr};
 
 use crate::{DefDatabase, FileId};
 
 use super::{
     body::Body,
-    hir_def::{AdtLoc, FunctionLoc, ModuleDefId, VariantId},
+    hir_def::{AdtId, AdtLoc, FunctionLoc, ModuleDefId, TypeAliasId, TypeAliasLoc, VariantId},
     module::{Clause, Expr, ExprId, ImportData, Pattern, PatternId, Statement, Visibility},
     resolver::ResolveResult,
     resolver_for_expr, FunctionId, ModuleItemData,
 };
 
-pub fn module_scope_query(db: &dyn DefDatabase, file_id: FileId) -> Arc<ModuleScope> {
+pub fn module_scope_with_map_query(
+    db: &dyn DefDatabase,
+    file_id: FileId,
+) -> (Arc<ModuleScope>, Arc<ModuleSourceMap>) {
     let module_data = db.module_items(file_id);
 
     let mut scope = ModuleScope::default();
+    let mut module_source_map = ModuleSourceMap::default();
+
+    for (_, imported_module) in module_data.module_imports() {
+        let Some(file) = db.module_map().file_for_module_name(&imported_module.name) else {
+            // ToDo: report diagnostics
+            continue;
+        };
+
+        scope.modules.insert(imported_module.accessor.clone(), file);
+    }
 
     for (_, import) in module_data.unqualified_imports() {
-        if let Some(val) = scope.resolve_import(db, &module_data, import) {
+        for val in scope.resolve_import(db, &module_data, import) {
             match val {
                 ModuleDefId::AdtId(_) => scope.types.insert(import.local_name(), val),
+                ModuleDefId::TypeAliasId(_) => scope.types.insert(import.local_name(), val),
                 _ => scope.values.insert(import.local_name(), val),
             };
         }
@@ -36,11 +51,36 @@ pub fn module_scope_query(db: &dyn DefDatabase, file_id: FileId) -> Arc<ModuleSc
             file_id,
             value: func_id,
         });
+
+        module_source_map
+            .function_map
+            .insert(func.ast_ptr.clone(), func_loc);
         let def = ModuleDefId::FunctionId(func_loc);
         scope.values.insert(name.clone(), def.clone());
         scope
             .declarations
-            .insert(name.clone(), (def, func.visibility.clone()));
+            .entry(name.clone())
+            .or_default()
+            .push((def, func.visibility.clone()));
+    }
+
+    for (alias_id, alias) in module_data.type_alias() {
+        let name = &alias.name;
+        let alias_loc = db.intern_type_alias(TypeAliasLoc {
+            file_id,
+            value: alias_id,
+        });
+        let def = ModuleDefId::TypeAliasId(alias_loc);
+
+        module_source_map
+            .type_alias_map
+            .insert(alias.ast_ptr.clone(), alias_loc);
+        scope.types.insert(name.clone(), def.clone());
+        scope
+            .declarations
+            .entry(name.clone())
+            .or_default()
+            .push((def, alias.visibility.clone()));
     }
 
     for (adt_id, adt) in module_data.adts() {
@@ -50,29 +90,72 @@ pub fn module_scope_query(db: &dyn DefDatabase, file_id: FileId) -> Arc<ModuleSc
             value: adt_id,
         });
         let def = ModuleDefId::AdtId(adt_loc);
+
+        module_source_map
+            .adt_map
+            .insert(adt.ast_ptr.clone(), adt_loc);
         scope.types.insert(name.clone(), def.clone());
         scope
             .declarations
-            .insert(name.clone(), (def, adt.visibility.clone()));
+            .entry(name.clone())
+            .or_default()
+            .push((def, adt.visibility.clone()));
 
         for variant_id in adt.variants.clone() {
             let variant = &module_data[variant_id];
             let name = &variant.name;
 
-            let def = ModuleDefId::VariantId(VariantId {
+            let variant_id = VariantId {
                 parent: adt_loc,
                 local_id: variant_id,
-            });
+            };
+            let def = ModuleDefId::VariantId(variant_id);
+
+            module_source_map
+                .variant_map
+                .insert(variant.ast_ptr.clone(), variant_id);
             scope.values.insert(name.clone(), def.clone());
 
             //use visibility of adt
             scope
                 .declarations
-                .insert(name.clone(), (def, adt.visibility.clone()));
+                .entry(name.clone())
+                .or_default()
+                .push((def, adt.visibility.clone()));
         }
     }
 
-    Arc::new(scope)
+    (Arc::new(scope), Arc::new(module_source_map))
+}
+
+#[derive(Debug, Default, PartialEq, Eq)]
+pub struct ModuleSourceMap {
+    function_map: HashMap<AstPtr<ast::Function>, FunctionId>,
+    adt_map: HashMap<AstPtr<ast::Adt>, AdtId>,
+    variant_map: HashMap<AstPtr<ast::Variant>, VariantId>,
+    type_alias_map: HashMap<AstPtr<ast::TypeAlias>, TypeAliasId>,
+}
+
+impl ModuleSourceMap {
+    pub fn node_to_function(&self, node: &ast::Function) -> Option<FunctionId> {
+        let src = AstPtr::new(node);
+        self.function_map.get(&src).copied()
+    }
+
+    pub fn node_to_adt(&self, node: &ast::Adt) -> Option<AdtId> {
+        let src = AstPtr::new(node);
+        self.adt_map.get(&src).copied()
+    }
+
+    pub fn node_to_variant(&self, node: &ast::Variant) -> Option<VariantId> {
+        let src = AstPtr::new(node);
+        self.variant_map.get(&src).copied()
+    }
+
+    pub fn node_to_type_alias(&self, node: &ast::TypeAlias) -> Option<TypeAliasId> {
+        let src = AstPtr::new(node);
+        self.type_alias_map.get(&src).copied()
+    }
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]
@@ -81,32 +164,38 @@ pub struct ModuleScope {
     values: IndexMap<SmolStr, ModuleDefId>,
     types: IndexMap<SmolStr, ModuleDefId>,
 
+    modules: IndexMap<SmolStr, FileId>,
+
     /// The defs declared in this module which can potentially be imported in another module
-    declarations: IndexMap<SmolStr, (ModuleDefId, Visibility)>,
+    declarations: IndexMap<SmolStr, Vec<(ModuleDefId, Visibility)>>,
 }
 
 impl ModuleScope {
-    pub fn resolve_name_locally(&self, name: SmolStr) -> Option<&ModuleDefId> {
-        self.values.get(&name)
+    pub fn resolve_name_locally(&self, name: &SmolStr) -> Option<&ModuleDefId> {
+        self.values.get(name)
     }
 
     pub fn resovlve_type(&self, name: SmolStr) -> Option<&ModuleDefId> {
         self.types.get(&name)
     }
 
+    pub fn resolve_module(&self, name: &SmolStr) -> Option<&FileId> {
+        self.modules.get(name)
+    }
+
     pub fn values(
         &self,
     ) -> impl Iterator<Item = (&SmolStr, &ModuleDefId)> + ExactSizeIterator + '_ {
-        self.values.iter().map(|v| v)
+        self.values.iter()
     }
 
     pub fn types(&self) -> impl Iterator<Item = (&SmolStr, &ModuleDefId)> + ExactSizeIterator + '_ {
-        self.types.iter().map(|v| v)
+        self.types.iter()
     }
 
     pub fn declarations(
         &self,
-    ) -> impl Iterator<Item = &(ModuleDefId, Visibility)> + ExactSizeIterator + '_ {
+    ) -> impl Iterator<Item = &Vec<(ModuleDefId, Visibility)>> + ExactSizeIterator + '_ {
         self.declarations.iter().map(|v| v.1)
     }
 
@@ -115,19 +204,26 @@ impl ModuleScope {
         db: &dyn DefDatabase,
         module_items: &ModuleItemData,
         import: &ImportData,
-    ) -> Option<ModuleDefId> {
+    ) -> Vec<ModuleDefId> {
         let ImportData {
             unqualified_name: unqualifed_name,
             module,
             ..
         } = import;
         let module = &module_items[*module];
-        let file_id = db.module_map().file_for_module_name(module.name.clone())?;
-        let scope = db.module_scope(file_id);
-        let Some((item, Visibility::Public)) = scope.declarations.get(unqualifed_name) else {
-            return None
+        let Some(file_id) = db.module_map().file_for_module_name(&module.name) else {
+            return Vec::new();
         };
-        Some(item.clone())
+        let scope = db.module_scope(file_id);
+        let Some(items) = scope.declarations.get(unqualifed_name) else {
+            return Vec::new();
+        };
+        items
+            .iter()
+            .filter(|i| i.1 == Visibility::Public)
+            .map(|i| i.0.clone())
+            .clone()
+            .collect()
     }
 }
 
@@ -200,7 +296,7 @@ impl ExprScopes {
             }
             Expr::Call { func, args } => {
                 for arg in args {
-                    self.traverse_expr(body, *arg, scope);
+                    self.traverse_expr(body, arg.1, scope);
                 }
                 self.traverse_expr(body, *func, scope);
             }
@@ -223,14 +319,19 @@ impl ExprScopes {
             } => {
                 self.traverse_expr(body, *container, scope);
             }
-            Expr::Case { subject, clauses } => {
-                self.traverse_expr(body, *subject, scope);
-                clauses.into_iter().for_each(|Clause { pattern, expr }| {
+            Expr::Case { subjects, clauses } => {
+                for s in subjects.iter() {
+                    self.traverse_expr(body, *s, scope);
+                }
+
+                clauses.iter().for_each(|Clause { patterns, expr }| {
                     let clause_scope = self.scopes.alloc(ScopeData {
                         parent: Some(scope),
                         entries: Vec::new(),
                     });
-                    self.add_bindings(body, clause_scope, &pattern);
+                    for pat in patterns.iter() {
+                        self.add_bindings(body, clause_scope, pat);
+                    }
                     self.traverse_expr(body, *expr, clause_scope);
                 });
             }
@@ -247,8 +348,13 @@ impl ExprScopes {
                 }
                 self.traverse_expr(body, *lam_body, body_scope);
             }
+            Expr::Tuple { fields } => {
+                for field in fields.iter() {
+                    self.traverse_expr(body, *field, scope);
+                }
+            }
             Expr::List { elements } => {
-                for elem in elements.into_iter() {
+                for elem in elements.iter() {
                     self.traverse_expr(body, *elem, scope);
                 }
             }
@@ -271,7 +377,7 @@ impl ExprScopes {
                     });
                     self.add_bindings(body, scope, pattern);
                 }
-                Statement::Expr { expr, .. } => {
+                Statement::Expr { expr } => {
                     self.traverse_expr(body, *expr, scope);
                 }
                 Statement::Use { patterns, expr } => {
@@ -290,7 +396,7 @@ impl ExprScopes {
 
     fn add_bindings(&mut self, body: &Body, scope: ScopeId, pattern_id: &PatternId) {
         let pattern = &body[*pattern_id];
-        match &pattern.pattern {
+        match &pattern {
             Pattern::Variable { name } => {
                 self.scopes[scope].entries.push(ScopeEntry {
                     name: name.clone(),
@@ -304,12 +410,12 @@ impl ExprScopes {
                 }
             }
             Pattern::Spread { name } => {
-                name.clone().map(|name| 
+                if let Some(name) = name.clone() {
                     self.scopes[scope].entries.push(ScopeEntry {
                         name,
                         pat: *pattern_id,
-                    }
-                ));
+                    })
+                }
             }
             Pattern::AlternativePattern { patterns } => {
                 for pattern in patterns {
@@ -332,6 +438,13 @@ impl ExprScopes {
                 }
             }
             Pattern::Literal { kind: _ } => {}
+            Pattern::AsPattern { pattern, as_name } => {
+                self.add_bindings(body, scope, pattern);
+                as_name.map(|as_name| self.add_bindings(body, scope, &as_name));
+            }
+            Pattern::Concat { pattern } => {
+                self.add_bindings(body, scope, pattern);
+            }
         }
     }
 }
@@ -364,22 +477,19 @@ pub(crate) fn dependency_order_query(
 ) -> Vec<Vec<FunctionId>> {
     let scopes = db.module_scope(file_id);
     let mut edges = Vec::new();
-    for (func, _) in scopes.declarations() {
-        match func {
-            ModuleDefId::FunctionId(owner_id) => {
-                let body = db.body(owner_id.clone());
-                edges.push((owner_id.clone().0.as_u32(), owner_id.clone().0.as_u32()));
-                body.exprs().for_each(|(e_id, expr)|
-                    match expr {
-                        Expr::Variable(name) => {
-                            let resolver = resolver_for_expr(db, owner_id.clone(), e_id);
-                            let Some(ResolveResult::Function(fn_id)) = resolver.resolve_name(name) else {return};
-                            edges.push((owner_id.clone().0.as_u32(), fn_id.id.0.as_u32()))
-                        },
-                        _ => {},
-                });
-            }
-            _ => {}
+    for (func, _) in scopes.declarations().flatten() {
+        if let ModuleDefId::FunctionId(owner_id) = func {
+            let body = db.body(*owner_id);
+            edges.push((owner_id.0.as_u32(), owner_id.0.as_u32()));
+            body.exprs().for_each(|(e_id, expr)| {
+                if let Expr::Variable(name) = expr {
+                    let resolver = resolver_for_expr(db, *owner_id, e_id);
+                    let Some(ResolveResult::Function(fn_id)) = resolver.resolve_name(name) else {
+                        return;
+                    };
+                    edges.push((owner_id.0.as_u32(), fn_id.id.0.as_u32()))
+                }
+            });
         }
     }
 

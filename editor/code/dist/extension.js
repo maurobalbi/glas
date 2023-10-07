@@ -4185,7 +4185,7 @@ function createLanguageClient() {
         transport: node_1.TransportKind.stdio,
         options: {
             env: Object.assign(process.env, {
-                GLEAM_LOG: "debug",
+                GLEAM_LOG: "info",
                 GLEAM_LOG_PATH: "/Users/maurobalbi/Documents/repos/gleamalyzer/log.log",
                 GLEAM_LOG_NOCOLOUR: "1",
             }),

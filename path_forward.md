@@ -1,18 +1,36 @@
-Features for 1.0:
+Features for 1.0 rc:
 
   ✓ Finish parser: attribute syntax, pattern guards, record spread 
-  - Finish inference for Result, Tuple, Case multiple subjects
-  - Fix function label / Record label lowering + inference
-  - Fix magic completion in pipes
+  ✓ Finish inference for Result, Tuple, Case multiple subjects
+  ✓ finish type_from_ast
+  ✓ type alias
+  ✓ fix parsing for panic, <>
+  ✓ fix make_ast for types with module def, e.g. wisp.Response
+  ✓ Fix make_type to use proper resolver!
+  ✓ Fix field_access for adt (including goto)
+  - Fix pattern completion (e.g. only show constructors)
+  ✓ Fix pattern inference for module types (e.g. local.Wobbler)
+  ✓ Fix Record Spread
+  - Fix function label / Record label lowering + inference (Unsaturated Constructors are inferred as fn (...) -> Constr)
+  - Fix pipe inference for functions with holes!
+  ✓ Finish hover for types
+  - Improve hover ( docs, etc)
+  - Add signature help
+  - Add Inlay - Hints ?
+  - Fix call completion in pipes
+  - Types completion (additional trigger char ':')
   - Reimplement target based compiliation
-  - Find references, highlight related
+  ✓ Find references, highlight related
   - Add rename assists!
   - completion expr.use, maybe more?
   - improve documentation
 
 After
+  - Optimization: if function is annotated, skip inferring!
   - Add some more diagnostics
     - Double declaration
+    - wrong labelling
     - Unexpected spreads
     - Error reporting: 
       https://www.reddit.com/r/ProgrammingLanguages/comments/i2hfti/strategies_for_displaying_type_errors_with_global/
+    - experiment with type-inference diagnostics

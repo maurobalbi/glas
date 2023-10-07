@@ -16,7 +16,7 @@ pub async fn load_package_info() -> Result<()> {
         // Configures stdout/stderr automatically.
         .output()
         .await
-        .with_context(|| format!("Failed to download dependencies"))
+        .with_context(|| "Failed to download dependencies".to_string())
         .unwrap();
 
     if !output.status.success() {

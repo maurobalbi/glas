@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt};
+use std::fmt;
 
 use smol_str::SmolStr;
 
@@ -27,9 +27,6 @@ pub struct TyFormatter<'a> {
     pub db: &'a dyn TyDatabase,
     fmt: &'a mut dyn TyWrite,
     buf: String,
-    display_target: DisplayTarget,
-    env: HashMap<u32, SmolStr>,
-    uid: u32,
 }
 
 pub trait TyDisplay {
@@ -41,13 +38,7 @@ pub trait TyDisplay {
     where
         Self: Sized,
     {
-        TyDisplayWrapper {
-            db,
-            t: self,
-            max_size: None,
-            omit_verbose_types: false,
-            display_target: DisplayTarget::Diagnostics,
-        }
+        TyDisplayWrapper { db, t: self }
     }
 }
 
@@ -78,29 +69,9 @@ impl<'a> TyFormatter<'a> {
         // Then we write to the internal formatter from the buffer
         self.fmt.write_str(&self.buf).map_err(TyDisplayError::from)
     }
-
-    pub fn write_str(&mut self, s: &str) -> Result<(), TyDisplayError> {
-        self.fmt.write_str(s)?;
-        Ok(())
-    }
-
-    pub fn write_char(&mut self, c: char) -> Result<(), TyDisplayError> {
-        self.fmt.write_char(c)?;
-        Ok(())
-    }
-}
-
-#[derive(Debug)]
-pub enum DisplaySourceCodeError {
-    PathNotFound,
-    UnknownType,
-    Closure,
-    Generator,
 }
 
 pub enum TyDisplayError {
-    /// Errors that can occur when generating source code
-    DisplaySourceCodeError(DisplaySourceCodeError),
     /// `FmtError` is required to be compatible with std::fmt::Display
     FmtError,
 }
@@ -110,34 +81,9 @@ impl From<fmt::Error> for TyDisplayError {
     }
 }
 
-#[derive(Clone, Copy)]
-pub enum DisplayTarget {
-    /// Display types for inlays, doc popups, autocompletion, etc...
-    /// Showing `{unknown}` or not qualifying paths is fine here.
-    /// There's no reason for this to fail.
-    Diagnostics,
-    /// Display types for inserting them in source files.
-    /// The generated code should compile, so paths need to be qualified.
-    // SourceCode { module_id: ModuleId },
-    /// Only for test purpose to keep real types
-    Test,
-}
-
-impl DisplayTarget {
-    // fn is_source_code(&self) -> bool {
-    //     matches!(self, Self::SourceCode { .. })
-    // }
-    fn is_test(&self) -> bool {
-        matches!(self, Self::Test)
-    }
-}
-
 pub struct TyDisplayWrapper<'a, T> {
     db: &'a dyn TyDatabase,
     t: &'a T,
-    max_size: Option<usize>,
-    omit_verbose_types: bool,
-    display_target: DisplayTarget,
 }
 
 impl<T: TyDisplay> TyDisplayWrapper<'_, T> {
@@ -146,9 +92,6 @@ impl<T: TyDisplay> TyDisplayWrapper<'_, T> {
             db: self.db,
             fmt: f,
             buf: String::with_capacity(20),
-            display_target: self.display_target,
-            uid: 0,
-            env: HashMap::new(),
         })
     }
 }
@@ -161,10 +104,6 @@ where
         match self.write_to(f) {
             Ok(()) => Ok(()),
             Err(TyDisplayError::FmtError) => Err(fmt::Error),
-            Err(TyDisplayError::DisplaySourceCodeError(_)) => {
-                // This should never happen
-                panic!("HirDisplay::hir_fmt failed with DisplaySourceCodeError when calling Display::fmt!")
-            }
         }
     }
 }
@@ -176,16 +115,27 @@ impl TyDisplay for Ty {
     ) -> Result<(), TyDisplayError> {
         match self {
             Ty::Unknown => write!(f, "?"),
+            Ty::Nil => write!(f, "Nil"),
             Ty::Bool => write!(f, "Bool"),
             Ty::Int => write!(f, "Int"),
             Ty::Float => write!(f, "Float"),
             Ty::String => write!(f, "String"),
+            Ty::Result { ok, err } => {
+                write!(f, "Result(")?;
+                ok.ty_fmt(f)?;
+                write!(f, ", ")?;
+                err.ty_fmt(f)?;
+                write!(f, ")")
+            }
             Ty::Function { params, return_ } => {
                 write!(f, "fn(")?;
                 f.write_joined(params.as_ref().clone().into_iter(), ", ")?;
 
                 write!(f, ") -> ")?;
                 return_.ty_fmt(f)
+            }
+            Ty::Hole => {
+                write!(f, "_")
             }
             Ty::List { of } => {
                 write!(f, "List(")?;
@@ -205,8 +155,16 @@ impl TyDisplay for Ty {
                 // }
                 write!(f, "{}", name)
             }
-            Ty::Tuple { fields: _ } => todo!(),
-            Ty::Adt { name, params } => {
+            Ty::Tuple { fields } => {
+                write!(f, "#(")?;
+                f.write_joined(fields.as_ref().clone().into_iter(), ", ")?;
+                write!(f, ")")
+            }
+            Ty::Adt {
+                module: _,
+                name,
+                params,
+            } => {
                 // let adt = db.lookup_intern_adt(*adt_id);
                 // let adt = &db.module_items(adt.file_id)[adt.value];
                 // if params.len() > 0 {

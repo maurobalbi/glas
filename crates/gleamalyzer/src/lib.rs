@@ -2,6 +2,7 @@ mod capabilities;
 mod config;
 mod convert;
 mod handler;
+mod loading_service;
 mod lsp_ext;
 mod meter;
 pub mod server;
@@ -15,12 +16,13 @@ use async_lsp::stdio::{PipeStdin, PipeStdout};
 use async_lsp::tracing::TracingLayer;
 use ide::VfsPath;
 use lsp_types::{MessageType, ShowMessageParams, Url};
-use tokio::io::BufReader;
+
 use tower::ServiceBuilder;
 
 pub(crate) use server::{Server, StateSnapshot};
 pub(crate) use vfs::{LineMap, Vfs};
 
+use crate::loading_service::LoaderProgressLayer;
 use crate::meter::MeterLayer;
 
 /// The file length limit. Files larger than this will be rejected from all interactions.
@@ -86,7 +88,8 @@ pub async fn run_server_stdio() -> Result<()> {
     let (mainloop, _) = async_lsp::MainLoop::new_server(|client| {
         ServiceBuilder::new()
             .layer(TracingLayer::default())
-            .layer(MeterLayer::default())
+            .layer(MeterLayer)
+            .layer(LoaderProgressLayer::default())
             .layer(LifecycleLayer::default())
             // TODO: Use `CatchUnwindLayer`.
             .layer(ConcurrencyLayer::new(concurrency))

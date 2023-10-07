@@ -26,6 +26,9 @@ pub enum BinaryOpKind {
     FloatGTE,
     FloatLTE,
     Eq,
+
+    //String
+    Concat,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -173,6 +176,7 @@ enums! {
         Import,
         Function,
         Adt,
+        TypeAlias,
     },
     ConstantExpr {
         Literal,
@@ -193,6 +197,7 @@ enums! {
         Lambda,
         BinaryOp,
         Hole,
+        Tuple,
         Pipe,
         UnaryOp,
         List,
@@ -207,6 +212,7 @@ enums! {
         TupleType,
         TypeNameRef,
         TypeApplication,
+        Hole,
     },
     Pattern {
         PatternVariable,
@@ -216,10 +222,13 @@ enums! {
         PatternList,
         Hole,
         PatternSpread,
+        AsPattern,
+        PatternConcat,
     },
     TypeNameOrName {
         Name,
         TypeName,
+        NameRef,
     },
 }
 
@@ -246,6 +255,7 @@ impl TypeNameOrName {
         match self {
             TypeNameOrName::Name(name) => name.token(),
             TypeNameOrName::TypeName(type_name) => type_name.token(),
+            TypeNameOrName::NameRef(it) => it.token(),
         }
     }
 
@@ -258,7 +268,7 @@ impl FieldAccessExpr {
     pub fn for_label_name_ref(label: &NameRef) -> Option<FieldAccessExpr> {
         let syn = label.syntax();
         let candidate = syn.parent().and_then(FieldAccessExpr::cast)?;
-        if candidate.label().as_ref() == Some(&label) {
+        if candidate.label().as_ref() == Some(label) {
             Some(candidate)
         } else {
             None
@@ -300,6 +310,7 @@ asts! {
                     T![">=."] => BinaryOpKind::FloatGTE,
                     T!["<=."] => BinaryOpKind::FloatGTE,
                     T!["=="] => BinaryOpKind::Eq,
+                    T!["<>"] => BinaryOpKind::Concat,
                     _ => return None,
                 };
                 Some((tok, op))
@@ -337,32 +348,36 @@ asts! {
     ADT = Adt {
         name: TypeName,
         constructors: [Variant],
+        generic_params: GenericParamList,
     },
-    CUSTOM_TYPE_ALIAS = CustomTypeAlias {
+    GENERIC_PARAM_LIST = GenericParamList {
+        params: [TypeExpr],
+    },
+    TYPE_ALIAS = TypeAlias {
         name: TypeName,
-        constructors: [Variant],
+        type_: TypeExpr,
+        generic_params: GenericParamList,
 
         pub fn is_public(&self) -> bool {
-            self.syntax().children_with_tokens().find(|it| it.kind() == T!["pub"]).is_some()
+            self.syntax().children_with_tokens().any(|it| it.kind() == T!["pub"])
         }
 
         pub fn is_opaque(&self) -> bool {
-            self.0.children_with_tokens().find(|t| t.kind() == T!["opaque"]).is_some()
+            self.0.children_with_tokens().any(|t| t.kind() == T!["opaque"])
         }
     },
     VARIANT = Variant {
         name: Name,
-        field_list: ConstructorFieldList,
+        field_list: VariantFieldList,
     },
     VARIANT_CONSTRUCTOR = VariantConstructor {
         name: NameRef,
-        args: ArgList,
     },
-    CONSTRUCTOR_FIELD_LIST = ConstructorFieldList {
-        fields: [ConstructorField],
+    VARIANT_FIELD_LIST = VariantFieldList {
+        fields: [VariantField],
     },
-    CONSTRUCTOR_FIELD = ConstructorField {
-        label: Label,
+    VARIANT_FIELD = VariantField {
+        label: Name,
         type_: TypeExpr,
     },
     LAMBDA = Lambda {
@@ -391,6 +406,9 @@ asts! {
         base: Expr,
         label: NameRef,
     },
+    TUPLE = Tuple {
+        fields: [Expr],
+    },
     TUPLE_INDEX = TupleIndex {
         index: Literal,
         base: Expr,
@@ -413,13 +431,7 @@ asts! {
         statements: [ModuleStatement],
     },
     MODULE_NAME = ModuleName {
-        pub fn token(&self) -> SyntaxToken {
-            self.0.children_with_tokens().find_map(NodeOrToken::into_token).unwrap()
-        }
-
-        pub fn text(&self) -> SmolStr {
-            self.token().text().into()
-        }
+        name: Name,
     },
     // Change to body with expression to be able to reuse parser / collecting logic and validate constant during lowering
     MODULE_CONSTANT = ModuleConstant {
@@ -427,7 +439,7 @@ asts! {
         value: ConstantExpr,
         annotation: TypeExpr,
         pub fn is_public(&self) -> bool {
-            self.syntax().children_with_tokens().find(|it| it.kind() == T!["pub"]).is_some()
+            self.syntax().children_with_tokens().any(|it| it.kind() == T!["pub"])
         }
     },
     NAME = Name {
@@ -472,7 +484,7 @@ asts! {
       as_name[1]: TypeNameOrName,
     },
     PARAM = Param {
-        pattern: AsPattern, // this is a pattern to make name resolution easier
+        pattern: Pattern, // this is a pattern to make name resolution easier
         label: Label,
         ty: TypeExpr,
     },
@@ -512,7 +524,7 @@ asts! {
         expr: Expr,
     },
     STMT_LET = StmtLet {
-        pattern: AsPattern,
+        pattern: Pattern,
         annotation: TypeExpr,
         body: Expr,
     },
@@ -521,14 +533,14 @@ asts! {
         expr: Expr,
     },
     USE_ASSIGNMENT = UseAssignment {
-        pattern: AsPattern,
+        pattern: Pattern,
         annotation: TypeExpr,
     },
     CONSTANT_TUPLE = ConstantTuple {
         elements: [ConstantExpr],
     },
     TYPE_NAME_REF = TypeNameRef {
-        module: ModuleName,
+        module: Name,
         constructor_name: TypeName,
     },
     TYPE_APPLICATION = TypeApplication {
@@ -570,22 +582,17 @@ asts! {
     },
     AS_PATTERN = AsPattern {
         pattern: Pattern,
-        as_name: Pattern,
+        // Is a pattern to make scoping it easier!
+        as_name[1]: Pattern,
     },
     ALTERNATIVE_PATTERN = AlternativePattern {
-        patterns: [AsPattern],
+        patterns: [Pattern],
     },
     PATTERN_VARIABLE = PatternVariable {
-        pub fn token(&self) -> Option<SyntaxToken> {
-            self.0.children_with_tokens().find_map(NodeOrToken::into_token)
-        }
-
-        pub fn text(&self) -> Option<SmolStr> {
-            self.token().map(|t| t.text().into())
-        }
+        name: Name,
     },
     VARIANT_REF = VariantRef {
-        module: ModuleName,
+        module: Name,
         variant: NameRef,
         field_list: VariantRefFieldList,
     },
@@ -593,19 +600,23 @@ asts! {
         fields: [VariantRefField],
     },
     VARIANT_REF_FIELD = VariantRefField {
-        field: AsPattern,
+        field: Pattern,
     },
     PATTERN_TUPLE = PatternTuple {
-        field_patterns: [AsPattern],
+        field_patterns: [Pattern],
     },
     PATTERN_SPREAD = PatternSpread {
-       name: Name, 
+       name: Name,
     },
     PATTERN_LIST = PatternList {
-        elements: [AsPattern],
+        elements: [Pattern],
     },
     PATTERN_GUARD = PatternGuard {
         expr: Expr,
+    },
+    PATTERN_CONCAT = PatternConcat {
+        string: Literal,
+        name[1]: Pattern,
     },
 }
 
@@ -653,9 +664,7 @@ mod tests {
     #[test]
     fn assert() {
         let e = crate::parse_module(
-            "fn a() { 
-                        let Dog(a) = Dog(1) 
-                    }",
+            "type Mogie { Mogie(name: Int) } fn wops() { let bobo = Mogie(name: 1) bobo.name}",
         );
         for error in e.errors() {
             println!("{}", error);
@@ -681,8 +690,9 @@ mod tests {
 
     #[test]
     fn module() {
-        let e =
-            parse::<SourceFile>("@target(erlang)\nconst a = 1 const b = 2 @target(javascript) const c = 3");
+        let e = parse::<SourceFile>(
+            "@target(erlang)\nconst a = 1 const b = 2 @target(javascript) const c = 3",
+        );
         let mut iter = e.statements();
         iter.next()
             .unwrap()
@@ -701,20 +711,17 @@ mod tests {
         iter.next().unwrap().syntax().should_eq("Int");
         iter.next().unwrap().syntax().should_eq("String");
     }
-    
+
     #[test]
     fn pattern_spread() {
         let e = parse::<Pattern>("fn spread() { case [] { [..name] -> name } }");
         e.syntax().should_eq("[..name]");
         match e {
-            Pattern::PatternList(list) => {
-                match list.elements().next().unwrap().pattern().unwrap() {
-                    Pattern::PatternSpread(spread) => spread.name().unwrap().syntax().should_eq("name"),
-                    _ => unreachable!()
-                }
-                
+            Pattern::PatternList(list) => match list.elements().next().unwrap() {
+                Pattern::PatternSpread(spread) => spread.name().unwrap().syntax().should_eq("name"),
+                _ => unreachable!(),
             },
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 
@@ -752,7 +759,7 @@ mod tests {
 
     #[test]
     fn opaque_type() {
-        let e = parse::<CustomTypeAlias>("pub type Bla = Bla");
+        let e = parse::<TypeAlias>("pub type Bla = Bla");
         e.name().unwrap().syntax().should_eq("Bla");
     }
 
@@ -809,7 +816,7 @@ mod tests {
             .module_path()
             .unwrap()
             .path()
-            .filter_map(|t| Some(format!("{}", t.token()?.text())))
+            .filter_map(|t| Some(t.token()?.text().to_string()))
             .collect::<Vec<_>>()
             .join("/");
         assert_eq!(str, "aa/a");
@@ -850,7 +857,7 @@ mod tests {
 
     #[test]
     fn constructor_field() {
-        let e = parse::<ConstructorField>(
+        let e = parse::<VariantField>(
             "type Wobble(a) {
             Wobble1(a: int.Wobbles)
         }",
@@ -929,11 +936,11 @@ mod tests {
     #[test]
     fn case_expr() {
         let e = parse::<Case>("fn a() { case wobble, 1 + 7 { Cat, Dog -> 1 }}");
-        let mut subs = e.subjects().into_iter();
+        let mut subs = e.subjects();
         subs.next().unwrap().syntax().should_eq("wobble");
         subs.next().unwrap().syntax().should_eq("1 + 7");
         assert!(subs.next().is_none());
-        let mut clauses = e.clauses().into_iter();
+        let mut clauses = e.clauses();
         clauses.next().unwrap().syntax().should_eq("Cat, Dog -> 1")
     }
 
@@ -954,9 +961,24 @@ mod tests {
             .syntax()
             .should_eq("Bird | Snake");
         c.body().unwrap().syntax().should_eq("2");
-        let mut pats = c.patterns().into_iter();
+        let mut pats = c.patterns();
         pats.next().unwrap().syntax().should_eq("Bird | Snake");
         pats.next().unwrap().syntax().should_eq("a");
+    }
+
+    #[test]
+    fn clause_guards() {
+        let clause = parse::<Clause>(
+            " fn guards(a: String) {
+            case 1 {
+                b if b == a -> 1
+            }
+        }",
+        );
+        let mut pats = clause.patterns();
+        pats.next().unwrap().syntax().should_eq("b");
+        assert!(pats.next().is_none());
+        clause.body().unwrap().syntax().should_eq("1")
     }
 
     #[test]
@@ -986,12 +1008,11 @@ mod tests {
                     }}",
         );
         p.syntax().should_eq("int.Bla(Some(a))");
-        let pattern = VariantRef::cast(p.patterns().next().unwrap().pattern().unwrap().syntax().clone()).unwrap();
+        let pattern = VariantRef::cast(p.patterns().next().unwrap().syntax().clone()).unwrap();
         pattern
             .field_list()
             .unwrap()
             .fields()
-            .into_iter()
             .next()
             .unwrap()
             .syntax()
@@ -1009,7 +1030,6 @@ mod tests {
             }",
         );
         p.assignments()
-            .into_iter()
             .next()
             .unwrap()
             .syntax()
@@ -1030,7 +1050,7 @@ mod tests {
     #[test]
     fn variant_constructor() {
         let f = parse::<VariantConstructor>("fn fields() { Muddle(name: 5) }");
-        f.args().unwrap().syntax().should_eq("(name: 5)");
+        // f.args().unwrap().syntax().should_eq("(name: 5)");
         f.name().unwrap().syntax().should_eq("Muddle");
     }
 
@@ -1041,5 +1061,45 @@ mod tests {
             todo
         }",
         );
+    }
+
+    #[test]
+    fn as_pattern() {
+        let p = parse::<AsPattern>(
+            "fn todoo() {
+            case 1 {
+                5 as b -> b
+            }
+        }",
+        );
+        p.as_name().unwrap().syntax().should_eq("b")
+    }
+
+    #[test]
+    fn adt_generic_params() {
+        let adt = parse::<Adt>("type List(a) { Cons(a) Nil }");
+
+        let params = adt.generic_params().unwrap();
+        params.syntax().should_eq("(a)");
+        params.params().next().unwrap().syntax().should_eq("a");
+    }
+
+    #[test]
+    fn pattern_concat() {
+        let conc = parse::<PatternConcat>(
+            r#"fn main() {
+            case "" {
+              "abc" <> asdf -> asdf
+            }
+          }"#,
+        );
+        conc.name().unwrap().syntax().should_eq("asdf");
+    }
+
+    #[test]
+    fn alias_body() {
+        let alias = parse::<TypeAlias>(r#"type Alias = String"#);
+        alias.name().unwrap().syntax().should_eq("Alias");
+        alias.type_().unwrap().syntax().should_eq("String");
     }
 }

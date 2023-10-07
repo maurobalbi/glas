@@ -1,3 +1,4 @@
+use la_arena::{Arena, Idx};
 use salsa::Durability;
 use smol_str::SmolStr;
 use std::collections::HashMap;
@@ -8,6 +9,8 @@ use syntax::{SyntaxNode, TextRange, TextSize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct FileId(pub u32);
+/// safe because `FileId` is a newtype of `u32`
+impl nohash_hasher::IsEnabled for FileId {}
 
 // The location of a gleam.toml
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -113,8 +116,8 @@ impl ModuleMap {
         self.files.insert(module_name, file)
     }
 
-    pub fn file_for_module_name(&self, name: SmolStr) -> Option<FileId> {
-        self.files.get(&name).copied()
+    pub fn file_for_module_name(&self, name: &SmolStr) -> Option<FileId> {
+        self.files.get(name).copied()
     }
 
     pub fn module_name_for_file(&self, file: FileId) -> Option<SmolStr> {
@@ -162,6 +165,12 @@ impl fmt::Debug for FileSet {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_map().entries(&self.paths).finish()
     }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PackageRoot {
+    pub is_local: bool,
+    pub path: PathBuf,
 }
 
 /// A workspace unit, typically a Gleam package.
@@ -221,20 +230,41 @@ pub fn module_name(root_path: &PathBuf, module_path: &Path) -> Option<SmolStr> {
         .to_string();
 
     // normalise windows paths
-    Some(name.replace("\\", "/").into())
+    Some(name.replace('\\', "/").into())
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct PackageGraph {
-    pub nodes: HashMap<SourceRootId, PackageInfo>,
+    target: Target,
+    pub arena: Arena<PackageInfo>,
 }
+
+impl PackageGraph {
+    pub fn set_target(&mut self, target: Target) {
+        self.target = target;
+    }
+
+    pub fn add_package(&mut self, display_name: SmolStr, gleam_toml: FileId) -> PackageId {
+        let info = PackageInfo {
+            gleam_toml,
+            display_name,
+            dependencies: Vec::new(),
+        };
+        self.arena.alloc(info)
+    }
+
+    pub fn add_dep(&mut self, from: PackageId, dep: Dependency) {
+        self.arena[from].dependencies.push(dep)
+    }
+}
+
+pub type PackageId = Idx<PackageInfo>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PackageInfo {
-    pub root_manifest: FileId,
+    pub gleam_toml: FileId,
     // pub version: Option<String>,
-    pub target: Target,
-    pub display_name: String,
+    pub display_name: SmolStr,
     pub dependencies: Vec<Dependency>,
 }
 
@@ -256,7 +286,7 @@ impl From<&str> for Target {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Dependency {
-    pub package_root: SourceRootId,
+    pub package: PackageId,
     pub name: String,
 }
 
@@ -295,9 +325,8 @@ impl<T: Clone> InFile<&T> {
 
 impl<'a> InFile<&'a SyntaxNode> {
     pub fn ancestors(self) -> impl Iterator<Item = InFile<SyntaxNode>> + Clone {
-        iter::successors(Some(self.cloned()), move |node| match node.value.parent() {
-            Some(parent) => Some(node.with_value(parent)),
-            None => None,
+        iter::successors(Some(self.cloned()), move |node| {
+            node.value.parent().map(|parent| node.with_value(parent))
         })
     }
 }
@@ -343,7 +372,7 @@ pub trait SourceDatabase {
     #[salsa::input]
     fn source_root(&self, sid: SourceRootId) -> Arc<SourceRoot>;
 
-    fn source_root_package_info(&self, sid: SourceRootId) -> Option<Arc<PackageInfo>>;
+    // fn source_root_package_info(&self, sid: SourceRootId) -> Option<Arc<PackageInfo>>;
 
     #[salsa::input]
     fn file_source_root(&self, file_id: FileId) -> SourceRootId;
@@ -355,12 +384,12 @@ pub trait SourceDatabase {
     fn module_map(&self) -> Arc<ModuleMap>;
 }
 
-fn source_root_package_info(
-    db: &dyn SourceDatabase,
-    sid: SourceRootId,
-) -> Option<Arc<PackageInfo>> {
-    db.package_graph().nodes.get(&sid).cloned().map(Arc::new)
-}
+// fn source_root_package_info(
+//     db: &dyn SourceDatabase,
+//     sid: SourceRootId,
+// ) -> Option<Arc<PackageInfo>> {
+//     db.package_graph().nodes.get(&sid).cloned().map(Arc::new)
+// }
 
 #[derive(Default, Clone, PartialEq, Eq)]
 pub struct Change {

@@ -1,14 +1,15 @@
 use crate::{LineMap, Result, Vfs};
-use async_lsp::{ErrorCode, ResponseError};
 use ide::{
     CompletionItem, CompletionItemKind, Diagnostic, DiagnosticKind, FileId, FilePos, FileRange,
-    HoverResult, Severity,
+    HlRelated, HoverResult, Severity,
 };
-use lsp::{DiagnosticTag, Documentation, Hover, MarkupContent, MarkupKind};
+use lsp::{
+    DiagnosticTag, DocumentHighlight, DocumentHighlightKind, Documentation, Hover, MarkupContent,
+    MarkupKind,
+};
 use lsp_types::{
     self as lsp, DiagnosticRelatedInformation, DiagnosticSeverity, Location, NumberOrString,
-    Position, PrepareRenameResponse, Range, TextDocumentIdentifier, TextDocumentPositionParams,
-    Url,
+    Position, Range, TextDocumentIdentifier, TextDocumentPositionParams, Url,
 };
 use std::sync::Arc;
 use text_size::{TextRange, TextSize};
@@ -171,18 +172,18 @@ pub(crate) fn to_diagnostics(
     ret
 }
 
-pub(crate) fn to_rename_error(message: String) -> ResponseError {
-    ResponseError::new(ErrorCode::REQUEST_FAILED, message)
-}
-
-pub(crate) fn to_prepare_rename_response(
+pub(crate) fn to_document_highlight(
     line_map: &LineMap,
-    range: TextRange,
-    text: String,
-) -> PrepareRenameResponse {
-    let range = to_range(line_map, range);
-    PrepareRenameResponse::RangeWithPlaceholder {
-        range,
-        placeholder: text,
-    }
+    hls: &[HlRelated],
+) -> Vec<DocumentHighlight> {
+    hls.iter()
+        .map(|hl| DocumentHighlight {
+            range: to_range(line_map, hl.range),
+            kind: Some(if hl.is_definition {
+                DocumentHighlightKind::WRITE
+            } else {
+                DocumentHighlightKind::READ
+            }),
+        })
+        .collect()
 }

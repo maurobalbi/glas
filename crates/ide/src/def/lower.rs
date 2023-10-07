@@ -1,12 +1,14 @@
-use std::ops::Index;
+use std::{collections::HashMap, ops::Index};
 
-use crate::{ ty, Diagnostic};
+use crate::{ty, Diagnostic};
 
 use super::{
+    hir_def::LocalFieldId,
     module::{
-        AdtData, Field, FunctionData, ImportData, ModuleImport, Param, VariantData, Visibility,
+        AdtData, FieldData, FunctionData, ImportData, ModuleImport, Param, TypeAliasData,
+        VariantData, Visibility,
     },
-    AstPtr, DefDatabase,
+    AstPtr,
 };
 use la_arena::{Arena, Idx, IdxRange, RawIdx};
 use smol_str::SmolStr;
@@ -20,10 +22,12 @@ pub struct ModuleItemData {
     functions: Arena<FunctionData>,
     unqualified_imports: Arena<ImportData>,
     adts: Arena<AdtData>,
+    type_alias: Arena<TypeAliasData>,
 
     module_imports: Arena<ModuleImport>,
 
     variants: Arena<VariantData>,
+    fields: Arena<FieldData>,
     pub diagnostics: Vec<Diagnostic>,
 }
 
@@ -36,6 +40,12 @@ impl ModuleItemData {
 
     pub fn adts(&self) -> impl Iterator<Item = (Idx<AdtData>, &AdtData)> + ExactSizeIterator + '_ {
         self.adts.iter()
+    }
+
+    pub fn type_alias(
+        &self,
+    ) -> impl Iterator<Item = (Idx<TypeAliasData>, &TypeAliasData)> + ExactSizeIterator + '_ {
+        self.type_alias.iter()
     }
 
     pub fn variants(
@@ -73,11 +83,27 @@ impl Index<Idx<VariantData>> for ModuleItemData {
     }
 }
 
+impl Index<Idx<FieldData>> for ModuleItemData {
+    type Output = FieldData;
+
+    fn index(&self, index: Idx<FieldData>) -> &Self::Output {
+        &self.fields[index]
+    }
+}
+
 impl Index<Idx<FunctionData>> for ModuleItemData {
     type Output = FunctionData;
 
     fn index(&self, index: Idx<FunctionData>) -> &Self::Output {
         &self.functions[index]
+    }
+}
+
+impl Index<Idx<TypeAliasData>> for ModuleItemData {
+    type Output = TypeAliasData;
+
+    fn index(&self, index: Idx<TypeAliasData>) -> &Self::Output {
+        &self.type_alias[index]
     }
 }
 
@@ -88,34 +114,37 @@ impl Index<Idx<ModuleImport>> for ModuleItemData {
         &self.module_imports[index]
     }
 }
-struct LowerCtx<'a> {
-    db: &'a dyn DefDatabase,
+struct LowerCtx {
     module_items: ModuleItemData,
 }
 
-pub(super) fn lower_module(db: &dyn DefDatabase, parse: Parse) -> ModuleItemData {
+pub(super) fn lower_module(parse: Parse) -> ModuleItemData {
     let mut ctx = LowerCtx {
-        db,
         module_items: ModuleItemData::default(),
     };
     ctx.lower_module(parse.root());
     ctx.module_items
 }
 
-impl<'a> LowerCtx<'a> {
+impl LowerCtx {
     fn alloc_function(&mut self, function: FunctionData) -> Idx<FunctionData> {
-        let id = self.module_items.functions.alloc(function);
-        id
+        self.module_items.functions.alloc(function)
     }
 
     fn alloc_custom_type(&mut self, custom_type: AdtData) -> Idx<AdtData> {
-        let id = self.module_items.adts.alloc(custom_type);
-        id
+        self.module_items.adts.alloc(custom_type)
+    }
+
+    fn alloc_type_alias(&mut self, custom_type: TypeAliasData) -> Idx<TypeAliasData> {
+        self.module_items.type_alias.alloc(custom_type)
     }
 
     fn alloc_variant(&mut self, constructor: VariantData) -> Idx<VariantData> {
-        let id = self.module_items.variants.alloc(constructor);
-        id
+        self.module_items.variants.alloc(constructor)
+    }
+
+    fn alloc_field(&mut self, field: FieldData) -> Idx<FieldData> {
+        self.module_items.fields.alloc(field)
     }
 
     fn alloc_unqualified_import(&mut self, import: ImportData) -> Idx<ImportData> {
@@ -139,7 +168,6 @@ impl<'a> LowerCtx<'a> {
     fn lower_module_statement(&mut self, stmnt: &ast::ModuleStatement) {
         match stmnt {
             // ast::ModuleStatement::ModuleConstant(_) => todo!(),
-            // ast::ModuleStatement::Import(_) => todo!(),
             ast::ModuleStatement::Function(f) => {
                 self.lower_function(f);
             }
@@ -149,8 +177,11 @@ impl<'a> LowerCtx<'a> {
             ast::ModuleStatement::Adt(ct) => {
                 self.lower_custom_type(ct);
             }
-            _ => return,
-        };
+            ast::ModuleStatement::TypeAlias(it) => {
+                self.lower_type_alias(it);
+            }
+            _ => (),
+        }
     }
     /// Here were resolving the imports and allocating the
     fn lower_import(&mut self, i: &ast::Import) {
@@ -161,23 +192,24 @@ impl<'a> LowerCtx<'a> {
             .module_path()
             .into_iter()
             .flat_map(|m| m.path())
-            .filter_map(|t| Some(format!("{}", t.token()?.text())))
+            .filter_map(|t| Some(t.token()?.text().to_string()))
             .collect::<Vec<_>>()
             .join("/")
             .into();
 
-        let accessor: SmolStr = i
+        let Some(accessor) = i
             .module_path()
             .into_iter()
             .flat_map(|m| m.path())
-            .filter_map(|t| Some(format!("{}", t.token()?.text())))
+            .filter_map(|t| Some(t.token()?.text().to_string()))
             .last()
-            .expect("This is a compiler bug")
-            .into();
+        else {
+            return;
+        };
 
         let module_id = self.alloc_module_import(ModuleImport {
             name: module_name,
-            accessor,
+            accessor: accessor.into(),
             ast_ptr,
         });
 
@@ -188,10 +220,10 @@ impl<'a> LowerCtx<'a> {
                     unqualified.as_name().and_then(|t| t.text());
 
                 self.alloc_unqualified_import(ImportData {
-                    module: module_id.clone(),
+                    module: module_id,
                     unqualified_as_name,
                     unqualified_name,
-                    ast_ptr: ast_ptr,
+                    ast_ptr,
                 });
             }
         }
@@ -201,19 +233,15 @@ impl<'a> LowerCtx<'a> {
         let ast_ptr = AstPtr::new(fun);
 
         let mut params = Vec::new();
-
         if let Some(param_list) = fun.param_list() {
             for param in param_list.params() {
-                match param.pattern().and_then(|p| p.pattern()) {
-                    Some(Pattern::PatternVariable(it)) => {
-                        it.text().map(|t| {
-                            params.push(Param {
-                                name: t,
-                                label: param.label().and_then(|n| n.text()),
-                            })
-                        });
+                if let Some(Pattern::PatternVariable(it)) = param.pattern() {
+                    if let Some(t) = it.name().and_then(|n| n.text()) {
+                        params.push(Param {
+                            name: t,
+                            label: param.label().and_then(|n| n.text()),
+                        })
                     }
-                    _ => {},
                 }
             }
         };
@@ -222,21 +250,58 @@ impl<'a> LowerCtx<'a> {
             name: fun.name()?.text()?,
             params,
             visibility: Visibility::Public,
-            ast_ptr: ast_ptr,
+            ast_ptr,
         }))
     }
 
     fn lower_custom_type(&mut self, ct: &ast::Adt) -> Option<Idx<AdtData>> {
         let ast_ptr = AstPtr::new(ct);
         let name = ct.name()?.text()?;
+        let mut generic_params = Vec::new();
+        if let Some(params) = ct.generic_params() {
+            for param in params.params() {
+                generic_params.push(ty::ty_from_ast(param));
+            }
+        }
 
         let visibility = Visibility::Public;
 
-        let constructors = self.lower_constructors(ct.constructors());
+        let mut fields = Vec::new();
+        let constructors = self.lower_constructors(ct.constructors(), &mut fields);
+
+        // get common fields for field access, e.g. Dog(name: Int).name
+        let mut fields_iter = fields.into_iter();
+        let mut common_fields = fields_iter.next().unwrap_or_default();
+        for other in fields_iter {
+            common_fields.retain(|k, _| other.get(k).is_some());
+        }
         Some(self.alloc_custom_type(AdtData {
             name,
+            common_fields,
             variants: constructors,
-            params: Vec::new(),
+            params: generic_params,
+            visibility,
+            ast_ptr,
+        }))
+    }
+
+    fn lower_type_alias(&mut self, alias: &ast::TypeAlias) -> Option<Idx<TypeAliasData>> {
+        let ast_ptr = AstPtr::new(alias);
+        let name = alias.name()?.text()?;
+        let mut generic_params = Vec::new();
+        if let Some(params) = alias.generic_params() {
+            for param in params.params() {
+                generic_params.push(ty::ty_from_ast(param));
+            }
+        }
+
+        let visibility = Visibility::Public;
+
+        let body = ty::ty_from_ast_opt(alias.type_());
+        Some(self.alloc_type_alias(TypeAliasData {
+            name,
+            body,
+            params: generic_params,
             visibility,
             ast_ptr,
         }))
@@ -245,39 +310,61 @@ impl<'a> LowerCtx<'a> {
     fn lower_constructors(
         &mut self,
         constructors: ast::AstChildren<ast::Variant>,
+        fields: &mut Vec<HashMap<SmolStr, LocalFieldId>>,
     ) -> IdxRange<VariantData> {
         let start = self.next_constructor_idx();
         for constructor in constructors {
-            self.lower_constructor(&constructor);
+            let constr = self.lower_constructor(&constructor);
+            if let Some((_, set)) = constr {
+                fields.push(set);
+            }
         }
         let end = self.next_constructor_idx();
         IdxRange::new(start..end)
     }
 
-    fn lower_constructor(&mut self, constructor: &ast::Variant) -> Option<Idx<VariantData>> {
+    fn lower_constructor(
+        &mut self,
+        constructor: &ast::Variant,
+    ) -> Option<(Idx<VariantData>, HashMap<SmolStr, LocalFieldId>)> {
         let ast_ptr = AstPtr::new(constructor);
         let name = constructor.name()?.text()?;
 
-        let mut fields_vec = Vec::new();
+        let mut field_set = HashMap::new();
+
+        let start = self.next_field_idx();
         if let Some(fields) = constructor.field_list() {
             for field in fields.fields() {
                 if let Some(type_ref) = ty::ty_from_ast_opt(field.type_()) {
-                    fields_vec.push(Field {
-                        label: field.label().and_then(|t| t.text()),
+                    let label = field.label().and_then(|t| t.text());
+                    let idx = self.alloc_field(FieldData {
+                        label: label.clone(),
                         type_ref,
-                    })
+                        ast_ptr: AstPtr::new(&field),
+                    });
+                    if let Some(label) = label {
+                        field_set.insert(label, idx);
+                    }
                 }
             }
         }
+        let end = self.next_field_idx();
 
-        Some(self.alloc_variant(VariantData {
-            name,
-            fields: fields_vec,
-            ast_ptr,
-        }))
+        Some((
+            self.alloc_variant(VariantData {
+                name,
+                fields: IdxRange::new(start..end),
+                ast_ptr,
+            }),
+            field_set,
+        ))
     }
 
     fn next_constructor_idx(&self) -> Idx<VariantData> {
         Idx::from_raw(RawIdx::from(self.module_items.variants.len() as u32))
+    }
+
+    fn next_field_idx(&self) -> Idx<FieldData> {
+        Idx::from_raw(RawIdx::from(self.module_items.fields.len() as u32))
     }
 }

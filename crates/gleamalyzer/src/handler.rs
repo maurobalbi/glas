@@ -2,8 +2,9 @@ use crate::{convert, lsp_ext::SyntaxTreeParams, StateSnapshot};
 use anyhow::Result;
 use ide::{FileRange, GotoDefinitionResult};
 use lsp_types::{
-    CompletionParams, CompletionResponse, Diagnostic, GotoDefinitionParams, GotoDefinitionResponse,
-    Hover, HoverParams, Url,
+    CompletionParams, CompletionResponse, Diagnostic, DocumentHighlight, DocumentHighlightParams,
+    GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverParams, Location, ReferenceParams,
+    Url,
 };
 
 const MAX_DIAGNOSTICS_CNT: usize = 128;
@@ -62,6 +63,33 @@ pub(crate) fn goto_definition(
         _ => return Ok(None),
     };
     Ok(Some(GotoDefinitionResponse::Array(targets)))
+}
+
+pub(crate) fn document_highlight(
+    snap: StateSnapshot,
+    params: DocumentHighlightParams,
+) -> Result<Option<Vec<DocumentHighlight>>> {
+    let (fpos, line_map) =
+        convert::from_file_pos(&snap.vfs(), &params.text_document_position_params)?;
+    let ret = snap.analysis.highlight_related(fpos)?;
+    let ret = convert::to_document_highlight(&line_map, &ret);
+    Ok(Some(ret))
+}
+
+pub(crate) fn references(
+    snap: StateSnapshot,
+    params: ReferenceParams,
+) -> Result<Option<Vec<Location>>> {
+    let (fpos, _) = convert::from_file_pos(&snap.vfs(), &params.text_document_position)?;
+    let Some(refs) = snap.analysis.references(fpos)? else {
+        return Ok(None);
+    };
+    let vfs = snap.vfs();
+    let locs = refs
+        .into_iter()
+        .map(|frange| convert::to_location(&vfs, frange))
+        .collect::<Vec<_>>();
+    Ok(Some(locs))
 }
 
 pub(crate) fn syntax_tree(snap: StateSnapshot, params: SyntaxTreeParams) -> Result<String> {

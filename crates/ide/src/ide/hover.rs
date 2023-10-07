@@ -1,4 +1,4 @@
-use crate::DefDatabase;
+use crate::ty;
 
 use syntax::ast::AstNode;
 use syntax::{best_token_at_offset, TextRange};
@@ -18,25 +18,46 @@ pub(crate) fn hover(db: &dyn TyDatabase, FilePos { file_id, pos }: FilePos) -> O
     let sema = Semantics::new(db);
 
     let parse = sema.parse(file_id);
-    let tok = best_token_at_offset(&parse.syntax(), pos)?;
+    let tok = best_token_at_offset(parse.syntax(), pos)?;
 
-    match semantics::classify_node(sema, &tok.parent()?)? {
+    match semantics::classify_node(&sema, &tok.parent()?)? {
         semantics::Definition::Adt(it) => Some(HoverResult {
             range: tok.text_range(),
             markup: format!("```gleam\ntype {}\n```", it.name(db.upcast())),
         }),
         semantics::Definition::Function(it) => {
-            let ty = it.ty(db);
-            Some(HoverResult {
-                range: tok.text_range(),
-                markup: format!("```gleam\n{}\n```", ty.display(db)),
-            })
+            let name = it.name(db.upcast());
+            match it.ty(db) {
+                ty::Ty::Function { params, return_ } => {
+                    let params = params
+                        .iter()
+                        .map(|ty| format!("{}", ty.display(db)))
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    Some(HoverResult {
+                        range: tok.text_range(),
+                        markup: format!(
+                            "```gleam\nfn {}({}) -> {}\n```",
+                            name,
+                            params,
+                            return_.display(db)
+                        ),
+                    })
+                }
+                _ => None,
+            }
         }
         semantics::Definition::Variant(it) => Some(HoverResult {
             range: tok.text_range(),
             markup: format!("```gleam\n{}\n```", it.name(db.upcast())),
         }),
-        semantics::Definition::Field(_) => todo!(),
+        semantics::Definition::Field(it) => {
+            let ty = it.ty(db.upcast());
+            Some(HoverResult {
+                range: tok.text_range(),
+                markup: format!("```gleam\n{}\n```", ty.display(db)),
+            })
+        }
         semantics::Definition::Local(it) => {
             let ty = it.ty(db);
             Some(HoverResult {
@@ -47,6 +68,14 @@ pub(crate) fn hover(db: &dyn TyDatabase, FilePos { file_id, pos }: FilePos) -> O
         semantics::Definition::Module(it) => Some(HoverResult {
             range: tok.text_range(),
             markup: format!("```gleam\nimport {}\n```", it.name(db.upcast())),
+        }),
+        semantics::Definition::BuiltIn(it) => Some(HoverResult {
+            range: tok.text_range(),
+            markup: format!("```gleam\n{:?}\n```", it),
+        }),
+        semantics::Definition::TypeAlias(it) => Some(HoverResult {
+            range: tok.text_range(),
+            markup: format!("```gleam\ntype {}\n```", it.name(db.upcast())),
         }),
     }
 }
@@ -71,6 +100,7 @@ mod tests {
         expect.assert_eq(&got);
     }
 
+    #[allow(dead_code)]
     #[track_caller]
     fn check_no(fixture: &str) {
         let (db, f) = TestDB::from_fixture(fixture).unwrap();
@@ -85,7 +115,7 @@ mod tests {
             "main",
             expect![[r#"
                 ```gleam
-                fn() -> a
+                fn main() -> a
                 ```
             "#]],
         );
@@ -113,7 +143,7 @@ mod tests {
             "#]],
         );
     }
-    
+
     #[test]
     fn module() {
         check(

@@ -9,7 +9,7 @@ use async_lsp::{AnyEvent, AnyNotification, AnyRequest, LspService};
 use serde::Serialize;
 use tower::{Layer, Service};
 
-const LEVEL: tracing::Level = tracing::Level::DEBUG;
+const LEVEL: tracing::Level = tracing::Level::INFO;
 
 pub struct Meter<S> {
     service: S,

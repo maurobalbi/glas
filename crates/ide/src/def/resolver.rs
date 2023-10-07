@@ -6,8 +6,8 @@ use smol_str::SmolStr;
 use crate::{DefDatabase, FileId};
 
 use super::{
-    hir::{Function, Local, Module, Variant},
-    hir_def::{AdtId, ModuleDefId},
+    hir::{Adt, BuiltIn, Function, Local, Module, TypeAlias, Variant},
+    hir_def::ModuleDefId,
     module::ExprId,
     scope::{ModuleScope, ScopeId},
     ExprScopes, FunctionId,
@@ -53,11 +53,15 @@ impl ScopeNames {
     }
 }
 
+#[derive(Debug)]
 pub enum ResolveResult {
     Local(Local),
     Function(Function),
     Variant(Variant),
     Module(Module),
+    Adt(Adt),
+    TypeAlias(TypeAlias),
+    BuiltIn(BuiltIn), // BuiltIn()
 }
 
 impl Resolver {
@@ -88,23 +92,32 @@ impl Resolver {
         for (name, moddef) in self.module_scope.values() {
             match moddef {
                 super::hir_def::ModuleDefId::FunctionId(it) => {
-                    map.add(name, ResolveResult::Function(Function::from(*it).clone()))
+                    map.add(name, ResolveResult::Function(Function::from(*it)))
                 }
-                super::hir_def::ModuleDefId::AdtId(_) => {}
                 super::hir_def::ModuleDefId::VariantId(it) => {
-                    map.add(name, ResolveResult::Variant(Variant::from(*it).clone()))
+                    map.add(name, ResolveResult::Variant(Variant::from(*it)))
                 }
+                super::hir_def::ModuleDefId::AdtId(_)
+                | super::hir_def::ModuleDefId::TypeAliasId(_) => {}
             }
         }
 
         map.map
     }
 
-    pub fn resolve_type(&self, name: &SmolStr) -> Option<AdtId> {
-        match self.module_scope.resovlve_type(name.clone()) {
-            Some(ModuleDefId::AdtId(t)) => Some(t.clone()),
+    pub fn resolve_type(&self, name: &SmolStr) -> Option<ResolveResult> {
+        let resolved = self.module_scope.resovlve_type(name.clone());
+        match resolved {
+            Some(ModuleDefId::AdtId(adt)) => Some(ResolveResult::Adt((*adt).into())),
+            Some(ModuleDefId::TypeAliasId(type_alias)) => {
+                Some(ResolveResult::TypeAlias((*type_alias).into()))
+            }
             _ => None,
         }
+    }
+
+    pub fn resolve_module(&self, name: &SmolStr) -> Option<FileId> {
+        self.module_scope.resolve_module(name).cloned()
     }
 
     pub fn resolve_name(&self, name: &SmolStr) -> Option<ResolveResult> {
@@ -125,26 +138,32 @@ impl Resolver {
             }
         }
 
-        if let Some(res) = self.module_scope.resolve_name_locally(name.clone()) {
+        if let Some(res) = self.module_scope.resolve_name_locally(name) {
             match *res {
                 super::hir_def::ModuleDefId::FunctionId(it) => {
                     return Some(ResolveResult::Function(Function::from(it)))
                 }
-                super::hir_def::ModuleDefId::AdtId(_) => {}
                 super::hir_def::ModuleDefId::VariantId(it) => {
                     return Some(ResolveResult::Variant(Variant::from(it)))
                 }
+                super::hir_def::ModuleDefId::AdtId(_)
+                | super::hir_def::ModuleDefId::TypeAliasId(_) => {}
             }
+        }
+
+        if let Some(val) = BuiltIn::values().get(name) {
+            return Some(ResolveResult::BuiltIn(val.clone()));
         }
 
         None
     }
 
     pub fn body_owner(&self) -> Option<FunctionId> {
-        self.scopes().find_map(|scope| match scope {
-            Scope::ExprScope(it) => Some(it.owner),
-            _ => None,
-        })
+        self.scopes()
+            .map(|scope| match scope {
+                Scope::ExprScope(it) => it.owner,
+            })
+            .next()
     }
 
     fn scopes(&self) -> impl Iterator<Item = &Scope> {

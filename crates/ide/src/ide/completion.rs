@@ -1,13 +1,13 @@
 use smol_str::SmolStr;
 use syntax::{
     ast::{self, AstNode, SourceFile},
-    best_token_at_offset, find_node_at_offset, match_ast, GleamLanguage, SyntaxKind, SyntaxNode,
-    SyntaxToken, TextRange, TextSize, T,
+    best_token_at_offset, find_node_at_offset, match_ast, SyntaxKind, SyntaxNode, SyntaxToken,
+    TextRange, TextSize, T,
 };
 
 use crate::{
     def::{
-        find_def,
+        find_container,
         hir::Function,
         hir::Variant,
         hir_def::ModuleDefId,
@@ -59,7 +59,7 @@ pub struct CompletionContext<'db> {
     source_range: TextRange,
     expr_ptr: Option<InFile<SyntaxNode>>,
     tok: SyntaxToken,
-    original_file: SyntaxNode,
+    trigger_tok: Option<SyntaxToken>,
 }
 
 impl<'db> CompletionContext<'db> {
@@ -68,14 +68,19 @@ impl<'db> CompletionContext<'db> {
         let original_file = sema.parse(position.file_id);
         let tok = best_token_at_offset(original_file.syntax(), position.pos)?;
 
+        let trigger_tok = original_file
+            .syntax()
+            .token_at_offset(position.pos)
+            .left_biased();
+
         let mut ctx = CompletionContext {
             db,
             sema,
             is_top_level: false,
             source_range: TextRange::default(),
             expr_ptr: None,
-            original_file: original_file.syntax().clone(),
             tok,
+            trigger_tok,
         };
 
         ctx.source_range = match ctx.tok.kind() {
@@ -88,7 +93,7 @@ impl<'db> CompletionContext<'db> {
             .tok
             .parent_ancestors()
             .take_while(|it| {
-                it.text_range() == ctx.source_range && !(it.kind() == SyntaxKind::SOURCE_FILE)
+                it.text_range() == ctx.source_range && it.kind() != SyntaxKind::SOURCE_FILE
             })
             .last();
 
@@ -117,7 +122,6 @@ impl<'db> CompletionContext<'db> {
     fn fill(&mut self, original_file: SourceFile, offset: TextSize) {
         if let Some(name_ref) = find_node_at_offset::<ast::NameRef>(original_file.syntax(), offset)
         {
-            tracing::info!("im filling");
             self.classify_name_ref(original_file, &name_ref);
         }
     }
@@ -127,10 +131,9 @@ impl<'db> CompletionContext<'db> {
 
 pub(crate) fn completions(
     db: &dyn TyDatabase,
-    fpos @ FilePos { file_id, pos: _ }: FilePos,
+    fpos: FilePos,
     trigger_char: Option<char>,
 ) -> Option<Vec<CompletionItem>> {
-    tracing::info!("Completeing complk {:?}", fpos);
     let ctx = CompletionContext::new(db, fpos)?;
 
     let mut acc = Vec::default();
@@ -152,7 +155,6 @@ pub(crate) fn completions(
 }
 
 fn complete_at(acc: &mut Vec<CompletionItem>, ctx: CompletionContext<'_>) {
-    
     acc.push(CompletionItem {
         label: "target(javscript)".into(),
         source_range: ctx.source_range,
@@ -196,24 +198,22 @@ fn complete_at(acc: &mut Vec<CompletionItem>, ctx: CompletionContext<'_>) {
 }
 
 fn complete_dot(acc: &mut Vec<CompletionItem>, ctx: CompletionContext<'_>) -> Option<()> {
+    let trigger_tok = ctx.trigger_tok?;
     match_ast! {
-        match (ctx.tok.parent()?) {
+        match (trigger_tok.parent()?) {
             ast::FieldAccessExpr(it) => {
                 // let receiver = find_opt_node_in_file(&ctx.original_file, it.base())?;
                 // let ty = ctx.sema.ty_of_expr(&receiver);
-                let text = it.base()?.syntax().to_string();
+                let file = ctx.sema.resolve_module(it.base()?)?;
 
-                let map = ctx.db.module_map();
-                let file = map
-                    .iter()
-                    .find(|(_, name)| name.split('/').last().eq(&Some(text.as_str())))?;
-                let module_items = ctx.db.module_scope(file.0);
+                let module_items = ctx.db.module_scope(file);
 
-                for (def, _) in module_items.declarations() {
+                for (def, _) in module_items.declarations().flatten() {
                     let kind = match def {
                         ModuleDefId::FunctionId(_) => CompletionItemKind::Function,
                         ModuleDefId::AdtId(_) => CompletionItemKind::Adt,
                         ModuleDefId::VariantId(_) => CompletionItemKind::Variant,
+                        ModuleDefId::TypeAliasId(_) => CompletionItemKind::Adt,
                     };
                     let (name, replace) = match def {
                         // ToDo: Extract to function because it's also used in complete_expr
@@ -236,7 +236,7 @@ fn complete_dot(acc: &mut Vec<CompletionItem>, ctx: CompletionContext<'_>) -> Op
                                 .collect::<Vec<_>>()
                                 .join(", ");
                             let name = it.name(ctx.db.upcast());
-                            let label = if params.len() > 0 {
+                            let label = if !params.is_empty() {
                                 format!("{}(…)", name)
                             } else {
                                 format!("{}()", name)
@@ -250,12 +250,12 @@ fn complete_dot(acc: &mut Vec<CompletionItem>, ctx: CompletionContext<'_>) -> Op
                                 .iter()
                                 .enumerate()
                                 .map(|(i, p)|
-                                    format!("${{{}:{}}}", i + 1, p.label.clone().unwrap_or("()".into()))
+                                    format!("${{{}:{}}}", i + 1, p.label(ctx.db.upcast()).clone().unwrap_or("()".into()))
                                 )
                                 .collect::<Vec<_>>()
                                 .join(", ");
                             let name = it.name(ctx.db.upcast());
-                            let label = if fields.len() > 0 {
+                            let label = if !fields.is_empty() {
                                 format!("{}(…)", name)
                             } else {
                                 format!("{}()", name)
@@ -268,7 +268,7 @@ fn complete_dot(acc: &mut Vec<CompletionItem>, ctx: CompletionContext<'_>) -> Op
                         label: name.into(),
                         source_range: ctx.source_range,
                         replace: replace.into(),
-                        kind: kind,
+                        kind,
                         signature: Some(String::from("signature")),
                         description: Some(String::from("desription")),
                         documentation: Some(String::from("docs")),
@@ -290,8 +290,7 @@ fn complete_import(acc: &mut Vec<CompletionItem>, ctx: &CompletionContext<'_>) -
     if ctx
         .tok
         .parent_ancestors()
-        .find(|t| ast::ModulePath::can_cast(t.kind()))
-        .is_some()
+        .any(|t| ast::ModulePath::can_cast(t.kind()))
     {
         for (_, name) in ctx.db.module_map().iter() {
             acc.push(CompletionItem {
@@ -311,7 +310,7 @@ fn complete_import(acc: &mut Vec<CompletionItem>, ctx: &CompletionContext<'_>) -
 
 fn complete_expr(acc: &mut Vec<CompletionItem>, ctx: &CompletionContext<'_>) -> Option<()> {
     let expr_ptr = ctx.expr_ptr.clone()?;
-    let resolver = match find_def(ctx.db.upcast(), expr_ptr.as_ref()) {
+    let resolver = match find_container(ctx.db.upcast(), expr_ptr.as_ref()) {
         Some(ModuleDefId::FunctionId(id)) => {
             let source_map = ctx.db.body_source_map(id);
             let expr_ptr = expr_ptr.with_value(ast::Expr::cast(expr_ptr.value.clone())?);
@@ -330,6 +329,9 @@ fn complete_expr(acc: &mut Vec<CompletionItem>, ctx: &CompletionContext<'_>) -> 
             ResolveResult::Local(_) => CompletionItemKind::Param,
             ResolveResult::Function(_) => CompletionItemKind::Function,
             ResolveResult::Variant(_) => CompletionItemKind::Variant,
+            ResolveResult::BuiltIn(_) => CompletionItemKind::Variant,
+            ResolveResult::Adt(_) => CompletionItemKind::Adt,
+            ResolveResult::TypeAlias(_) => CompletionItemKind::Adt,
         };
         let replace = match def {
             ResolveResult::Function(it) => {
@@ -403,36 +405,13 @@ fn complete_snippet(acc: &mut Vec<CompletionItem>, ctx: &CompletionContext) {
     });
 }
 
-/// Attempts to find `node` inside `syntax` via `node`'s text range.
-/// If the fake identifier has been inserted after this node or inside of this node use the `_compensated` version instead.
-fn find_opt_node_in_file<N: AstNode<Language = GleamLanguage>>(
-    syntax: &SyntaxNode,
-    node: Option<N>,
-) -> Option<N> {
-    find_node_in_file(syntax, &node?)
-}
-
-/// Attempts to find `node` inside `syntax` via `node`'s text range.
-/// If the fake identifier has been inserted after this node or inside of this node use the `_compensated` version instead.
-fn find_node_in_file<N: AstNode<Language = GleamLanguage>>(
-    syntax: &SyntaxNode,
-    node: &N,
-) -> Option<N> {
-    let syntax_range = syntax.text_range();
-    let range = node.syntax().text_range();
-    let intersection = range.intersect(syntax_range)?;
-    syntax
-        .covering_element(intersection)
-        .ancestors()
-        .find_map(N::cast)
-}
-
 #[cfg(test)]
 mod tests {
     use crate::base::SourceDatabase;
     use crate::tests::TestDB;
     use expect_test::{expect, Expect};
 
+    #[allow(dead_code)]
     #[track_caller]
     fn check_no(fixture: &str, label: &str) {
         let (db, f) = TestDB::from_fixture(fixture).unwrap();

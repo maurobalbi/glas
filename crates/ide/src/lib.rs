@@ -11,11 +11,12 @@ pub const DEFAULT_IMPORT_FILE: &str = "gleam.toml";
 
 pub use self::ide::{
     Analysis, AnalysisHost, Cancelled, CompletionItem, CompletionItemKind, GotoDefinitionResult,
-    HoverResult,
+    HlRelated, HoverResult,
 };
 pub use base::{
-    module_name, Change, FileId, FilePos, FileRange, FileSet, InFile, ModuleMap, PackageGraph,
-    PackageInfo, SourceDatabase, SourceRoot, SourceRootId, VfsPath,
+    module_name, Change, Dependency, FileId, FilePos, FileRange, FileSet, InFile, ModuleMap,
+    PackageGraph, PackageId, PackageInfo, PackageRoot, SourceDatabase, SourceRoot, SourceRootId,
+    Target, VfsPath,
 };
 pub use def::DefDatabase;
 pub use diagnostic::{Diagnostic, DiagnosticKind, Severity};

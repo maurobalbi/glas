@@ -1,4 +1,4 @@
-use std::{cmp::min, collections::HashMap, mem, ops::Deref, sync::Arc, hash::Hash};
+use std::{cmp::min, collections::HashMap, mem, ops::Deref, sync::Arc};
 
 use la_arena::ArenaMap;
 use smol_str::SmolStr;
@@ -7,9 +7,9 @@ use syntax::ast::{BinaryOpKind, LiteralKind};
 use crate::{
     def::{
         body::Body,
-        hir::{self, ModuleDef},
+        hir::{self, Adt, Field, ModuleDef, TypeAlias},
         hir_def::{AdtId, FunctionId},
-        module::{Expr, ExprId, Field, Pattern, PatternId, Statement},
+        module::{Expr, ExprId, Pattern, PatternId, Statement},
         resolver::{resolver_for_toplevel, ResolveResult, Resolver},
         resolver_for_expr,
     },
@@ -26,10 +26,15 @@ enum Ty {
     Unknown {
         idx: u32,
     },
+    Nil,
     Bool,
     Int,
     Float,
     String,
+    Result {
+        ok: TyVar,
+        err: TyVar,
+    },
     List {
         of: TyVar,
     },
@@ -38,7 +43,7 @@ enum Ty {
         generic_params: Vec<TyVar>,
     },
     Function {
-        params: Vec<TyVar>,
+        params: Vec<(Option<SmolStr>, TyVar)>,
         return_: TyVar,
     },
     Tuple {
@@ -63,7 +68,6 @@ pub struct InferenceResult {
 
 impl InferenceResult {
     pub fn ty_for_pattern(&self, pattern: PatternId) -> super::Ty {
-        tracing::info!("{:#?} {:?}", self, pattern);
         self.pattern_ty_map[pattern].clone()
     }
 
@@ -121,7 +125,7 @@ pub(crate) fn infer_function_group_query(
         fn_to_ty_var.insert(*f, ty);
         ctx.unify_var(TyVar(i as u32), ty);
 
-        let inferred_ctx = mem::replace(&mut ctx.body_ctx, BodyCtx::default());
+        let inferred_ctx = std::mem::take(&mut ctx.body_ctx);
         fn_to_ctx.insert(*f, inferred_ctx);
     }
 
@@ -173,12 +177,13 @@ impl<'db> InferCtx<'db> {
         ty_var
     }
 
+    // ToDo: Add context file_id to make proper resolver!
     fn make_type(&mut self, ty: super::Ty, env: &mut HashMap<SmolStr, TyVar>) -> TyVar {
         let ty = match ty {
             super::Ty::Unknown => return self.new_ty_var(),
+            super::Ty::Hole => return self.new_ty_var(),
             // this is not correct, same name obviously doesnt have same type e.g fn a(a:a) {a} and fn b(b: a} {b} dont have the same type!
             super::Ty::Generic { name } => {
-                tracing::info!("making generic type: {}", name);
                 return match env.get(&name) {
                     Some(var) => *var,
                     None => {
@@ -189,21 +194,27 @@ impl<'db> InferCtx<'db> {
                     }
                 };
             }
+            super::Ty::Nil => Ty::Nil,
             super::Ty::Bool => Ty::Bool,
             super::Ty::Int => Ty::Int,
             super::Ty::Float => Ty::Float,
             super::Ty::String => Ty::String,
+            super::Ty::Result { ok, err } => {
+                let ok = self.make_type(ok.deref().clone(), env);
+                let err = self.make_type(err.deref().clone(), env);
+                Ty::Result { ok, err }
+            }
             super::Ty::List { of } => {
                 let ty = self.make_type(of.deref().clone(), env);
                 Ty::List { of: ty }
             }
             super::Ty::Function { params, return_ } => {
                 let mut pars = Vec::new();
-                for param in params.deref().into_iter() {
+                for param in params.deref().iter() {
                     let par_var = self.new_ty_var();
                     let par_ty = self.make_type(param.clone(), env);
                     self.unify_var(par_var, par_ty);
-                    pars.push(par_var);
+                    pars.push((None, par_var));
                 }
                 let ret = self.new_ty_var();
                 let ret_ty = self.make_type(return_.deref().clone(), env);
@@ -213,20 +224,60 @@ impl<'db> InferCtx<'db> {
                     return_: ret,
                 }
             }
-            super::Ty::Tuple { fields: _ } => todo!(),
-            super::Ty::Adt { name, params } => {
+            super::Ty::Tuple { fields } => {
+                let mut field_tys = Vec::new();
+                for field in fields.deref().iter() {
+                    let field_ty = self.make_type(field.clone(), env);
+                    field_tys.push(field_ty)
+                }
+                Ty::Tuple { fields: field_tys }
+            }
+            super::Ty::Adt {
+                module,
+                name,
+                params,
+            } => {
                 let mut pars = Vec::new();
 
-                for param in params.deref().into_iter() {
+                for param in params.deref().iter() {
                     let par_var = self.new_ty_var();
                     let par_ty = self.make_type(param.clone(), env);
                     self.unify_var(par_var, par_ty);
                     pars.push(par_var);
                 }
-                match self.resolver.resolve_type(&name) {
-                    Some(adt_id) => Ty::Adt {
-                        generic_params: pars,
-                        adt_id,
+                let module_def = match module {
+                    Some(module) => self.resolver.resolve_module(&module).and_then(|m| {
+                        // ToDo: use something like Module.exports().get instead
+                        let resolver = resolver_for_toplevel(self.db.upcast(), m);
+                        resolver.resolve_type(&name)
+                    }),
+                    None => self.resolver.resolve_type(&name),
+                };
+                match module_def {
+                    Some(type_) => match type_ {
+                        ResolveResult::Adt(adt) => Ty::Adt {
+                            generic_params: pars,
+                            adt_id: adt.id,
+                        },
+                        ResolveResult::TypeAlias(alias) => {
+                            let data = TypeAlias { id: alias.id }.data(self.db.upcast());
+                            let type_alias = self.db.lookup_intern_type_alias(alias.id);
+                            if let Some(ty) = data.body {
+                                let resolver = std::mem::replace(
+                                    &mut self.resolver,
+                                    resolver_for_toplevel(self.db.upcast(), type_alias.file_id),
+                                );
+                                let ty = self.make_type(ty, env);
+                                let _ = std::mem::replace(&mut self.resolver, resolver);
+                                return ty;
+                            }
+                            self.idx += 1;
+                            Ty::Unknown { idx: self.idx }
+                        }
+                        _ => {
+                            self.idx += 1;
+                            Ty::Unknown { idx: self.idx }
+                        }
                     },
                     None => {
                         self.idx += 1;
@@ -240,17 +291,24 @@ impl<'db> InferCtx<'db> {
 
     fn infer_function(&mut self, body: &Body) -> TyVar {
         let mut param_tys = Vec::new();
-        for (param, ty) in &body.params {
+        let mut env = HashMap::new();
+        for (param, ty, label) in &body.params {
             let pat_ty = self.ty_for_pattern(*param);
-            tracing::info!("inferring function param ty {:?}", ty);
             if let Some(ty) = ty {
-                let mut env = HashMap::new();
                 let param_ty = self.make_type(ty.clone(), &mut env);
                 self.unify_var(pat_ty, param_ty);
             }
-            param_tys.push(pat_ty);
+            param_tys.push((label.clone(), pat_ty));
         }
+        let return_ = body
+            .return_
+            .as_ref()
+            .map(|r| self.make_type(r.clone(), &mut env));
         let body_ty = self.infer_expr(body.body_expr);
+        if let Some(ret) = return_ {
+            self.unify_var(ret, body_ty);
+        }
+
         Ty::Function {
             params: param_tys,
             return_: body_ty,
@@ -280,8 +338,7 @@ impl<'db> InferCtx<'db> {
                     for pat in patterns {
                         let new_var = self.new_ty_var();
                         let pat_ty = self.infer_pattern(pat, new_var);
-                        self.unify_var(last, pat_ty);
-                        params.push(pat_ty);
+                        params.push((None, pat_ty));
                     }
                     let cb_tail = self.infer_stmts(stmts.collect());
                     let cb_ty = Ty::Function {
@@ -293,13 +350,13 @@ impl<'db> InferCtx<'db> {
                     match &self.body[expr] {
                         Expr::Call { func, args } => {
                             let mut arg_tys = Vec::new();
-                            for arg in args {
+                            for (_, arg) in args {
                                 let param_ty = self.new_ty_var();
-                                arg_tys.push(param_ty);
+                                arg_tys.push((None, param_ty));
                                 let arg_ty = self.infer_expr(*arg);
                                 self.unify_var(arg_ty, param_ty)
                             }
-                            arg_tys.push(cb_tyvar);
+                            arg_tys.push((None, cb_tyvar));
                             let ret_ty = self.new_ty_var();
                             let fun_ty = self.infer_expr(*func);
 
@@ -313,9 +370,7 @@ impl<'db> InferCtx<'db> {
                             last = ret_ty
                         }
                         _ => {
-                            let mut arg_tys = Vec::new();
-
-                            arg_tys.push(cb_tyvar);
+                            let arg_tys = vec![(None, cb_tyvar)];
                             let ret_ty = self.new_ty_var();
                             let fun_ty = self.infer_expr(expr);
 
@@ -345,7 +400,6 @@ impl<'db> InferCtx<'db> {
     }
 
     fn infer_expr_inner(&mut self, tgt_expr: ExprId) -> TyVar {
-        tracing::info!("inferring {:?}", &self.body[tgt_expr]);
         match &self.body[tgt_expr] {
             Expr::Missing => self.new_ty_var(),
             Expr::Hole => self.new_ty_var(),
@@ -368,7 +422,9 @@ impl<'db> InferCtx<'db> {
             Expr::Binary { left, right, op } => {
                 let lhs_ty = self.infer_expr(*left);
                 let rhs_ty = self.infer_expr(*right);
-                let Some(op) = op else { return self.new_ty_var() };
+                let Some(op) = op else {
+                    return self.new_ty_var();
+                };
                 match op {
                     BinaryOpKind::IntAdd
                     | BinaryOpKind::IntSub
@@ -413,7 +469,19 @@ impl<'db> InferCtx<'db> {
                         self.unify_var(lhs_ty, rhs_ty);
                         bool
                     }
+                    BinaryOpKind::Concat => {
+                        self.unify_var_ty(lhs_ty, Ty::String);
+                        self.unify_var(lhs_ty, rhs_ty);
+                        lhs_ty
+                    }
                 }
+            }
+            Expr::Tuple { fields } => {
+                let mut field_ty = Vec::new();
+                for field in fields.iter() {
+                    field_ty.push(self.infer_expr(*field));
+                }
+                Ty::Tuple { fields: field_ty }.intern(self)
             }
             Expr::Spread { expr } => {
                 let sp_ty = self.infer_expr(*expr);
@@ -425,12 +493,41 @@ impl<'db> InferCtx<'db> {
                 let arg_ty = self.infer_expr(*left);
 
                 let ret_ty = self.new_ty_var();
+
+                // Ugly hack to notify Expr call of
+                match &self.body[*right] {
+                    Expr::Call { func, args } => {
+                        let func_ty = self.infer_expr(*func);
+                        let ty = self.table.get_mut(func_ty.0).clone();
+
+                        for (_, arg) in args {
+                            self.infer_expr(*arg);
+                        }
+
+                        match ty {
+                            Ty::Function { params, return_ } => {
+                                if params.len() > args.len() && !params.is_empty() {
+                                    self.unify_var(arg_ty, params[0].1)
+                                }
+                                return return_;
+                            }
+                            _ => {
+                                //ToDo: Diagnostics
+                            }
+                        }
+                        //infer func expr, check if amount of params is the same as args, then unify left
+                    }
+                    _ => {
+                        //infer right, and unify like int he old times
+                    }
+                }
+
                 let fun_ty = self.infer_expr(*right);
 
                 self.unify_var_ty(
                     fun_ty,
                     Ty::Function {
-                        params: vec![arg_ty],
+                        params: vec![(None, arg_ty)],
                         return_: ret_ty,
                     },
                 );
@@ -439,25 +536,27 @@ impl<'db> InferCtx<'db> {
             Expr::Call { func, args } => {
                 let mut arg_tys = Vec::new();
                 let mut hole = None;
-                let mut count = 0;
-
-                for arg in args {
-                    match self.body[*arg] {
-                        Expr::Hole => {
-                            count += 1;
-                            let var = self.infer_expr(*arg);
-                            hole = Some(var);
-                            arg_tys.push(var);
-                        }
-                        _ => {
-                            arg_tys.push(self.infer_expr(*arg));
-                        }
-                    }
-                }
-
                 // add(_, 1) => fn(_hole) { add(_hole, 1) }
                 let ret_ty = self.new_ty_var();
                 let fun_ty = self.infer_expr(*func);
+
+                for (_, arg) in args {
+                    match self.body[*arg] {
+                        Expr::Hole => {
+                            let var = self.infer_expr(*arg);
+                            hole = Some(var);
+                            arg_tys.push((None, var));
+                        }
+                        // ..object
+                        Expr::Spread { expr } => {
+                            let expr = self.infer_expr(expr);
+                            self.unify_var(ret_ty, expr);
+                        }
+                        _ => {
+                            arg_tys.push((None, self.infer_expr(*arg)));
+                        }
+                    }
+                }
 
                 self.unify_var_ty(
                     fun_ty,
@@ -469,8 +568,14 @@ impl<'db> InferCtx<'db> {
 
                 if let Some(hole) = hole {
                     let new_ty = self.new_ty_var();
-                    self.unify_var_ty(new_ty, Ty::Function { params: vec![hole], return_: ret_ty  });
-                    return new_ty
+                    self.unify_var_ty(
+                        new_ty,
+                        Ty::Function {
+                            params: vec![(None, hole)],
+                            return_: ret_ty,
+                        },
+                    );
+                    return new_ty;
                 }
                 ret_ty
             }
@@ -487,14 +592,22 @@ impl<'db> InferCtx<'db> {
                         }
                     }
                     Some(ResolveResult::Function(func)) => {
-                        // check if resolved funcion is in group being inferred to avoid cycles
+                        // check if resolved function is in group being inferred to avoid cycles
                         let group_ty = self.group.iter().enumerate().find(|f| *f.1 == func.id);
                         match group_ty {
                             Some(grp) => TyVar(grp.0 as u32),
                             None => {
                                 let inferred_ty = func.ty(db);
                                 let mut env = HashMap::new();
-                                self.make_type(inferred_ty.clone(), &mut env)
+                                // ToDo: analogous to inference for adt in field.access, this and every other resolved type / value
+                                let func_loc = self.db.lookup_intern_function(func.id); //       needs to have a local resolver to make the correct type
+                                let resolver = std::mem::replace(
+                                    &mut self.resolver,
+                                    resolver_for_toplevel(self.db.upcast(), func_loc.file_id),
+                                );
+                                let ty = self.make_type(inferred_ty, &mut env);
+                                let _ = std::mem::replace(&mut self.resolver, resolver);
+                                ty
                             }
                         }
                     }
@@ -502,22 +615,17 @@ impl<'db> InferCtx<'db> {
                     _ => self.new_ty_var(),
                 }
             }
-            Expr::Case { subject, clauses } => {
-                // let subj_tys = subjects.iter().map(|s| self.infer_expr(*s)).collect::<Vec<_>>();
-
-                // let last = self.new_ty_var();
-                // for clause in clauses.into_iter() {
-                //     subj_tys.iter().zip(clause.patterns.iter()).for_each(|(sub, pat)| {
-                //         self.infer_pattern(*pat, *sub);
-                //         let expr_ty = self.infer_expr(clause.expr);
-                //         self.unify_var(last, expr_ty);
-                //     })
-                // }
-                // last
+            Expr::Case { subjects, clauses } => {
+                let mut subject_tys = Vec::new();
+                for subject in subjects.iter() {
+                    subject_tys.push(self.infer_expr(*subject));
+                }
                 let ret = self.new_ty_var();
-                let ty = self.infer_expr(*subject);
+
                 for clause in clauses.iter() {
-                    self.infer_pattern(clause.pattern, ty);
+                    for (pat, ty) in clause.patterns.iter().zip(subject_tys.iter()) {
+                        self.infer_pattern(*pat, *ty);
+                    }
                     let expr_ty = self.infer_expr(clause.expr);
                     self.unify_var(expr_ty, ret);
                 }
@@ -529,87 +637,81 @@ impl<'db> InferCtx<'db> {
                 label: _,
                 label_name,
             } => {
-                let ty = self.infer_expr(*container);
-
                 let field_var = self.new_ty_var();
-                let field_ty = match self.table.get_mut(ty.0) {
-                    Ty::Adt {
-                        adt_id,
-                        generic_params: params,
-                    } => {
-                        self.body_ctx.field_resolution.insert(
-                            tgt_expr,
-                            FieldResolution::ModuleDef(ModuleDef::Adt(hir::Adt::from(*adt_id))),
-                        );
-                        match params.iter().next() {
-                            Some(var) => *var,
-                            None => self.new_ty_var(),
-                        }
+                let base_ty = self.infer_expr(*container);
+                // ToDo: This is wrong, since it might also be a module_access
+                if let Ty::Adt { adt_id, .. } = self.table.get_mut(base_ty.0) {
+                    let adt = Adt { id: *adt_id };
+                    if let Some(field) = adt.common_fields(self.db.upcast()).get(label_name) {
+                        let mut env = HashMap::new();
+                        self.body_ctx
+                            .field_resolution
+                            .insert(tgt_expr, FieldResolution::Field(*field));
+                        return self.make_type(field.ty(self.db.upcast()), &mut env);
                     }
-                    _ => {
-                        tracing::info!("INFERRING FIELD_RESOLUTION NON ADT");
-                        let map = self.db.module_map();
-                        let file = map
-                            .iter()
-                            .find(|(_, name)| name.split('/').last().eq(&Some(base_string.as_str())));
-                        tracing::info!("fileid for modulename {:?} {}", file, base_string);
-                        if let Some(res) = file
-                            .map(|f| resolver_for_toplevel(self.db.upcast(), f.0))
-                            .and_then(|r| r.resolve_name(label_name))
-                        {
-                            match res {
-                                ResolveResult::Local(_) => {
-                                    unreachable!("This is a compiler bug")
-                                }
-                                ResolveResult::Function(it) => {
-                                    let fn_ty = it.ty(self.db);
-                                    let mut env = HashMap::new();
-
-                                    self.body_ctx.field_resolution.insert(
-                                        tgt_expr,
-                                        FieldResolution::ModuleDef(ModuleDef::Function(it)),
-                                    );
-                                    self.body_ctx
-                                        .module_resolution
-                                        .insert(*container, file.unwrap().0.clone());
-                                    return self.make_type(fn_ty.clone(), &mut env);
-                                }
-                                // ToDo: Add type to adt in hir and fix this.
-                                ResolveResult::Variant(it) => {
-                                    let var = self.new_ty_var();
-                                    self.unify_var_ty(
-                                        var,
-                                        Ty::Adt {
-                                            generic_params: Vec::new(),
-                                            adt_id: it.parent,
-                                        },
-                                    );
-                                    self.body_ctx
-                                        .module_resolution
-                                        .insert(*container, file.unwrap().0.clone());
-                                    self.body_ctx.field_resolution.insert(
-                                        tgt_expr,
-                                        FieldResolution::ModuleDef(ModuleDef::Variant(it)),
-                                    );
-                                    return var;
-                                }
-                                ResolveResult::Module(_) => todo!(),
-                            }
-                        }
-                        self.new_ty_var()
-                    }
-                };
-                self.unify_var(field_ty, field_var);
-                field_ty
-            }
-            Expr::VariantLiteral { name, fields } => {
-                let mut params = Vec::new();
-                // also unify fields
-                for field in fields {
-                    params.push(self.infer_expr(*field));
                 }
-                let (ty, _params) = self.resolve_variant(name);
-                ty
+
+                if let Some(file) = self.resolver.resolve_module(base_string) {
+                    self.body_ctx.module_resolution.insert(*container, file);
+                    let resolver = resolver_for_toplevel(self.db.upcast(), file);
+                    if let Some(res) = resolver.resolve_name(label_name) {
+                        match res {
+                            ResolveResult::Local(_) => {
+                                unreachable!("This is a compiler bug")
+                            }
+                            ResolveResult::Function(it) => {
+                                let fn_ty = it.ty(self.db);
+                                let mut env = HashMap::new();
+
+                                self.body_ctx.field_resolution.insert(
+                                    tgt_expr,
+                                    FieldResolution::ModuleDef(ModuleDef::Function(it)),
+                                );
+                                let func_loc = self.db.lookup_intern_function(it.id); //       needs to have a local resolver to make the correct type
+                                let resolver = std::mem::replace(
+                                    &mut self.resolver,
+                                    resolver_for_toplevel(self.db.upcast(), func_loc.file_id),
+                                );
+                                let ty = self.make_type(fn_ty, &mut env);
+                                let _ = std::mem::replace(&mut self.resolver, resolver);
+                                return ty;
+                            }
+                            // ToDo: Add type to adt in hir and fix this.
+                            ResolveResult::Variant(it) => {
+                                let var = self.new_ty_var();
+                                self.unify_var_ty(
+                                    var,
+                                    Ty::Adt {
+                                        generic_params: Vec::new(),
+                                        adt_id: it.parent,
+                                    },
+                                );
+                                self.body_ctx.field_resolution.insert(
+                                    tgt_expr,
+                                    FieldResolution::ModuleDef(ModuleDef::Variant(it)),
+                                );
+                                return var;
+                            }
+                            ResolveResult::BuiltIn(_) => {}
+                            ResolveResult::Module(_) => {}
+                            ResolveResult::Adt(_) => {}
+                            ResolveResult::TypeAlias(_) => {}
+                        }
+                    }
+                }
+                field_var
+            }
+            Expr::VariantLiteral { name } => {
+                let (ty, params) = self.resolve_variant(name);
+                if !params.is_empty() {
+                    Ty::Function {
+                        params,
+                        return_: ty,
+                    }
+                    .intern(self)
+                } else {
+                    ty
+                }
             }
             Expr::List { elements } => {
                 let of_ty = self.new_ty_var();
@@ -623,7 +725,7 @@ impl<'db> InferCtx<'db> {
                 let mut param_tys = Vec::new();
                 for param in params.clone() {
                     let pat_ty = self.ty_for_pattern(param);
-                    param_tys.push(pat_ty);
+                    param_tys.push((None, pat_ty));
                 }
                 let body_ty = self.infer_expr(*body);
                 Ty::Function {
@@ -648,29 +750,35 @@ impl<'db> InferCtx<'db> {
     }
 
     fn infer_pattern(&mut self, pattern: PatternId, expected_ty_var: TyVar) -> TyVar {
-        tracing::info!(
-            "Inferring pattern {:?} {:?}",
-            &self.body[pattern],
-            self.table.get_mut(expected_ty_var.0)
-        );
         let pat_var = self.ty_for_pattern(pattern);
-        match &self.body[pattern].pattern {
+        match &self.body[pattern] {
             Pattern::VariantRef {
                 name,
-                module: _,
+                module,
                 fields,
             } => {
-                let (pat_ty, mut field_tys) = self.resolve_variant(name);
+                let (pat_ty, mut field_tys) = match module {
+                    None => self.resolve_variant(name),
+                    Some(module) => self
+                        .resolver
+                        .resolve_module(module)
+                        .and_then(|file| {
+                            // ToDo: refactor to something nicer and more correct, e.g. FileId -> Moodule.exports().get(name)
+                            let resolver = resolver_for_toplevel(self.db.upcast(), file);
+                            resolver.resolve_name(name)
+                        })
+                        .map(|res| self.variant_from_resolve_result(res))
+                        .unwrap_or_else(|| (self.new_ty_var(), Vec::new())),
+                };
 
                 // Tried with reserve / fill_with, but that didnt seem to work
                 while field_tys.len() < fields.len() {
-                    field_tys.push(self.new_ty_var());
+                    field_tys.push((None, self.new_ty_var()));
                 }
-                tracing::info!("inferring fields {:?} {:?}", field_tys.capacity(), fields);
-                for (field, field_ty) in fields.iter().zip(field_tys.iter()) {
+                for (field, field_ty) in fields.iter().zip(field_tys.clone().iter()) {
                     // Unify fields with patterns
-                    // self.unify_var_ty(ty, Ty::Int);
-                    self.infer_pattern(*field, *field_ty);
+
+                    self.infer_pattern(*field, field_ty.1);
                 }
                 self.unify_var(pat_ty, pat_var);
             }
@@ -679,6 +787,13 @@ impl<'db> InferCtx<'db> {
                     self.infer_pattern(*pat, expected_ty_var);
                 }
             }
+            Pattern::AsPattern { pattern, as_name } => {
+                let sub_pat = self.infer_pattern(*pattern, expected_ty_var);
+                if let Some(as_name) = as_name {
+                    self.infer_pattern(*as_name, expected_ty_var);
+                }
+                self.unify_var(pat_var, sub_pat)
+            }
             Pattern::Literal { kind } => match kind {
                 LiteralKind::Int => self.unify_var_ty(pat_var, Ty::Int),
                 LiteralKind::Float => self.unify_var_ty(pat_var, Ty::Float),
@@ -686,47 +801,107 @@ impl<'db> InferCtx<'db> {
                 LiteralKind::Bool => self.unify_var_ty(pat_var, Ty::Bool),
             },
             Pattern::Spread { name: _ } => {
-                self.unify_var_ty(pat_var, Ty::List { of: expected_ty_var });
+                self.unify_var_ty(
+                    pat_var,
+                    Ty::List {
+                        of: expected_ty_var,
+                    },
+                );
                 return pat_var;
+            }
+            Pattern::Tuple { fields } => {
+                let mut field_ty = Vec::new();
+                for field in fields.iter() {
+                    let new_ty = self.new_ty_var();
+                    self.infer_pattern(*field, new_ty);
+                    field_ty.push(new_ty);
+                }
+                self.unify_var_ty(pat_var, Ty::Tuple { fields: field_ty })
             }
             Pattern::List { elements } => {
                 let of = self.new_ty_var();
-                for elem in elements.into_iter() {
+                for elem in elements.iter() {
                     self.infer_pattern(*elem, of);
                 }
                 self.unify_var_ty(pat_var, Ty::List { of });
             }
-            _ => {}
+            Pattern::Concat { pattern } => {
+                let expected_ty = self.new_ty_var();
+                self.unify_var_ty(expected_ty, Ty::String);
+                self.infer_pattern(*pattern, expected_ty);
+            }
+            Pattern::Missing => {}
+            Pattern::Hole => {}
+            Pattern::Variable { .. } => {}
         }
         self.unify_var(expected_ty_var, pat_var);
         pat_var
     }
 
-    fn resolve_variant(&mut self, name: &SmolStr) -> (TyVar, Vec<TyVar>) {
+    fn resolve_variant(&mut self, name: &SmolStr) -> (TyVar, Vec<(Option<SmolStr>, TyVar)>) {
         match self.resolver.resolve_name(name) {
-            // return field types aswell for unification
-            Some(ResolveResult::Variant(variant)) => {
+            Some(res) => self.variant_from_resolve_result(res),
+            None => (self.new_ty_var(), Vec::new()),
+        }
+    }
+
+    fn variant_from_resolve_result(
+        &mut self,
+        result: ResolveResult,
+    ) -> (TyVar, Vec<(Option<SmolStr>, TyVar)>) {
+        match result {
+            ResolveResult::Variant(variant) => {
                 let mut ty_env = HashMap::new();
                 let params = variant
                     .fields(self.db.upcast())
-                    .iter()
-                    .map(|l| self.make_type(l.type_ref.clone(), &mut ty_env))
+                    .into_iter()
+                    .map(|field| {
+                        (
+                            field.label(self.db.upcast()),
+                            self.make_type(field.ty(self.db.upcast()), &mut ty_env),
+                        )
+                    })
                     .collect();
-                
-                // ToDo: infer function for unsaturated constructor
-                // e.g. type Bla { Bla(Int, Int) } => let b = Bla => fn(Int, Int) -> Bla
+
+                let adt_data = Adt::from(variant.parent).data(self.db.upcast());
+                let mut generic_params = Vec::new();
+                for param in adt_data.params.iter() {
+                    generic_params.push(self.make_type(param.clone(), &mut ty_env));
+                }
+
                 let ty = Ty::Adt {
                     adt_id: variant.parent,
-                    generic_params: Vec::new(),
+                    generic_params,
                 }
                 .intern(self);
                 (ty, params)
             }
-
-            _ => {
-                // ToDo: Add diagnostics
-                (self.new_ty_var(), Vec::new())
-            }
+            ResolveResult::BuiltIn(it) => match it {
+                hir::BuiltIn::Nil => (Ty::Nil.intern(self), Vec::new()),
+                hir::BuiltIn::Ok => {
+                    let ok = self.new_ty_var();
+                    (
+                        Ty::Result {
+                            ok,
+                            err: self.new_ty_var(),
+                        }
+                        .intern(self),
+                        vec![(None, ok)],
+                    )
+                }
+                hir::BuiltIn::Error => {
+                    let err = self.new_ty_var();
+                    (
+                        Ty::Result {
+                            ok: self.new_ty_var(),
+                            err,
+                        }
+                        .intern(self),
+                        vec![(None, err)],
+                    )
+                }
+            },
+            _ => (self.new_ty_var(), Vec::new()),
         }
     }
 
@@ -736,6 +911,33 @@ impl<'db> InferCtx<'db> {
                 idx: min(idx, idx2),
             },
             (Ty::Unknown { .. }, other) | (other, Ty::Unknown { .. }) => other,
+            (Ty::Result { ok, err }, Ty::Result { ok: okr, err: errr }) => {
+                self.unify_var(ok, okr);
+                self.unify_var(err, errr);
+                Ty::Result { ok, err }
+            }
+            (
+                Ty::Adt {
+                    adt_id: id1,
+                    generic_params: params1,
+                },
+                Ty::Adt {
+                    adt_id: id2,
+                    generic_params: params2,
+                },
+            ) => {
+                // diagnostic if adt_id not the same!
+                if id1 != id2 {
+                    tracing::info!("Different adts {:?} {:?}", id1, id2);
+                }
+                for (p1, p2) in params1.clone().into_iter().zip(params2.into_iter()) {
+                    self.unify_var(p1, p2)
+                }
+                Ty::Adt {
+                    adt_id: id1,
+                    generic_params: params1,
+                }
+            }
             (Ty::List { of: of1 }, Ty::List { of: of2 }) => {
                 self.unify_var(of1, of2);
                 Ty::List { of: of1 }
@@ -750,18 +952,25 @@ impl<'db> InferCtx<'db> {
                     return_: ret2,
                 },
             ) => {
+                // reorder
                 for (p1, p2) in params1.clone().into_iter().zip(params2.into_iter()) {
-                    self.unify_var(p1, p2)
+                    self.unify_var(p1.1, p2.1)
                 }
-                self.unify_var(ret1.clone(), ret2);
+                self.unify_var(ret1, ret2);
                 Ty::Function {
                     params: params1,
                     return_: ret1,
                 }
             }
+            (Ty::Tuple { fields: fields1 }, Ty::Tuple { fields: fields2 }) => {
+                for (f1, f2) in fields1.clone().into_iter().zip(fields2.into_iter()) {
+                    self.unify_var(f1, f2)
+                }
+                Ty::Tuple { fields: fields1 }
+            }
             (lhs, rhs) => {
                 if lhs != rhs {
-                    tracing::info!("ERROR: {:?} {:?}", lhs, rhs);
+                    tracing::debug!("ERROR: {:?} {:?}", lhs, rhs);
                 };
                 lhs
             }
@@ -854,10 +1063,19 @@ impl<'a> Collector<'a> {
                 };
                 super::Ty::Generic { name }
             }
+            Ty::Nil => super::Ty::Nil,
             Ty::Bool => super::Ty::Bool,
             Ty::Int => super::Ty::Int,
             Ty::Float => super::Ty::Float,
             Ty::String => super::Ty::String,
+            Ty::Result { ok, err } => {
+                let ok = self.collect(*ok);
+                let err = self.collect(*err);
+                super::Ty::Result {
+                    ok: Arc::new(ok),
+                    err: Arc::new(err),
+                }
+            }
             Ty::List { of } => {
                 let of = self.collect(*of);
                 super::Ty::List { of: Arc::new(of) }
@@ -865,7 +1083,7 @@ impl<'a> Collector<'a> {
             Ty::Function { params, return_ } => {
                 let mut super_params = Vec::new();
                 for param in params {
-                    super_params.push(self.collect(*param));
+                    super_params.push(self.collect(param.1));
                 }
                 let super_return = self.collect(*return_);
                 super::Ty::Function {
@@ -873,17 +1091,32 @@ impl<'a> Collector<'a> {
                     return_: Arc::new(super_return),
                 }
             }
-            Ty::Tuple { fields: _ } => todo!(),
+            Ty::Tuple { fields } => {
+                let mut super_fields = Vec::new();
+                for field in fields {
+                    super_fields.push(self.collect(*field));
+                }
+                super::Ty::Tuple {
+                    fields: Arc::new(super_fields),
+                }
+            }
             Ty::Adt {
                 adt_id,
-                generic_params: _,
+                generic_params,
             } => {
                 let adt = self.db.lookup_intern_adt(*adt_id);
                 let module = self.db.module_items(adt.file_id);
                 let adt_data = &module[adt.value];
+                let mut params = Vec::new();
+                for param in generic_params {
+                    params.push(self.collect(*param));
+                }
+
                 super::Ty::Adt {
+                    // try to use module from adt
+                    module: None,
                     name: adt_data.name.clone(),
-                    params: Arc::new(Vec::new()),
+                    params: Arc::new(params),
                 }
             }
         }

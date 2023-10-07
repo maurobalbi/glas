@@ -5,6 +5,7 @@ mod lower;
 pub mod module;
 pub mod resolver;
 mod scope;
+mod search;
 pub mod semantics;
 pub mod source;
 pub mod source_analyzer;
@@ -13,19 +14,21 @@ use std::sync::Arc;
 
 use crate::base::SourceDatabase;
 use crate::FileId;
-use salsa;
 
 use syntax::{AstPtr, Parse};
 
-pub use semantics::{classify_node, find_def, Semantics};
+pub use semantics::{classify_node, find_container, Semantics};
 pub use syntax::ast::{AstNode, BinaryOpKind as BinaryOp, Expr, UnaryOpKind as UnaryOp};
 
 use self::body::{Body, BodySourceMap};
-use self::hir_def::{AdtId, AdtLoc, FunctionId, FunctionLoc};
+use self::hir_def::{AdtId, AdtLoc, FunctionId, FunctionLoc, TypeAliasId, TypeAliasLoc};
 use self::lower::lower_module;
 pub use self::lower::ModuleItemData;
-use self::scope::{dependency_order_query, module_scope_query, ExprScopes, ModuleScope};
+use self::scope::{
+    dependency_order_query, module_scope_with_map_query, ExprScopes, ModuleScope, ModuleSourceMap,
+};
 pub use resolver::resolver_for_expr;
+pub use search::SearchScope;
 
 #[salsa::query_group(InternDatabaseStorage)]
 pub trait InternDatabase: SourceDatabase {
@@ -34,6 +37,9 @@ pub trait InternDatabase: SourceDatabase {
 
     #[salsa::interned]
     fn intern_adt(&self, loc: AdtLoc) -> AdtId;
+
+    #[salsa::interned]
+    fn intern_type_alias(&self, loc: TypeAliasLoc) -> TypeAliasId;
 }
 
 #[salsa::query_group(DefDatabaseStorage)]
@@ -51,9 +57,12 @@ pub trait DefDatabase: SourceDatabase + InternDatabase {
     #[salsa::invoke(ExprScopes::expr_scopes_query)]
     fn expr_scopes(&self, function_id: FunctionId) -> Arc<ExprScopes>;
 
-    #[salsa::invoke(module_scope_query)]
+    #[salsa::invoke(module_scope_with_map_query)]
+    fn module_scope_with_map(&self, file_id: FileId) -> (Arc<ModuleScope>, Arc<ModuleSourceMap>);
+
     fn module_scope(&self, file_id: FileId) -> Arc<ModuleScope>;
 
+    fn module_source_map(&self, file_id: FileId) -> Arc<ModuleSourceMap>;
     // #[salsa::invoke(LocalNameResolution::name_resolution_query)]
     // fn name_resolution(&self, file_id: FileId) -> Arc<LocalNameResolution>;
 
@@ -68,7 +77,7 @@ fn parse(db: &dyn DefDatabase, file_id: FileId) -> Parse {
 
 fn module_items(db: &dyn DefDatabase, file_id: FileId) -> Arc<ModuleItemData> {
     let parse = db.parse(file_id);
-    Arc::new(lower_module(db, parse))
+    Arc::new(lower_module(parse))
 }
 
 fn body_with_source_map(
@@ -87,4 +96,12 @@ fn body_source_map(db: &dyn DefDatabase, function_id: FunctionId) -> Arc<BodySou
 
 fn body(db: &dyn DefDatabase, function_id: FunctionId) -> Arc<Body> {
     db.body_with_source_map(function_id).0
+}
+
+fn module_scope(db: &dyn DefDatabase, file_id: FileId) -> Arc<ModuleScope> {
+    db.module_scope_with_map(file_id).0
+}
+
+fn module_source_map(db: &dyn DefDatabase, file_id: FileId) -> Arc<ModuleSourceMap> {
+    db.module_scope_with_map(file_id).1
 }

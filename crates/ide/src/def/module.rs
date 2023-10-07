@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+
+use crate::ty;
 use la_arena::{Idx, IdxRange};
 use smol_str::SmolStr;
 use syntax::{
@@ -5,33 +8,47 @@ use syntax::{
     AstPtr,
 };
 
-use crate::ty;
+use super::hir_def::LocalFieldId;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct AdtData {
     pub name: SmolStr,
 
     pub variants: IdxRange<VariantData>,
+    pub common_fields: HashMap<SmolStr, LocalFieldId>,
 
-    pub params: Vec<TypeParam>,
+    pub params: Vec<ty::Ty>,
     pub visibility: Visibility,
 
     pub ast_ptr: AstPtr<ast::Adt>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub struct TypeAliasData {
+    pub name: SmolStr,
+
+    pub body: Option<ty::Ty>,
+
+    pub params: Vec<ty::Ty>,
+    pub visibility: Visibility,
+
+    pub ast_ptr: AstPtr<ast::TypeAlias>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct VariantData {
     pub name: SmolStr,
 
-    pub fields: Vec<Field>,
+    pub fields: IdxRange<FieldData>,
 
     pub ast_ptr: AstPtr<ast::Variant>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct Field {
+pub struct FieldData {
     pub label: Option<SmolStr>,
     pub type_ref: ty::Ty,
+    pub ast_ptr: AstPtr<ast::VariantField>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -41,7 +58,6 @@ pub struct TypeParam(SmolStr);
 pub struct FunctionData {
     pub name: SmolStr,
     pub params: Vec<Param>,
-
     pub visibility: Visibility,
     pub ast_ptr: AstPtr<ast::Function>,
 }
@@ -87,8 +103,7 @@ pub enum Visibility {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Clause {
-    // patterns are lowered into #(pat, pat) tuples to make type inference easier
-    pub pattern: PatternId,
+    pub patterns: Vec<PatternId>,
     // pub guard: Option<ExprId>,
     pub expr: ExprId,
 }
@@ -123,6 +138,9 @@ pub enum Expr {
         right: ExprId,
         op: Option<BinaryOpKind>,
     },
+    Tuple {
+        fields: Vec<ExprId>,
+    },
     FieldAccess {
         base_string: SmolStr,
         base: ExprId,
@@ -131,11 +149,10 @@ pub enum Expr {
     },
     VariantLiteral {
         name: SmolStr,
-        fields: Vec<ExprId>,
     },
     Call {
         func: ExprId,
-        args: Vec<ExprId>,
+        args: Vec<(Option<SmolStr>, ExprId)>,
     },
     List {
         elements: Vec<ExprId>,
@@ -146,26 +163,20 @@ pub enum Expr {
     },
     Lambda {
         body: ExprId,
-        params: IdxRange<AsPattern>,
+        params: IdxRange<Pattern>,
     },
     Spread {
         expr: ExprId,
     },
     Case {
         // subjects are lowered into tuple to make type inference easier
-        subject: ExprId,
+        subjects: Vec<ExprId>,
         clauses: Vec<Clause>,
     },
     Variable(SmolStr),
 }
 
-pub type PatternId = Idx<AsPattern>;
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct AsPattern {
-    pub pattern: Pattern,
-    pub as_name: Option<Pattern>,
-}
+pub type PatternId = Idx<Pattern>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Pattern {
@@ -193,6 +204,13 @@ pub enum Pattern {
     },
     AlternativePattern {
         patterns: Vec<PatternId>,
+    },
+    AsPattern {
+        pattern: PatternId,
+        as_name: Option<PatternId>,
+    },
+    Concat {
+        pattern: PatternId,
     },
 }
 

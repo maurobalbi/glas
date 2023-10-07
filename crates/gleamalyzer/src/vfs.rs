@@ -1,12 +1,11 @@
 use crate::UrlExt;
 use anyhow::{ensure, Context, Result};
-use ide::{
-    Change, FileId, FileSet, ModuleMap, PackageGraph, PackageInfo, SourceRoot, SourceRootId,
-    VfsPath,
-};
+use ide::{Change, FileId, FileSet, ModuleMap, PackageGraph, SourceRoot, VfsPath};
+
 use lsp_types::Url;
+use rustc_hash::FxHashMap;
 use slab::Slab;
-use std::collections::HashMap;
+
 use std::sync::Arc;
 use std::{fmt, mem};
 use text_size::{TextRange, TextSize};
@@ -38,10 +37,8 @@ impl Vfs {
         }
     }
 
-    pub fn set_package_info(&mut self, package_info: Option<PackageInfo>) {
-        self.change.set_package_graph(PackageGraph {
-            nodes: HashMap::from_iter(package_info.map(|info| (SourceRootId(0), info))),
-        });
+    pub fn set_package_graph(&mut self, graph: Option<PackageGraph>) {
+        self.change.set_package_graph(graph.unwrap_or_default());
     }
 
     pub fn set_roots_and_map(&mut self, roots: Vec<SourceRoot>, module_map: ModuleMap) {
@@ -149,7 +146,7 @@ pub struct LineMap {
     /// - Have at least one element.
     /// - The first must be 0.
     line_starts: Vec<u32>,
-    char_diffs: HashMap<u32, Vec<(u32, CodeUnitsDiff)>>,
+    char_diffs: FxHashMap<u32, Vec<(u32, CodeUnitsDiff)>>,
     len: u32,
 }
 
@@ -178,7 +175,7 @@ impl LineMap {
             )
             .collect::<Vec<_>>();
 
-        let mut char_diffs = HashMap::new();
+        let mut char_diffs = FxHashMap::default();
 
         let start_pos_iter = line_starts.iter().copied();
         let end_pos_iter = line_starts[1..].iter().copied().chain(Some(text_len));
@@ -207,6 +204,7 @@ impl LineMap {
         (text, this)
     }
 
+    #[allow(dead_code)]
     pub fn last_line(&self) -> u32 {
         self.line_starts.len() as u32 - 1
     }
@@ -240,6 +238,7 @@ impl LineMap {
         (line as u32, col)
     }
 
+    #[allow(dead_code)]
     pub fn end_col_for_line(&self, line: u32) -> u32 {
         let mut len = if line + 1 >= self.line_starts.len() as u32 {
             self.len - self.line_starts[line as usize]
@@ -295,7 +294,7 @@ mod tests {
         assert_eq!(&map.line_starts, &[0]);
         assert_eq!(
             &map.char_diffs,
-            &HashMap::from([(
+            &HashMap::from_iter([(
                 0u32,
                 vec![
                     (3u32, CodeUnitsDiff::One),

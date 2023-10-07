@@ -3,8 +3,8 @@ use la_arena::Idx;
 use crate::{impl_from, impl_intern, FileId, InFile};
 
 use super::{
-    hir::{Adt, Function, Module, Variant},
-    module::{AdtData, FunctionData, VariantData},
+    hir::{Adt, Field, Function, Module, TypeAlias, Variant},
+    module::{AdtData, FieldData, FunctionData, TypeAliasData, VariantData},
     DefDatabase,
 };
 use crate::impl_intern_key;
@@ -24,11 +24,25 @@ macro_rules! from_id {
     )*}
 }
 
-from_id!((FunctionId, Function), (AdtId, Adt), (FileId, Module));
+from_id!(
+    (FunctionId, Function),
+    (AdtId, Adt),
+    (FileId, Module),
+    (TypeAliasId, TypeAlias)
+);
 
 impl From<VariantId> for Variant {
     fn from(value: VariantId) -> Self {
         Variant {
+            parent: value.parent,
+            id: value.local_id,
+        }
+    }
+}
+
+impl From<FieldId> for Field {
+    fn from(value: FieldId) -> Self {
+        Field {
             parent: value.parent,
             id: value.local_id,
         }
@@ -51,6 +65,16 @@ pub type AdtLoc = InFile<Idx<AdtData>>;
 impl_intern!(AdtId, AdtLoc, intern_adt, lookup_intern_adt);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct TypeAliasId(pub salsa::InternId);
+pub type TypeAliasLoc = InFile<Idx<TypeAliasData>>;
+impl_intern!(
+    TypeAliasId,
+    TypeAliasLoc,
+    intern_type_alias,
+    lookup_intern_type_alias
+);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct VariantId {
     pub parent: AdtId,
     pub local_id: LocalVariantId,
@@ -58,17 +82,28 @@ pub struct VariantId {
 
 pub type LocalVariantId = Idx<VariantData>;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct FieldId {
+    pub parent: VariantId,
+    pub local_id: LocalFieldId,
+}
+
+pub type LocalFieldId = Idx<FieldData>;
+
+#[allow(clippy::enum_variant_names)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ModuleDefId {
     FunctionId(FunctionId),
     AdtId(AdtId),
     VariantId(VariantId),
+    TypeAliasId(TypeAliasId),
 }
 
 impl_from!(
     FunctionId,
     AdtId,
-    VariantId
+    VariantId,
+    TypeAliasId
     for ModuleDefId
 );
 

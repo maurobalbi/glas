@@ -2,7 +2,7 @@ use syntax::ast;
 
 use crate::{DefDatabase, InFile};
 
-use super::hir::{Adt, Function, Variant};
+use super::hir::{Adt, Field, Function, TypeAlias, Variant};
 
 pub trait HasSource {
     type Ast;
@@ -32,6 +32,16 @@ impl HasSource for Adt {
     }
 }
 
+impl HasSource for TypeAlias {
+    type Ast = ast::TypeAlias;
+    fn source(self, db: &dyn DefDatabase) -> Option<InFile<Self::Ast>> {
+        let loc = db.lookup_intern_type_alias(self.id);
+        let adt_data = &db.module_items(loc.file_id)[loc.value];
+        let root = db.parse(loc.file_id);
+        Some(loc.map(|_| adt_data.ast_ptr.to_node(&root.syntax_node())))
+    }
+}
+
 impl HasSource for Variant {
     type Ast = ast::Variant;
     fn source(self, db: &dyn DefDatabase) -> Option<InFile<Self::Ast>> {
@@ -39,5 +49,15 @@ impl HasSource for Variant {
         let variant_data = &db.module_items(loc.file_id)[self.id];
         let root = db.parse(loc.file_id);
         Some(loc.map(|_| variant_data.ast_ptr.to_node(&root.syntax_node())))
+    }
+}
+
+impl HasSource for Field {
+    type Ast = ast::VariantField;
+    fn source(self, db: &dyn DefDatabase) -> Option<InFile<Self::Ast>> {
+        let loc = db.lookup_intern_adt(self.parent.parent);
+        let field_data = &db.module_items(loc.file_id)[self.id];
+        let root = db.parse(loc.file_id);
+        Some(loc.map(|_| field_data.ast_ptr.to_node(&root.syntax_node())))
     }
 }

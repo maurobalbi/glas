@@ -1,18 +1,17 @@
-use crate::base::{SourceDatabaseStorage, Target};
+use crate::base::SourceDatabaseStorage;
 use crate::def::{DefDatabaseStorage, InternDatabaseStorage};
 use crate::ide::Upcast;
 use crate::ty::TyDatabaseStorage;
 use crate::{
-    module_name, Change, DefDatabase, FileId, FilePos, FileRange, FileSet, ModuleMap, PackageGraph,
-    PackageInfo, SourceRoot, SourceRootId, VfsPath,
+    module_name, Change, DefDatabase, FileId, FilePos, FileSet, ModuleMap, PackageGraph,
+    PackageInfo, SourceRoot, VfsPath,
 };
 use anyhow::{bail, ensure, Context, Result};
 use indexmap::IndexMap;
-use std::collections::HashMap;
+use smol_str::SmolStr;
 use std::path::PathBuf;
 use std::{mem, ops};
-use syntax::ast::AstNode;
-use syntax::{GleamLanguage, SyntaxNode, TextSize};
+use syntax::TextSize;
 
 pub const MARKER_INDICATOR: char = '$';
 
@@ -31,14 +30,15 @@ impl salsa::Database for TestDB {}
 
 impl Upcast<dyn DefDatabase> for TestDB {
     fn upcast(&self) -> &(dyn DefDatabase + 'static) {
-        &*self
+        self
     }
 }
 
 impl TestDB {
     pub fn single_file(fixture: &str) -> Result<(Self, FileId)> {
         let (db, f) = Self::from_fixture(fixture)?;
-        ensure!(f.files().len() == 1, "Fixture contains multiple files");
+        // gleam.toml is always added aswell
+        ensure!(f.files().len() == 2, "Fixture contains multiple files");
         let file_id = f.files()[0];
         Ok((db, file_id))
     }
@@ -67,25 +67,12 @@ impl TestDB {
             vec![SourceRoot::new_local(file_set, "/".into())],
             module_map,
         );
-        let package_graph = PackageGraph {
-            nodes: HashMap::from_iter(f.package_info.clone().map(|info| (SourceRootId(0), info))),
-        };
+        let mut package_graph = PackageGraph::default();
+        package_graph.add_package(SmolStr::from("test"), FileId(f.files.len() as u32));
+
         change.set_package_graph(package_graph);
         change.apply(&mut db);
         Ok((db, f))
-    }
-
-    pub fn find_node<T>(&self, fpos: FilePos, f: impl FnMut(SyntaxNode) -> Option<T>) -> Option<T> {
-        self.parse(fpos.file_id)
-            .syntax_node()
-            .token_at_offset(fpos.pos)
-            .right_biased()?
-            .parent_ancestors()
-            .find_map(f)
-    }
-
-    pub fn node_at<N: AstNode<Language = GleamLanguage>>(&self, fpos: FilePos) -> Option<N> {
-        self.find_node(fpos, N::cast)
     }
 }
 
@@ -140,12 +127,6 @@ impl Fixture {
                         .and_then(|input| input.split_once('='))
                     {
                         let _target = VfsPath::new(target);
-                        this.package_info.get_or_insert_with(|| PackageInfo {
-                            root_manifest: cur_file,
-                            dependencies: Default::default(),
-                            target: Target::default(),
-                            display_name: "Test".into(),
-                        });
                     } else {
                         bail!("Unknow property {prop}");
                     }
@@ -158,7 +139,7 @@ impl Fixture {
             } else {
                 if cur_path.is_none() {
                     missing_header = true;
-                    cur_path = Some(VfsPath::new(format!("/test.gleam")));
+                    cur_path = Some(VfsPath::new("/test.gleam".to_string()));
                 }
 
                 let mut iter = line.chars().peekable();
@@ -182,6 +163,14 @@ impl Fixture {
             }
         }
         this.insert_file(cur_path.context("Empty fixture")?, cur_text)?;
+
+        let _: std::result::Result<(), anyhow::Error> =
+            this.insert_file(VfsPath::new("gleam.toml"), "".to_string());
+        this.package_info.get_or_insert_with(|| PackageInfo {
+            gleam_toml: FileId(this.files.len() as u32 - 1),
+            dependencies: Default::default(),
+            display_name: "Test".into(),
+        });
 
         let marker_len = markers
             .iter()
@@ -215,14 +204,5 @@ impl Fixture {
 
     pub fn markers(&self) -> &[FilePos] {
         &self.markers
-    }
-
-    #[track_caller]
-    pub fn unwrap_single_range_marker(&self) -> FileRange {
-        match *self.markers() {
-            [fpos] => FileRange::empty(fpos),
-            [start, end] => FileRange::span(start, end),
-            _ => panic!("Must have either 1 or 2 markers"),
-        }
     }
 }

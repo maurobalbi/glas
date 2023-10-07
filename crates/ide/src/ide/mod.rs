@@ -3,14 +3,15 @@ mod diagnostics;
 mod goto_definition;
 mod highlight_related;
 mod hover;
+mod references;
 mod syntax_tree;
 
 use crate::base::SourceDatabaseStorage;
 use crate::def::{DefDatabaseStorage, InternDatabaseStorage};
 use crate::ty::{TyDatabase, TyDatabaseStorage};
 use crate::{
-    Change, DefDatabase, Diagnostic, FileId, FilePos, FileSet, ModuleMap, SourceDatabase,
-    SourceRoot, VfsPath,
+    Change, DefDatabase, Diagnostic, FileId, FilePos, FileRange, FileSet, ModuleMap,
+    SourceDatabase, SourceRoot, VfsPath,
 };
 use salsa::{Database, Durability, ParallelDatabase};
 use std::fmt;
@@ -67,19 +68,19 @@ pub trait Upcast<T: ?Sized> {
 
 impl Upcast<dyn TyDatabase> for RootDatabase {
     fn upcast(&self) -> &(dyn TyDatabase + 'static) {
-        &*self
+        self
     }
 }
 
 impl Upcast<dyn SourceDatabase> for RootDatabase {
     fn upcast(&self) -> &(dyn SourceDatabase + 'static) {
-        &*self
+        self
     }
 }
 
 impl Upcast<dyn DefDatabase> for RootDatabase {
     fn upcast(&self) -> &(dyn DefDatabase + 'static) {
-        &*self
+        self
     }
 }
 
@@ -112,7 +113,7 @@ impl AnalysisHost {
         let file = FileId(0);
         change.change_file(file, src.into());
         let mut file_set = FileSet::default();
-        file_set.insert(file, VfsPath::new(format!("/main.gleam"))); // Hack
+        file_set.insert(file, VfsPath::new("/main.gleam")); // Hack
         change.set_roots_and_map(
             vec![SourceRoot::new_local(file_set, "/".into())],
             ModuleMap::default(),
@@ -174,6 +175,10 @@ impl Analysis {
 
     pub fn goto_definition(&self, pos: FilePos) -> Cancellable<Option<GotoDefinitionResult>> {
         self.with_db(|db| goto_definition::goto_definition(db, pos))
+    }
+
+    pub fn references(&self, pos: FilePos) -> Cancellable<Option<Vec<FileRange>>> {
+        self.with_db(|db| references::references(db, pos))
     }
 
     pub fn syntax_tree(&self, file_id: FileId) -> Cancellable<String> {

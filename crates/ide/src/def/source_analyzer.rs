@@ -1,20 +1,19 @@
 use std::sync::Arc;
 
-use smol_str::SmolStr;
 use syntax::{
     ast::{self, AstNode},
-    AstPtr, SyntaxNode,
+    SyntaxNode,
 };
 
 use crate::{
-    ty::{FieldResolution, InferenceResult, Ty, TyDatabase},
-    DefDatabase, FileId, InFile,
+    ty::{FieldResolution, InferenceResult, TyDatabase},
+    FileId, InFile,
 };
 
 use super::{
     body::{Body, BodySourceMap},
-    hir_def::{AdtId, FunctionId, ModuleDefId},
-    module::{ExprId, PatternId},
+    hir_def::FunctionId,
+    module::ExprId,
     resolver::{resolver_for_scope, Resolver},
     scope::{ExprScopes, ScopeId},
 };
@@ -60,41 +59,11 @@ impl SourceAnalyzer {
     fn body_source_map(&self) -> Option<&BodySourceMap> {
         self.def.as_ref().map(|(.., source_map)| &**source_map)
     }
-    fn body(&self) -> Option<&Body> {
-        self.def.as_ref().map(|(_, body, _)| &**body)
-    }
 
     fn expr_id(&self, expr: &ast::Expr) -> Option<ExprId> {
         let src = InFile::new(self.file_id, expr.clone());
         let sm = self.body_source_map()?;
         sm.expr_for_node(src.as_ref())
-    }
-
-    fn pattern_id(&self, pat: &ast::AsPattern) -> Option<PatternId> {
-        // FIXME: macros, see `expr_id`
-        let src = InFile {
-            file_id: self.file_id,
-            value: pat,
-        };
-        self.body_source_map()?.pattern_for_node(src)
-    }
-
-    pub(crate) fn type_of_expr(&self, db: &dyn DefDatabase, expr: &ast::Expr) -> Option<Ty> {
-        let expr_id = self.expr_id(expr)?;
-        let infer = self.infer.as_ref()?;
-        let ty = infer.ty_for_expr(expr_id).clone();
-        Some(ty)
-    }
-
-    pub(crate) fn type_of_pattern(
-        &self,
-        db: &dyn DefDatabase,
-        pattern: &ast::AsPattern,
-    ) -> Option<Ty> {
-        let pattern_id = self.pattern_id(pattern)?;
-        let infer = self.infer.as_ref()?;
-        let ty = infer.ty_for_pattern(pattern_id).clone();
-        Some(ty)
     }
 
     pub(crate) fn resolve_field(&self, call: &ast::FieldAccessExpr) -> Option<FieldResolution> {
@@ -106,12 +75,10 @@ impl SourceAnalyzer {
     }
 
     pub(crate) fn resolve_module(&self, expr: &ast::Expr) -> Option<FileId> {
-        let expr_id = self.expr_id(&expr)?;
-        self.infer
-            .as_ref()
-            .and_then(|i| i.resolve_module(expr_id))
-            .clone()
+        let expr_id = self.expr_id(expr)?;
+        self.infer.as_ref().and_then(|i| i.resolve_module(expr_id))
     }
+
     // pub(crate) fn resolve_field_access_expr(
     //     &self,
     //     db: &dyn DefDatabase,
