@@ -368,16 +368,16 @@ asts! {
     },
     VARIANT = Variant {
         name: Name,
-        field_list: ConstructorFieldList,
+        field_list: VariantFieldList,
     },
     VARIANT_CONSTRUCTOR = VariantConstructor {
         name: NameRef,
     },
-    CONSTRUCTOR_FIELD_LIST = ConstructorFieldList {
-        fields: [ConstructorField],
+    VARIANT_FIELD_LIST = VariantFieldList {
+        fields: [VariantField],
     },
-    CONSTRUCTOR_FIELD = ConstructorField {
-        label: Label,
+    VARIANT_FIELD = VariantField {
+        label: Name,
         type_: TypeExpr,
     },
     LAMBDA = Lambda {
@@ -857,7 +857,7 @@ mod tests {
 
     #[test]
     fn constructor_field() {
-        let e = parse::<ConstructorField>(
+        let e = parse::<VariantField>(
             "type Wobble(a) {
             Wobble1(a: int.Wobbles)
         }",

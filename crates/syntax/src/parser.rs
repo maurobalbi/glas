@@ -416,7 +416,7 @@ fn custom_type(p: &mut Parser, m: MarkOpened) {
             p.expect(T!["{"]);
             while !p.at(T!["}"]) && !p.eof() {
                 if p.at(U_IDENT) {
-                    custom_type_variant(p);
+                    variant(p);
                 } else {
                     if p.at_any(STMT_RECOVERY) {
                         break;
@@ -443,7 +443,7 @@ fn custom_type(p: &mut Parser, m: MarkOpened) {
     }
 }
 
-fn custom_type_variant(p: &mut Parser) {
+fn variant(p: &mut Parser) {
     assert!(p.at(U_IDENT));
     let m = p.start_node();
     let n = p.start_node();
@@ -454,7 +454,7 @@ fn custom_type_variant(p: &mut Parser) {
         let f = p.start_node();
         while !p.at(T![")"]) && !p.eof() {
             if p.at_any(TYPE_FIRST) {
-                type_variant_field(p);
+                variant_field(p);
                 if !p.at(T![")"]) {
                     p.expect(T![","]);
                 }
@@ -465,23 +465,23 @@ fn custom_type_variant(p: &mut Parser) {
                 p.bump_with_error(ErrorKind::ExpectedType);
             }
         }
-        p.finish_node(f, CONSTRUCTOR_FIELD_LIST);
+        p.finish_node(f, VARIANT_FIELD_LIST);
         p.expect(T![")"]);
     }
 
     p.finish_node(m, VARIANT);
 }
 
-fn type_variant_field(p: &mut Parser) {
+fn variant_field(p: &mut Parser) {
     let m = p.start_node();
     if p.nth(1) == T![":"] {
         let n = p.start_node();
         p.expect(IDENT);
-        p.finish_node(n, LABEL);
+        p.finish_node(n, NAME);
         p.expect(T![":"]);
     }
     type_expr(p);
-    p.finish_node(m, CONSTRUCTOR_FIELD);
+    p.finish_node(m, VARIANT_FIELD);
 }
 
 fn function(p: &mut Parser, m: MarkOpened, is_anon: bool) -> MarkClosed {
