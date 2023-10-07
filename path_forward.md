@@ -7,7 +7,7 @@ Features for 1.0 rc:
   ✓ fix parsing for panic, <>
   ✓ fix make_ast for types with module def, e.g. wisp.Response
   ✓ Fix make_type to use proper resolver!
-  - Fix field_access for adt (including goto)
+  ✓ Fix field_access for adt (including goto)
   - Fix pattern completion (e.g. only show constructors)
   ✓ Fix pattern inference for module types (e.g. local.Wobbler)
   ✓ Fix Record Spread
@@ -20,7 +20,7 @@ Features for 1.0 rc:
   - Fix call completion in pipes
   - Types completion (additional trigger char ':')
   - Reimplement target based compiliation
-  - Find references, highlight related
+  ✓ Find references, highlight related
   - Add rename assists!
   - completion expr.use, maybe more?
   - improve documentation
