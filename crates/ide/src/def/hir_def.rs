@@ -3,8 +3,8 @@ use la_arena::Idx;
 use crate::{impl_from, impl_intern, FileId, InFile};
 
 use super::{
-    hir::{Adt, Function, Module, TypeAlias, Variant, Field},
-    module::{AdtData, FunctionData, TypeAliasData, VariantData, FieldData},
+    hir::{Adt, Field, Function, Module, TypeAlias, Variant},
+    module::{AdtData, FieldData, FunctionData, TypeAliasData, VariantData},
     DefDatabase,
 };
 use crate::impl_intern_key;
