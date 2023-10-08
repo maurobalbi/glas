@@ -8,7 +8,7 @@ A language server for the [Gleam](https://gleam.run/) programming language.
 
 At this early stage no pre-built binaries are available.
 
-- For testing, clone this repo and hit F5
+- For testing, clone this repo, open it in VSCode and hit F5
 
 ## Features
 
