@@ -430,8 +430,8 @@ asts! {
     SOURCE_FILE = SourceFile {
         statements: [ModuleStatement],
     },
-    MODULE_NAME = ModuleName {
-        name: Name,
+    MODULE_NAME_REF = ModuleNameRef {
+        name: NameRef,
     },
     // Change to body with expression to be able to reuse parser / collecting logic and validate constant during lowering
     MODULE_CONSTANT = ModuleConstant {
@@ -592,7 +592,7 @@ asts! {
         name: Name,
     },
     VARIANT_REF = VariantRef {
-        module: Name,
+        module: ModuleNameRef,
         variant: NameRef,
         field_list: VariantRefFieldList,
     },

@@ -53,18 +53,4 @@ mod tests {
     //     "#]]);
     // }
 
-    #[test]
-    fn unused_target() {
-        check(
-            "if javascript {} const a",
-            expect![[r#"
-                0..2: SyntaxError(ExpectedStatement)
-                3..13: SyntaxError(ExpectedStatement)
-                14..15: SyntaxError(ExpectedStatement)
-                15..16: SyntaxError(ExpectedStatement)
-                24..24: SyntaxError(ExpectToken(EQ))
-                24..24: SyntaxError(ExpectedConstantExpression)
-            "#]],
-        );
-    }
 }

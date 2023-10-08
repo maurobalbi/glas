@@ -41,7 +41,6 @@ const PATTERN_FIRST: TokenSet = TokenSet::new(&[
     T![".."],
 ]);
 const TYPE_FIRST: TokenSet = TokenSet::new(&[T!["fn"], T!["#"], IDENT, U_IDENT, DISCARD_IDENT]);
-const CONST_FIRST: TokenSet = TokenSet::new(&[IDENT, T!["#"], T!["["], INTEGER, FLOAT, STRING]);
 const EXPR_FIRST: TokenSet = TokenSet::new(&[
     IDENT,
     U_IDENT,
@@ -896,8 +895,10 @@ fn pattern(p: &mut Parser) {
                 return;
             }
 
-            let module_m = p.finish_node(m, NAME);
-            let t_ref = p.start_node_before(module_m);
+            let n_r = p.finish_node(m, NAME_REF);
+            let m_r = p.start_node_before(n_r);
+            let m_r = p.finish_node(m_r, MODULE_NAME_REF);
+            let t_ref = p.start_node_before(m_r);
             p.expect(T!["."]);
             name_ref(p);
             if p.at(T!["("]) {
@@ -1241,47 +1242,8 @@ fn module_const(p: &mut Parser, m: MarkOpened) {
         type_expr(p);
     }
     p.expect(T!["="]);
-    const_expr(p);
+    expr(p);
     p.finish_node(m, MODULE_CONSTANT);
-}
-
-fn const_expr(p: &mut Parser) {
-    match p.nth(0) {
-        INTEGER | FLOAT | STRING | T!["True"] | T!["False"] => {
-            let n = p.start_node();
-            p.bump();
-            p.finish_node(n, LITERAL);
-        }
-        T!["{"] => {
-            block(p);
-        }
-        IDENT | U_IDENT => {
-            name_ref(p);
-        }
-        T!["#"] => {
-            const_tuple(p);
-        }
-        _ => p.error(ErrorKind::ExpectedConstantExpression),
-    };
-}
-
-fn const_tuple(p: &mut Parser) -> MarkClosed {
-    assert!(p.at(T!["#"]));
-    let m = p.start_node();
-    p.expect(T!["#"]);
-    p.expect(T!["("]);
-    while !p.eof() && !p.at(T![")"]) {
-        if p.at_any(CONST_FIRST) {
-            const_expr(p);
-            if !p.at(T![")"]) {
-                p.expect(T![","]);
-            }
-        } else {
-            break;
-        }
-    }
-    p.expect(T![")"]);
-    p.finish_node(m, CONSTANT_TUPLE)
 }
 
 fn tuple(p: &mut Parser) -> MarkClosed {

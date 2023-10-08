@@ -399,7 +399,7 @@ impl BodyLowerCtx {
                         .variant()
                         .and_then(|n| n.text())
                         .unwrap_or_else(Name::missing),
-                    module: pat.module().and_then(|t| t.text()),
+                    module: pat.module().and_then(|t| t.name()).and_then(|n| n.text()),
                     fields,
                 }
             }

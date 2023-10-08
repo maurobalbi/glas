@@ -227,11 +227,8 @@ fn classify_name(sema: &Semantics, name: &ast::Name) -> Option<Definition> {
 fn classify_name_ref(sema: &Semantics, name_ref: &ast::NameRef) -> Option<Definition> {
     let parent = name_ref.syntax().parent()?;
 
-    match_ast! {
-        match parent {
-            ast::FieldAccessExpr(expr) => return sema.resolve_field(expr).map(Into::into),
-            _ => {},
-        }
+    if let Some(expr) = ast::FieldAccessExpr::cast(parent) {
+        return sema.resolve_field(expr).map(Into::into)
     }
 
     sema.resolve_name(name_ref.clone()).map(Into::into)

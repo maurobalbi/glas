@@ -305,7 +305,7 @@ def! {
     LABEL,
     HOLE,
     SOURCE_FILE,
-    MODULE_NAME,
+    MODULE_NAME_REF,
     MODULE_CONSTANT,
     NAME,
     TYPE_NAME,
