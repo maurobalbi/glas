@@ -158,10 +158,10 @@ enum CodeUnitsDiff {
 
 impl LineMap {
     fn normalize(mut text: String) -> (String, Self) {
+        text.retain(|c| c != '\r');
+
         // Must be valid for `TextSize`.
         let text_len = u32::try_from(text.len()).expect("Text too long");
-
-        text.retain(|c| c != '\r');
         let bytes = text.as_bytes();
 
         let line_starts = Some(0)

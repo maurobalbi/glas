@@ -12,6 +12,7 @@ use anyhow::Result;
 use async_lsp::client_monitor::ClientProcessMonitorLayer;
 use async_lsp::concurrency::ConcurrencyLayer;
 use async_lsp::server::LifecycleLayer;
+#[cfg(unix)]
 use async_lsp::stdio::{PipeStdin, PipeStdout};
 use async_lsp::tracing::TracingLayer;
 use ide::VfsPath;
@@ -71,6 +72,7 @@ pub async fn run_server_stdio() -> Result<()> {
     tracing::info!("Max concurrent requests: {concurrency}");
 
     let mut init_messages = Vec::new();
+    #[cfg(unix)]
     if let Some(err) = PipeStdin::lock().err().or_else(|| PipeStdout::lock().err()) {
         init_messages.push(ShowMessageParams {
             typ: MessageType::WARNING,

@@ -17,7 +17,6 @@ impl nohash_hasher::IsEnabled for FileId {}
 pub struct SourceRootId(pub u32);
 
 /// An path in the virtual filesystem.
-#[cfg(unix)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum VfsPath {
     Path(PathBuf),

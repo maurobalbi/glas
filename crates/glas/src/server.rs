@@ -146,7 +146,10 @@ impl Server {
             host: AnalysisHost::default(),
             vfs: Arc::new(RwLock::new(Vfs::new())),
             opened_files: HashMap::default(),
+            #[cfg(unix)]
             config: Arc::new(Config::new("/non-existing-path".into())),
+            #[cfg(windows)]            
+            config: Arc::new(Config::new("c://non-existing-path".into())),
 
             load_gleam_workspace_fut: None,
             gleam_interop_client: None,

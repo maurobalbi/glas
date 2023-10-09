@@ -27,6 +27,7 @@ serde_json = "1.0.82"
 slab = "0.4.8"
 smol_str = "0.1.23"
 tokio = { version = "1.32.0", features = ["io-std", "macros", "rt", "sync", "time"] }
+tokio-util = {version = "0.7.9", features = ["compat"]}
 tower = "0.4.13"
 toml = "0.7.4"
 text-size = "1.1.0"
@@ -46,3 +47,6 @@ features = [
 
 [target.'cfg(unix)'.dependencies]
 rustix = { version = "0.38.3", default-features = false, features = ["fs", "std"] }
+
+[target.'cfg(windows)'.dependencies]
+tokio-util = {version = "0.7.9", features = ["compat"]}
