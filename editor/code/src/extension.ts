@@ -19,7 +19,7 @@ export const syntaxTree = new lc.RequestType<SyntaxTreeParams, string, void>(
 );
 
 export function activate(context: vscode.ExtensionContext) {
-  client = createLanguageClient();
+  client = createLanguageClient(context);
   // Start the client. This will also launch the server
   client.start();
 
@@ -85,7 +85,7 @@ export function deactivate(): Thenable<void> | undefined {
   return client?.stop();
 }
 
-function createLanguageClient(): LanguageClient {
+function createLanguageClient(context: vscode.ExtensionContext): LanguageClient {
   let clientOptions: LanguageClientOptions = {
     documentSelector: [{ scheme: "file", language: "gleam" }],
     synchronize: {
@@ -97,8 +97,9 @@ function createLanguageClient(): LanguageClient {
     },
   };
 
+  const ext = process.platform === "win32" ? ".exe" : "";
   let serverOptions: ServerOptions = {
-    command: process.env["__GLAS_LSP_SERVER_PATH"] || "glas",
+    command: process.env["__GLAS_LSP_SERVER_PATH"] || vscode.Uri.joinPath(context.extensionUri, `glas${ext}`).fsPath,
     transport: TransportKind.stdio,
     options: {
       env: Object.assign(process.env, {

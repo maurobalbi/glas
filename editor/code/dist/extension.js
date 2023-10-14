@@ -4114,7 +4114,7 @@ const lc = __webpack_require__(/*! vscode-languageclient */ "./node_modules/vsco
 let client;
 exports.syntaxTree = new lc.RequestType("glas/syntaxTree");
 function activate(context) {
-    client = createLanguageClient();
+    client = createLanguageClient(context);
     // Start the client. This will also launch the server
     client.start();
     const uri = vscode.Uri.parse('glas-syntaxTree:' + "syntax");
@@ -4168,7 +4168,7 @@ function deactivate() {
     return client?.stop();
 }
 exports.deactivate = deactivate;
-function createLanguageClient() {
+function createLanguageClient(context) {
     let clientOptions = {
         documentSelector: [{ scheme: "file", language: "gleam" }],
         synchronize: {
@@ -4179,8 +4179,9 @@ function createLanguageClient() {
             ],
         },
     };
+    const ext = process.platform === "win32" ? ".exe" : "";
     let serverOptions = {
-        command: process.env["__GLAS_LSP_SERVER_PATH"] || "glas",
+        command: process.env["__GLAS_LSP_SERVER_PATH"] || vscode.Uri.joinPath(context.extensionUri, `glas${ext}`).fsPath,
         transport: node_1.TransportKind.stdio,
         options: {
             env: Object.assign(process.env, {
