@@ -2,6 +2,7 @@
   "name": "glas-vscode",
   "displayName": "glas-vscode",
   "description": "Gleam language server for VSCode",
+  "repository": "https://github.com/maurobalbi/glas",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.76.0"
@@ -10,7 +11,6 @@
     "Programming Languages",
     "Formatters"
   ],
-  "icon": "images/icon.png",
   "contributes": {
     "languages": [
       {
