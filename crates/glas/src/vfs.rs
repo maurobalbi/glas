@@ -1,6 +1,6 @@
 use crate::UrlExt;
 use anyhow::{ensure, Context, Result};
-use ide::{Change, FileId, FileSet, ModuleMap, PackageGraph, SourceRoot, VfsPath};
+use ide::{Change, FileId, FileSet, PackageGraph, SourceRoot, VfsPath};
 
 use lsp_types::Url;
 use rustc_hash::FxHashMap;
@@ -41,14 +41,19 @@ impl Vfs {
         self.change.set_package_graph(graph.unwrap_or_default());
     }
 
-    pub fn set_roots_and_map(&mut self, roots: Vec<SourceRoot>, module_map: ModuleMap) {
-        self.change.set_roots_and_map(roots, module_map);
+    pub fn set_roots(&mut self, roots: Vec<SourceRoot>) {
+        self.change.set_roots(roots);
+    }
+
+    pub fn is_structural_change(&self) -> bool {
+        self.change.is_structural_change
     }
 
     pub fn set_path_content(&mut self, path: VfsPath, text: String) -> FileId {
         let (text, line_map) = LineMap::normalize(text);
         let text = <Arc<str>>::from(text);
         let line_map = Arc::new(line_map);
+
         match self.local_file_set.file_for_path(&path) {
             Some(file) => {
                 self.files[file.0 as usize] = (text.clone(), line_map);
@@ -61,6 +66,7 @@ impl Vfs {
                 self.local_file_set.insert(file, path);
                 next_entry.insert((text.clone(), line_map));
                 self.change.change_file(file, text);
+                self.change.set_structural_change();
                 file
             }
         }
@@ -105,6 +111,7 @@ impl Vfs {
         self.files.remove(file.0 as usize);
         // We cannot free a `FileId` from database. The best we can do is setting it to empty.
         self.change.change_file(file, "".into());
+        self.change.set_structural_change();
         Ok(())
     }
 

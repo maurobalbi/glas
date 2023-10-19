@@ -114,9 +114,8 @@ impl AnalysisHost {
         change.change_file(file, src.into());
         let mut file_set = FileSet::default();
         file_set.insert(file, VfsPath::new("/main.gleam")); // Hack
-        change.set_roots_and_map(
-            vec![SourceRoot::new_local(file_set, "/".into())],
-            ModuleMap::default(),
+        change.set_roots(
+            vec![SourceRoot::new(file_set, "/".into())],
         );
         let mut this = Self::new();
         this.apply_change(change);

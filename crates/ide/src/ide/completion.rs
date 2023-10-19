@@ -9,7 +9,7 @@ use crate::{
     def::{
         find_container,
         hir::Function,
-        hir::Variant,
+        hir::{Variant, Package, Module},
         hir_def::ModuleDefId,
         resolver::{resolver_for_toplevel, ResolveResult},
         resolver_for_expr, Semantics,
@@ -55,6 +55,8 @@ pub enum CompletionItemKind {
 pub struct CompletionContext<'db> {
     db: &'db dyn TyDatabase,
     sema: Semantics<'db>,
+    package: Package,
+    module: Module,
     is_top_level: bool,
     source_range: TextRange,
     expr_ptr: Option<InFile<SyntaxNode>>,
@@ -73,11 +75,15 @@ impl<'db> CompletionContext<'db> {
             .token_at_offset(position.pos)
             .left_biased();
 
+        let module = Module { id: position.file_id};
+
         let mut ctx = CompletionContext {
             db,
             sema,
             is_top_level: false,
             source_range: TextRange::default(),
+            module: module,
+            package: module.package(db.upcast()),
             expr_ptr: None,
             tok,
             trigger_tok,
@@ -292,7 +298,8 @@ fn complete_import(acc: &mut Vec<CompletionItem>, ctx: &CompletionContext<'_>) -
         .parent_ancestors()
         .any(|t| ast::ModulePath::can_cast(t.kind()))
     {
-        for (_, name) in ctx.db.module_map().iter() {
+        // ToDo: get all visible modules
+        for (_, name) in ctx.package.visible_modules(ctx.db.upcast()).iter() {
             acc.push(CompletionItem {
                 label: name.clone(),
                 source_range: ctx.source_range,

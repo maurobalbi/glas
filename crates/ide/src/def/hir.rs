@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use smol_str::SmolStr;
 use syntax::ast::{self, AstNode};
@@ -6,7 +6,7 @@ use syntax::ast::{self, AstNode};
 use crate::{
     impl_from,
     ty::{self, Ty, TyDatabase},
-    DefDatabase, FileId, InFile, SourceRootId,
+    DefDatabase, FileId, InFile, ModuleMap, SourceRootId,
 };
 
 use super::{
@@ -21,19 +21,43 @@ pub struct Package {
 }
 
 impl Package {
-    pub fn dependencies(self, _db: &dyn DefDatabase) -> Vec<PackageDependency> {
-        Vec::new()
+    pub fn dependencies(self, db: &dyn DefDatabase) -> Vec<Package> {
+        let package_id = db.source_root_package(self.id);
+        let graph = db.package_graph();
+        let package = graph[*package_id].clone();
+        package
+            .dependencies
+            .iter()
+            .map(|p| {
+                let gleam_toml = graph[p.package].gleam_toml;
+                let sid = db.file_source_root(gleam_toml);
+                Package { id: sid }
+            })
+            .collect()
+    }
+
+    pub fn module_map(self, db: &dyn DefDatabase) -> Arc<ModuleMap> {
+        db.module_map(self.id)
+    }
+
+    pub fn visible_modules(self, db: &dyn DefDatabase) -> Arc<ModuleMap> {
+        let mut module_map = ModuleMap::default();
+        self.dependencies(db).iter().for_each(|m| {
+            let map = m.module_map(db);
+            for m in map.iter() {
+                module_map.insert(m.0, m.1.clone());
+            }
+        });
+        for m in self.module_map(db).iter() {
+            module_map.insert(m.0, m.1.clone());
+        }
+        Arc::new(module_map)
     }
 
     // pub fn target(self, db: &dyn DefDatabase) -> crate::base::Target {
     //     db.source_root_package_info(SourceRootId(0))
     //         .map_or(crate::base::Target::default(), |s| s.target.clone())
     // }
-}
-
-#[derive(Debug)]
-pub struct PackageDependency {
-    pub package: Package,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -43,9 +67,16 @@ pub struct Module {
 
 impl Module {
     pub fn name(self, db: &dyn DefDatabase) -> SmolStr {
-        db.module_map()
+        let root = db.file_source_root(self.id);
+        let module_map = db.module_map(root);
+        module_map
             .module_name_for_file(self.id)
             .expect("This is a compiler bug!")
+    }
+
+    pub fn package(self, db: &dyn DefDatabase) -> Package {
+        let root = db.file_source_root(self.id);
+        Package { id: root }
     }
 }
 

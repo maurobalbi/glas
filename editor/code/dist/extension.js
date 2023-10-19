@@ -4108,7 +4108,6 @@ module.exports = validRange
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.sleep = exports.isGleamEditor = exports.isGleamDocument = exports.deactivate = exports.activate = exports.syntaxTree = void 0;
 const vscode = __webpack_require__(/*! vscode */ "vscode");
-const vscode_1 = __webpack_require__(/*! vscode */ "vscode");
 const node_1 = __webpack_require__(/*! vscode-languageclient/node */ "./node_modules/vscode-languageclient/node.js");
 const lc = __webpack_require__(/*! vscode-languageclient */ "./node_modules/vscode-languageclient/lib/node/main.js");
 let client;
@@ -4171,13 +4170,13 @@ exports.deactivate = deactivate;
 function createLanguageClient(context) {
     let clientOptions = {
         documentSelector: [{ scheme: "file", language: "gleam" }],
-        synchronize: {
-            fileEvents: [
-                vscode_1.workspace.createFileSystemWatcher("**/gleam.toml"),
-                vscode_1.workspace.createFileSystemWatcher("**/manifest.toml"),
-                vscode_1.workspace.createFileSystemWatcher("**/*.gleam"),
-            ],
-        },
+        // synchronize: {
+        //   fileEvents: [
+        //     workspace.createFileSystemWatcher("**/gleam.toml"),
+        //     workspace.createFileSystemWatcher("**/manifest.toml"),
+        //     workspace.createFileSystemWatcher("**/*.gleam"),
+        //   ],
+        // },
     };
     const ext = process.platform === "win32" ? ".exe" : "";
     let serverOptions = {

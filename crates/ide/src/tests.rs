@@ -48,27 +48,16 @@ impl TestDB {
         let mut db = Self::default();
         let mut change = Change::default();
         let mut file_set = FileSet::default();
-        let mut module_map = ModuleMap::default();
         for (i, (path, text)) in (0u32..).zip(&f.files) {
             let file = FileId(i);
             file_set.insert(file, path.clone());
-            module_map.insert(
-                file,
-                module_name(
-                    &PathBuf::from(""),
-                    path.as_path().expect("should be a path"),
-                )
-                .expect("expected a module name"),
-            );
+        
             change.change_file(file, text.to_owned().into());
         }
-        tracing::info!("{:#?} {:#?}", module_map, file_set);
-        change.set_roots_and_map(
-            vec![SourceRoot::new_local(file_set, "/".into())],
-            module_map,
-        );
+        tracing::info!("{:#?}",file_set);
+        change.set_roots(vec![SourceRoot::new(file_set, "/".into())]);
         let mut package_graph = PackageGraph::default();
-        package_graph.add_package(SmolStr::from("test"), FileId(f.files.len() as u32));
+        package_graph.add_package(SmolStr::from("test"), FileId(f.files.len() as u32 - 1));
 
         change.set_package_graph(package_graph);
         change.apply(&mut db);
@@ -118,8 +107,9 @@ impl Fixture {
                 ensure!(!missing_header, "Missing path header at the first line");
 
                 let mut iter = header.split(' ');
+                let test_dir = VfsPath::new("/test");
                 let path = iter.next().context("Missing path")?;
-                let path = VfsPath::new(path);
+                let path = test_dir.join(path).unwrap();
 
                 for prop in iter {
                     if let Some((_name, target)) = prop
@@ -139,7 +129,7 @@ impl Fixture {
             } else {
                 if cur_path.is_none() {
                     missing_header = true;
-                    cur_path = Some(VfsPath::new("/test.gleam".to_string()));
+                    cur_path = Some(VfsPath::new("/test/test.gleam".to_string()));
                 }
 
                 let mut iter = line.chars().peekable();
@@ -165,7 +155,7 @@ impl Fixture {
         this.insert_file(cur_path.context("Empty fixture")?, cur_text)?;
 
         let _: std::result::Result<(), anyhow::Error> =
-            this.insert_file(VfsPath::new("gleam.toml"), "".to_string());
+            this.insert_file(VfsPath::new("/gleam.toml"), "".to_string());
         this.package_info.get_or_insert_with(|| PackageInfo {
             gleam_toml: FileId(this.files.len() as u32 - 1),
             dependencies: Default::default(),

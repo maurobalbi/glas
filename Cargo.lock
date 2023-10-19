@@ -623,6 +623,7 @@ dependencies = [
  "futures",
  "gleam-interop",
  "ide",
+ "indexmap",
  "la-arena",
  "log",
  "lsp-types",

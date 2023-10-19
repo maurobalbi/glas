@@ -33,10 +33,18 @@ impl SearchScope {
         SearchScope::new(std::iter::once((file, None)).collect())
     }
 
+    /// Build a searchscope spanning all currently loaded modules
     pub fn package_graph(db: &dyn DefDatabase) -> SearchScope {
         let mut entries = IntMap::default();
-        for (file, _) in db.module_map().iter() {
-            entries.insert(file, None);
+        // ToDo: get all files in dependencies
+        for package in db.package_graph().iter() {
+            let package_info = &db.package_graph()[package];
+            let sid = db.file_source_root(package_info.gleam_toml);
+            let source_root = db.source_root(sid);
+            for (file_id, path) in source_root.module_files() {
+                tracing::info!("search graph {:?}", path);
+                entries.insert(file_id, None);
+            }
         }
         SearchScope { entries }
     }

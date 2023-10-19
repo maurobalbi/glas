@@ -11,6 +11,7 @@ use crate::{DefDatabase, FileId};
 
 use super::{
     body::Body,
+    hir::Module,
     hir_def::{AdtId, AdtLoc, FunctionLoc, ModuleDefId, TypeAliasId, TypeAliasLoc, VariantId},
     module::{Clause, Expr, ExprId, ImportData, Pattern, PatternId, Statement, Visibility},
     resolver::ResolveResult,
@@ -22,12 +23,14 @@ pub fn module_scope_with_map_query(
     file_id: FileId,
 ) -> (Arc<ModuleScope>, Arc<ModuleSourceMap>) {
     let module_data = db.module_items(file_id);
+    let module_map = Module { id: file_id }.package(db).visible_modules(db);
+    tracing::info!("Module scope query {:?}", module_map);
 
     let mut scope = ModuleScope::default();
     let mut module_source_map = ModuleSourceMap::default();
 
     for (_, imported_module) in module_data.module_imports() {
-        let Some(file) = db.module_map().file_for_module_name(&imported_module.name) else {
+        let Some(file) = module_map.file_for_module_name(&imported_module.name) else {
             // ToDo: report diagnostics
             continue;
         };
@@ -36,7 +39,7 @@ pub fn module_scope_with_map_query(
     }
 
     for (_, import) in module_data.unqualified_imports() {
-        for val in scope.resolve_import(db, &module_data, import) {
+        for val in scope.resolve_import(db, file_id, &module_data, import) {
             match val {
                 ModuleDefId::AdtId(_) => scope.types.insert(import.local_name(), val),
                 ModuleDefId::TypeAliasId(_) => scope.types.insert(import.local_name(), val),
@@ -202,6 +205,7 @@ impl ModuleScope {
     fn resolve_import(
         &self,
         db: &dyn DefDatabase,
+        file_id: FileId,
         module_items: &ModuleItemData,
         import: &ImportData,
     ) -> Vec<ModuleDefId> {
@@ -211,7 +215,11 @@ impl ModuleScope {
             ..
         } = import;
         let module = &module_items[*module];
-        let Some(file_id) = db.module_map().file_for_module_name(&module.name) else {
+        let Some(file_id) = Module { id: file_id }
+            .package(db)
+            .module_map(db)
+            .file_for_module_name(&module.name)
+        else {
             return Vec::new();
         };
         let scope = db.module_scope(file_id);

@@ -437,7 +437,7 @@ fn field_access() {
 fn field_access_module() {
     check_fix(
         r#"
-#- /test.gleam
+#- test.gleam
 fn main() {
     1
 }
@@ -446,7 +446,7 @@ type Bla {
     Bla
 }
 
-#- /test2.gleam
+#- test2.gleam
 import test
 
 fn test() { "abc" }
@@ -520,12 +520,13 @@ fn alias_infer() {
 }
 
 #[test]
+#[traced_test]
 fn aliased_import() {
     check_fix(
-        r#"#- /test.gleam
+        r#"#- test.gleam
 pub type Bla = String
 
-#- /test2.gleam
+#- test2.gleam
 import test.{Bla, main as dodo}
 
 fn test(a: String) -> Bla { $0 }"#,
@@ -536,12 +537,12 @@ fn test(a: String) -> Bla { $0 }"#,
 #[test]
 fn generic_alias() {
     check_fix(
-        r#"#- /test.gleam
+        r#"#- test.gleam
 pub type Wobble(name) {
     Wobble(name)
 }
 
-#- /test2.gleam
+#- test2.gleam
 import test.{Wobble as Bobo, main as dodo}
 pub opaque type Nasty {
     Nasty
@@ -556,12 +557,12 @@ fn test(a: String) -> Alias { $0 }"#,
 #[test]
 fn qualified_pattern() {
     check_fix(
-        r#"#- /test.gleam
+        r#"#- test.gleam
 pub type Wobble(name) {
     Wobble(name)
 }
 
-#- /test2.gleam
+#- test2.gleam
 import test
 
 fn test(a) { case a {
@@ -574,12 +575,12 @@ fn test(a) { case a {
 #[test]
 fn qualified_type() {
     check_fix(
-        r#"#- /test.gleam
+        r#"#- test.gleam
 pub type Wobble(name) {
     Wobble(name)
 }
 
-#- /test2.gleam
+#- test2.gleam
 import test
 
 fn test(a: test.Wobble(a)) { $0"" }"#,
@@ -590,11 +591,11 @@ fn test(a: test.Wobble(a)) { $0"" }"#,
 #[test]
 fn qualified_type_alias() {
     check_fix(
-        r#"#- /test.gleam
+        r#"#- test.gleam
 pub type Wobble = Alias
 type Alias = String
 
-#- /test2.gleam
+#- test2.gleam
 import test
 
 fn test(a: test.Wobble) { $0"" }"#,

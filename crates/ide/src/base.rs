@@ -4,7 +4,7 @@ use smol_str::SmolStr;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::{fmt, iter};
+use std::{fmt, iter, ops};
 use syntax::{SyntaxNode, TextRange, TextSize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -166,9 +166,8 @@ impl fmt::Debug for FileSet {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PackageRoot {
-    pub is_local: bool,
     pub path: PathBuf,
 }
 
@@ -177,23 +176,13 @@ pub struct PackageRoot {
 pub struct SourceRoot {
     file_set: FileSet,
     root_path: PathBuf,
-    pub is_library: bool,
 }
 
 impl SourceRoot {
-    pub fn new_local(file_set: FileSet, root_path: PathBuf) -> Self {
+    pub fn new(file_set: FileSet, root_path: PathBuf) -> Self {
         Self {
             file_set,
             root_path,
-            is_library: false,
-        }
-    }
-
-    pub fn new_library(file_set: FileSet, root_path: PathBuf) -> SourceRoot {
-        SourceRoot {
-            is_library: true,
-            root_path,
-            file_set,
         }
     }
 
@@ -208,6 +197,15 @@ impl SourceRoot {
     pub fn files(&self) -> impl Iterator<Item = (FileId, &'_ VfsPath)> + ExactSizeIterator + '_ {
         self.file_set.iter()
     }
+
+    pub fn module_files(&self) -> impl Iterator<Item = (FileId, &'_ VfsPath)> + '_ {
+        self.files().filter(|(_, path)| {
+            let Some(ext) = path.as_path().and_then(|p| p.extension()) else {
+                return false;
+            };
+            ext == "gleam"
+        })
+    }
 }
 
 pub fn module_name(root_path: &PathBuf, module_path: &Path) -> Option<SmolStr> {
@@ -216,6 +214,10 @@ pub fn module_name(root_path: &PathBuf, module_path: &Path) -> Option<SmolStr> {
         .strip_prefix(root_path)
         .expect("Stripping package prefix from module path")
         .to_path_buf();
+
+    if module_path.extension()? != "gleam" {
+        return None;
+    }
 
     // my/module
     let _ = module_path.set_extension("");
@@ -255,6 +257,17 @@ impl PackageGraph {
     pub fn add_dep(&mut self, from: PackageId, dep: Dependency) {
         self.arena[from].dependencies.push(dep)
     }
+    
+    pub fn iter(&self) -> impl Iterator<Item = PackageId> + '_ {
+        self.arena.iter().map(|(idx, _)| idx)
+    }
+}
+
+impl ops::Index<PackageId> for PackageGraph {
+    type Output = PackageInfo;
+    fn index(&self, crate_id: PackageId) -> &PackageInfo {
+        &self.arena[crate_id]
+    }
 }
 
 pub type PackageId = Idx<PackageInfo>;
@@ -286,7 +299,6 @@ impl From<&str> for Target {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Dependency {
     pub package: PackageId,
-    pub name: String,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
@@ -376,26 +388,36 @@ pub trait SourceDatabase {
     #[salsa::input]
     fn file_source_root(&self, file_id: FileId) -> SourceRootId;
 
+    fn source_root_package(&self, source_root_id: SourceRootId) -> Arc<PackageId>;
+
     #[salsa::input]
     fn package_graph(&self) -> Arc<PackageGraph>;
 
     #[salsa::input]
-    fn module_map(&self) -> Arc<ModuleMap>;
+    fn module_map(&self, source: SourceRootId) -> Arc<ModuleMap>;
 }
 
-// fn source_root_package_info(
-//     db: &dyn SourceDatabase,
-//     sid: SourceRootId,
-// ) -> Option<Arc<PackageInfo>> {
-//     db.package_graph().nodes.get(&sid).cloned().map(Arc::new)
-// }
+fn source_root_package(db: &dyn SourceDatabase, id: SourceRootId) -> Arc<PackageId> {
+    let graph = db.package_graph();
+    tracing::info!("Graph {:#?}", graph);
+    let mut iter = graph.iter()
+        .filter(|&package| {
+            let root_file = graph[package].gleam_toml;
+            db.file_source_root(root_file) == id
+        });
+        let res = iter.next().expect("should always find a package!");
+        tracing::info!("iter lengtch {:?}", res);
+        tracing::info!("iter lengtch {:?}", iter.collect::<Vec<_>>());
+    Arc::new(res)
+}
 
 #[derive(Default, Clone, PartialEq, Eq)]
 pub struct Change {
     pub package_graph: Option<PackageGraph>,
     pub roots: Option<Vec<SourceRoot>>,
-    pub module_map: Option<ModuleMap>,
     pub file_changes: Vec<(FileId, Arc<str>)>,
+    pub is_structural_change: bool,
+    pub is_workspace_change: bool,
 }
 
 impl Change {
@@ -407,9 +429,12 @@ impl Change {
         self.package_graph = Some(graph);
     }
 
-    pub fn set_roots_and_map(&mut self, roots: Vec<SourceRoot>, module_map: ModuleMap) {
+    pub fn set_roots(&mut self, roots: Vec<SourceRoot>) {
         self.roots = Some(roots);
-        self.module_map = Some(module_map);
+    }
+
+    pub fn set_structural_change(&mut self) {
+        self.is_structural_change = true;
     }
 
     pub fn change_file(&mut self, file_id: FileId, content: Arc<str>) {
@@ -423,14 +448,22 @@ impl Change {
         if let Some(roots) = self.roots {
             u32::try_from(roots.len()).expect("Length overflow");
             for (sid, root) in (0u32..).map(SourceRootId).zip(roots) {
-                for (fid, _) in root.files() {
+                let mut module_map = ModuleMap::default();
+                for (fid, vpath) in root.files() {
+                    tracing::info!("Setting source root for: {:?} {:?}", fid, vpath);
                     db.set_file_source_root_with_durability(fid, sid, Durability::HIGH);
+                    if let Some(module_name) = vpath
+                        .as_path()
+                        .and_then(|mpath| module_name(&root.root_path, mpath))
+
+                    {
+                        module_map.insert(fid, module_name); // Todo: Report error if insert returns an fileid
+                    }
                 }
+                tracing::info!("MM {:#?}", module_map);
+                db.set_module_map_with_durability(sid, Arc::new(module_map), Durability::HIGH);
                 db.set_source_root_with_durability(sid, Arc::new(root), Durability::HIGH);
             }
-        }
-        if let Some(module_map) = self.module_map {
-            db.set_module_map_with_durability(Arc::new(module_map), Durability::HIGH)
         }
         for (file_id, content) in self.file_changes {
             db.set_file_content_with_durability(file_id, content, Durability::LOW);

@@ -91,8 +91,6 @@ function createLanguageClient(context: vscode.ExtensionContext): LanguageClient 
     synchronize: {
       fileEvents: [
         workspace.createFileSystemWatcher("**/gleam.toml"),
-        workspace.createFileSystemWatcher("**/manifest.toml"),
-        workspace.createFileSystemWatcher("**/*.gleam"),
       ],
     },
   };

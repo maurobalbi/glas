@@ -1,6 +1,4 @@
-use std::future::Future;
 use std::ops::ControlFlow;
-use std::pin::Pin;
 use std::task::{Context, Poll};
 
 use lsp_types::notification;
@@ -49,15 +47,15 @@ where
     type Future = S::Future;
 
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        match self.receiver.take() {
-            None => return Poll::Ready(ready!(self.service.poll_ready(cx))),
-            Some(mut receiver) => {
-                if Pin::new(&mut receiver).poll(cx).is_pending() {
-                    tracing::info!("Paused! waiting until packages are downloaded");
-                    return Poll::Pending;
-                }
-            }
-        }
+        // match self.receiver.take() {
+        //     None => return Poll::Ready(ready!(self.service.poll_ready(cx))),
+        //     Some(mut receiver) => {
+        //         if Pin::new(&mut receiver).poll(cx).is_pending() {
+        //             tracing::info!("Paused! waiting until packages are downloaded");
+        //             return Poll::Pending;
+        //         }
+        //     }
+        // }
 
         Poll::Ready(ready!(self.service.poll_ready(cx)))
     }

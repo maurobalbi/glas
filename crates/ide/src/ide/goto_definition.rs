@@ -165,12 +165,12 @@ mod tests {
     fn module_res() {
         check_no(
             r#"
-#- /test.gleam
+#- test.gleam
 fn main() {
     1
 }
 
-#- /test2.gleam
+#- test2.gleam
 fn bla() {
     $0main()
 }
@@ -182,12 +182,12 @@ fn bla() {
     fn module_field_access_res() {
         check(
             r#"
-#- /asdf/test.gleam
+#- asdf/test.gleam
 fn main() {
     1
 }
 
-#- /test2.gleam
+#- test2.gleam
 import asdf/test
 
 fn bla() {
@@ -208,12 +208,12 @@ fn <main>() {
     fn qualified_type() {
         check(
             r#"
-#- /asdf/test.gleam
+#- asdf/test.gleam
 pub type Wobble {
     Some
 }
 
-#- /test2.gleam
+#- test2.gleam
 import asdf/test
 
 fn bla(a: test.$0Wobble) {
@@ -233,12 +233,12 @@ pub type <Wobble> {
     fn module_field_access() {
         check(
             r#"
-#- /test.gleam
+#- test.gleam
 fn print() {
     1
 }
 
-#- /test2.gleam
+#- test2.gleam
 import test
 
 type Internal {
