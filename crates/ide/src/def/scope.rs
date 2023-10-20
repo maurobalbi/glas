@@ -7,7 +7,7 @@ use salsa::InternId;
 use smol_str::SmolStr;
 use syntax::{ast, AstPtr};
 
-use crate::{DefDatabase, FileId};
+use crate::{DefDatabase, FileId, ModuleMap};
 
 use super::{
     body::Body,
@@ -39,7 +39,7 @@ pub fn module_scope_with_map_query(
     }
 
     for (_, import) in module_data.unqualified_imports() {
-        for val in scope.resolve_import(db, file_id, &module_data, import) {
+        for val in scope.resolve_import(db, &module_map, &module_data, import) {
             match val {
                 ModuleDefId::AdtId(_) => scope.types.insert(import.local_name(), val),
                 ModuleDefId::TypeAliasId(_) => scope.types.insert(import.local_name(), val),
@@ -205,7 +205,7 @@ impl ModuleScope {
     fn resolve_import(
         &self,
         db: &dyn DefDatabase,
-        file_id: FileId,
+        module_map: &ModuleMap,
         module_items: &ModuleItemData,
         import: &ImportData,
     ) -> Vec<ModuleDefId> {
@@ -215,11 +215,8 @@ impl ModuleScope {
             ..
         } = import;
         let module = &module_items[*module];
-        let Some(file_id) = Module { id: file_id }
-            .package(db)
-            .module_map(db)
-            .file_for_module_name(&module.name)
-        else {
+
+        let Some(file_id) = module_map.file_for_module_name(&module.name) else {
             return Vec::new();
         };
         let scope = db.module_scope(file_id);
