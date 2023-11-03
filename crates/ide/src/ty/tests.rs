@@ -408,9 +408,24 @@ fn lambda_shorthand() {
 }
 
 #[test]
+#[traced_test]
 fn annotations() {
     check_all(
         "fn ann(a: #(Int), b: fn(Int, Float) -> Int) -> Int { \"123\" } ",
+        expect!["ann: fn(#(Int), fn(Int, Float) -> Int) -> Int"],
+    )
+}
+
+#[test]
+#[traced_test]
+fn annot() {
+    check_all(
+        "fn ann(a: #(Int), b: fn(Int, Float) -> Int) -> Result(Int,Int) { Ok(\"123\") } ",
+        expect!["ann: fn(#(Int), fn(Int, Float) -> Int) -> Result(Int, Int)"],
+    );
+  
+    check_all(
+        "fn ann(a: #(Int), b: fn(Int, Float) -> Int) -> Int) { \"123\" } ",
         expect!["ann: fn(#(Int), fn(Int, Float) -> Int) -> Int"],
     )
 }
