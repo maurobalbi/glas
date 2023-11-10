@@ -257,7 +257,7 @@ impl PackageGraph {
     pub fn add_dep(&mut self, from: PackageId, dep: Dependency) {
         self.arena[from].dependencies.push(dep)
     }
-    
+
     pub fn iter(&self) -> impl Iterator<Item = PackageId> + '_ {
         self.arena.iter().map(|(idx, _)| idx)
     }
@@ -400,14 +400,13 @@ pub trait SourceDatabase {
 fn source_root_package(db: &dyn SourceDatabase, id: SourceRootId) -> Arc<PackageId> {
     let graph = db.package_graph();
     tracing::info!("Graph {:#?}", graph);
-    let mut iter = graph.iter()
-        .filter(|&package| {
-            let root_file = graph[package].gleam_toml;
-            db.file_source_root(root_file) == id
-        });
-        let res = iter.next().expect("should always find a package!");
-        tracing::info!("iter lengtch {:?}", res);
-        tracing::info!("iter lengtch {:?}", iter.collect::<Vec<_>>());
+    let mut iter = graph.iter().filter(|&package| {
+        let root_file = graph[package].gleam_toml;
+        db.file_source_root(root_file) == id
+    });
+    let res = iter.next().expect("should always find a package!");
+    tracing::info!("iter lengtch {:?}", res);
+    tracing::info!("iter lengtch {:?}", iter.collect::<Vec<_>>());
     Arc::new(res)
 }
 
@@ -455,7 +454,6 @@ impl Change {
                     if let Some(module_name) = vpath
                         .as_path()
                         .and_then(|mpath| module_name(&root.root_path, mpath))
-
                     {
                         module_map.insert(fid, module_name); // Todo: Report error if insert returns an fileid
                     }

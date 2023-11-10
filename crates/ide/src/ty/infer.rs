@@ -311,7 +311,7 @@ impl<'db> InferCtx<'db> {
 
         Ty::Function {
             params: param_tys,
-            return_: body_ty,
+            return_: return_.unwrap_or(body_ty),
         }
         .intern(self)
     }
@@ -354,7 +354,7 @@ impl<'db> InferCtx<'db> {
                                 let param_ty = self.new_ty_var();
                                 arg_tys.push((None, param_ty));
                                 let arg_ty = self.infer_expr(*arg);
-                                self.unify_var(arg_ty, param_ty)
+                                self.unify_var(arg_ty, param_ty);
                             }
                             arg_tys.push((None, cb_tyvar));
                             let ret_ty = self.new_ty_var();
@@ -507,7 +507,7 @@ impl<'db> InferCtx<'db> {
                         match ty {
                             Ty::Function { params, return_ } => {
                                 if params.len() > args.len() && !params.is_empty() {
-                                    self.unify_var(arg_ty, params[0].1)
+                                    self.unify_var(arg_ty, params[0].1);
                                 }
                                 return return_;
                             }
@@ -737,16 +737,36 @@ impl<'db> InferCtx<'db> {
         }
     }
 
-    fn unify_var_ty(&mut self, var: TyVar, rhs: Ty) {
+    fn unify_var_ty(&mut self, var: TyVar, rhs: Ty) -> bool {
         let lhs = mem::replace(self.table.get_mut(var.0), Ty::Unknown { idx: 0 });
-        let ret = self.unify(lhs, rhs);
-        *self.table.get_mut(var.0) = ret;
+        if let Ok(ret) = self.unify(lhs.clone(), rhs) {
+            tracing::info!("Ret {:?}", ret);
+            *self.table.get_mut(var.0) = ret;
+            return true;
+        } else {
+            tracing::info!("Err {:?}", lhs);
+            *self.table.get_mut(var.0) = lhs;
+            return false;
+        };
     }
 
     fn unify_var(&mut self, lhs: TyVar, rhs: TyVar) {
-        let (var, rhs) = self.table.unify(lhs.0, rhs.0);
-        let Some(rhs) = rhs else { return };
-        self.unify_var_ty(TyVar(var), rhs);
+        let _ = self.try_unify_var(lhs, rhs);
+    }
+
+    fn try_unify_var(&mut self, lhs: TyVar, rhs: TyVar) -> Result<(), ()> {
+        let rhs_ty = self.table.get_mut(rhs.0).clone();
+        let unified = self.unify_var_ty(lhs, rhs_ty);
+        if unified {
+            tracing::info!(
+                "unifieing table {:?} {:?}",
+                self.table.get_mut(lhs.0).clone(),
+                self.table.get_mut(rhs.0)
+            );
+            self.table.unify(lhs.0, rhs.0);
+            return Ok(());
+        };
+        Err(())
     }
 
     fn infer_pattern(&mut self, pattern: PatternId, expected_ty_var: TyVar) -> TyVar {
@@ -792,14 +812,16 @@ impl<'db> InferCtx<'db> {
                 if let Some(as_name) = as_name {
                     self.infer_pattern(*as_name, expected_ty_var);
                 }
-                self.unify_var(pat_var, sub_pat)
+                self.unify_var(pat_var, sub_pat);
             }
-            Pattern::Literal { kind } => match kind {
-                LiteralKind::Int => self.unify_var_ty(pat_var, Ty::Int),
-                LiteralKind::Float => self.unify_var_ty(pat_var, Ty::Float),
-                LiteralKind::String => self.unify_var_ty(pat_var, Ty::String),
-                LiteralKind::Bool => self.unify_var_ty(pat_var, Ty::Bool),
-            },
+            Pattern::Literal { kind } => {
+                match kind {
+                    LiteralKind::Int => self.unify_var_ty(pat_var, Ty::Int),
+                    LiteralKind::Float => self.unify_var_ty(pat_var, Ty::Float),
+                    LiteralKind::String => self.unify_var_ty(pat_var, Ty::String),
+                    LiteralKind::Bool => self.unify_var_ty(pat_var, Ty::Bool),
+                };
+            }
             Pattern::Spread { name: _ } => {
                 self.unify_var_ty(
                     pat_var,
@@ -816,7 +838,7 @@ impl<'db> InferCtx<'db> {
                     self.infer_pattern(*field, new_ty);
                     field_ty.push(new_ty);
                 }
-                self.unify_var_ty(pat_var, Ty::Tuple { fields: field_ty })
+                self.unify_var_ty(pat_var, Ty::Tuple { fields: field_ty });
             }
             Pattern::List { elements } => {
                 let of = self.new_ty_var();
@@ -905,15 +927,16 @@ impl<'db> InferCtx<'db> {
         }
     }
 
-    fn unify(&mut self, lhs: Ty, rhs: Ty) -> Ty {
-        match (lhs, rhs) {
+    fn unify(&mut self, lhs: Ty, rhs: Ty) -> Result<Ty, ()> {
+        tracing::info!("unify ty {:?} {:?}", lhs, rhs);
+        let ty = match (lhs, rhs) {
             (Ty::Unknown { idx }, Ty::Unknown { idx: idx2 }) => Ty::Unknown {
                 idx: min(idx, idx2),
             },
             (Ty::Unknown { .. }, other) | (other, Ty::Unknown { .. }) => other,
             (Ty::Result { ok, err }, Ty::Result { ok: okr, err: errr }) => {
-                self.unify_var(ok, okr);
-                self.unify_var(err, errr);
+                self.try_unify_var(ok, okr)?;
+                self.try_unify_var(err, errr)?;
                 Ty::Result { ok, err }
             }
             (
@@ -931,7 +954,7 @@ impl<'db> InferCtx<'db> {
                     tracing::info!("Different adts {:?} {:?}", id1, id2);
                 }
                 for (p1, p2) in params1.clone().into_iter().zip(params2.into_iter()) {
-                    self.unify_var(p1, p2)
+                    self.try_unify_var(p1, p2)?;
                 }
                 Ty::Adt {
                     adt_id: id1,
@@ -939,7 +962,7 @@ impl<'db> InferCtx<'db> {
                 }
             }
             (Ty::List { of: of1 }, Ty::List { of: of2 }) => {
-                self.unify_var(of1, of2);
+                self.try_unify_var(of1, of2)?;
                 Ty::List { of: of1 }
             }
             (
@@ -954,9 +977,9 @@ impl<'db> InferCtx<'db> {
             ) => {
                 // reorder
                 for (p1, p2) in params1.clone().into_iter().zip(params2.into_iter()) {
-                    self.unify_var(p1.1, p2.1)
+                    self.try_unify_var(p1.1, p2.1)?;
                 }
-                self.unify_var(ret1, ret2);
+                self.try_unify_var(ret1, ret2)?;
                 Ty::Function {
                     params: params1,
                     return_: ret1,
@@ -964,17 +987,19 @@ impl<'db> InferCtx<'db> {
             }
             (Ty::Tuple { fields: fields1 }, Ty::Tuple { fields: fields2 }) => {
                 for (f1, f2) in fields1.clone().into_iter().zip(fields2.into_iter()) {
-                    self.unify_var(f1, f2)
+                    self.try_unify_var(f1, f2)?;
                 }
                 Ty::Tuple { fields: fields1 }
             }
             (lhs, rhs) => {
                 if lhs != rhs {
                     tracing::debug!("ERROR: {:?} {:?}", lhs, rhs);
+                    return Err(());
                 };
                 lhs
             }
-        }
+        };
+        return Ok(ty);
     }
 }
 

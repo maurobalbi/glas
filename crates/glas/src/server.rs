@@ -10,11 +10,11 @@ use async_lsp::{
     ClientSocket, ErrorCode, LanguageClient, LanguageServer, ResponseError, ServerSocket,
 };
 use ide::{
-    Analysis, AnalysisHost, Cancelled, Dependency, FileSet, PackageGraph,
-    PackageId, PackageRoot, SourceRoot, Target, VfsPath,
+    Analysis, AnalysisHost, Cancelled, Dependency, FileSet, PackageGraph, PackageId, PackageRoot,
+    SourceRoot, Target, VfsPath,
 };
 
-use indexmap:: IndexSet;
+use indexmap::IndexSet;
 use lsp_types::notification::{Notification, PublishDiagnostics};
 use lsp_types::request::{self as req, Request};
 use lsp_types::{
@@ -810,7 +810,6 @@ impl Server {
         task::spawn_blocking(move || f(snap))
     }
 
-
     // This function is responsible for handling onOpen / didChangeFile events
     // and potentially discovering / loading new packages
     fn set_vfs_file_content(&mut self, uri: &Url, text: String) {
@@ -933,7 +932,7 @@ impl Server {
         let source_roots = prefix_to_paths
             .into_iter()
             .enumerate()
-            .map(|(i, (path, set))| SourceRoot::new(set, path))
+            .map(|(_i, (path, set))| SourceRoot::new(set, path))
             .collect();
         source_roots
     }
@@ -958,7 +957,6 @@ fn find_gleam_project_parent(path: &Path) -> Option<PathBuf> {
 
         if let Some(parent) = root.parent() {
             if let Some(grand_parent) = parent.parent() {
-
                 if parent.file_name() == Some(OsStr::new("packages"))
                     && grand_parent.file_name() == Some(OsStr::new("build"))
                 {

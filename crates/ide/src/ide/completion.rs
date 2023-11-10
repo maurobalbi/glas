@@ -9,7 +9,7 @@ use crate::{
     def::{
         find_container,
         hir::Function,
-        hir::{Variant, Package, Module},
+        hir::{Module, Package, Variant},
         hir_def::ModuleDefId,
         resolver::{resolver_for_toplevel, ResolveResult},
         resolver_for_expr, Semantics,
@@ -75,7 +75,9 @@ impl<'db> CompletionContext<'db> {
             .token_at_offset(position.pos)
             .left_biased();
 
-        let module = Module { id: position.file_id};
+        let module = Module {
+            id: position.file_id,
+        };
 
         let mut ctx = CompletionContext {
             db,

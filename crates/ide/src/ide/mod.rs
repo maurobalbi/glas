@@ -10,8 +10,8 @@ use crate::base::SourceDatabaseStorage;
 use crate::def::{DefDatabaseStorage, InternDatabaseStorage};
 use crate::ty::{TyDatabase, TyDatabaseStorage};
 use crate::{
-    Change, DefDatabase, Diagnostic, FileId, FilePos, FileRange, FileSet, ModuleMap,
-    SourceDatabase, SourceRoot, VfsPath,
+    Change, DefDatabase, Diagnostic, FileId, FilePos, FileRange, FileSet, SourceDatabase,
+    SourceRoot, VfsPath,
 };
 use salsa::{Database, Durability, ParallelDatabase};
 use std::fmt;
@@ -114,9 +114,7 @@ impl AnalysisHost {
         change.change_file(file, src.into());
         let mut file_set = FileSet::default();
         file_set.insert(file, VfsPath::new("/main.gleam")); // Hack
-        change.set_roots(
-            vec![SourceRoot::new(file_set, "/".into())],
-        );
+        change.set_roots(vec![SourceRoot::new(file_set, "/".into())]);
         let mut this = Self::new();
         this.apply_change(change);
         (this, file)

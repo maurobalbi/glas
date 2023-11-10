@@ -3,13 +3,12 @@ use crate::def::{DefDatabaseStorage, InternDatabaseStorage};
 use crate::ide::Upcast;
 use crate::ty::TyDatabaseStorage;
 use crate::{
-    module_name, Change, DefDatabase, FileId, FilePos, FileSet, ModuleMap, PackageGraph,
-    PackageInfo, SourceRoot, VfsPath,
+    Change, DefDatabase, FileId, FilePos, FileSet, PackageGraph, PackageInfo, SourceRoot, VfsPath,
 };
 use anyhow::{bail, ensure, Context, Result};
 use indexmap::IndexMap;
 use smol_str::SmolStr;
-use std::path::PathBuf;
+
 use std::{mem, ops};
 use syntax::TextSize;
 
@@ -51,10 +50,10 @@ impl TestDB {
         for (i, (path, text)) in (0u32..).zip(&f.files) {
             let file = FileId(i);
             file_set.insert(file, path.clone());
-        
+
             change.change_file(file, text.to_owned().into());
         }
-        tracing::info!("{:#?}",file_set);
+        tracing::info!("{:#?}", file_set);
         change.set_roots(vec![SourceRoot::new(file_set, "/".into())]);
         let mut package_graph = PackageGraph::default();
         package_graph.add_package(SmolStr::from("test"), FileId(f.files.len() as u32 - 1));

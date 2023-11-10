@@ -8,7 +8,7 @@ use super::display::TyDisplay;
 use super::TyDatabase;
 
 #[track_caller]
-fn check_all(src: &str, expect: Expect) {
+fn check_fn(src: &str, expect: Expect) {
     let (db, file) = TestDB::single_file(src).unwrap();
     let scope = db.module_scope(file);
     let mut output = Vec::new();
@@ -19,6 +19,42 @@ fn check_all(src: &str, expect: Expect) {
                 let func = db.lookup_intern_function(fn_id);
                 let func = &db.module_items(func.file_id)[func.value];
                 output.push(format!("{}: {}", func.name, infer.fn_ty.display(&db)));
+            }
+            crate::def::hir_def::ModuleDefId::AdtId(_) => {}
+            crate::def::hir_def::ModuleDefId::VariantId(_) => {}
+            crate::def::hir_def::ModuleDefId::TypeAliasId(_) => {}
+        }
+    }
+
+    let got = output.join("\n");
+    expect.assert_eq(&got);
+}
+
+#[track_caller]
+fn check_all(src: &str, expect: Expect) {
+    let (db, file) = TestDB::single_file(src).unwrap();
+    let scope = db.module_scope(file);
+    let mut output = Vec::new();
+    for fun in scope.declarations().flatten() {
+        match fun.0 {
+            crate::def::hir_def::ModuleDefId::FunctionId(fn_id) => {
+                let infer = db.infer_function(fn_id);
+                let func = db.lookup_intern_function(fn_id);
+                let (body, src_map) = db.body_with_source_map(fn_id);
+                let root = db.parse(func.file_id).syntax_node();
+                let func = &db.module_items(func.file_id)[func.value];
+                output.push(format!("{}: {}", func.name, infer.fn_ty.display(&db)));
+                for (pat_id, _) in body.patterns() {
+                    let source = src_map.node_for_pattern(pat_id);
+                    if let Some(src) = source {
+                        let text = src.value.syntax_node_ptr().to_node(&root);
+                        output.push(format!(
+                            "  {}: {}",
+                            text,
+                            infer.ty_for_pattern(pat_id).display(&db)
+                        ))
+                    }
+                }
             }
             crate::def::hir_def::ModuleDefId::AdtId(_) => {}
             crate::def::hir_def::ModuleDefId::VariantId(_) => {}
@@ -55,7 +91,7 @@ fn check_fix(src: &str, expect: Expect) {
 
 #[test]
 fn let_in() {
-    check_all(
+    check_fn(
         "type Bla2 { Bla } fn bla(a, b) { Bla }",
         expect![
             r#"
@@ -66,7 +102,7 @@ fn let_in() {
 
 #[test]
 fn fn_params() {
-    check_all(
+    check_fn(
         "fn main(a,b) {a + b} fn bla(a, b) { b }",
         expect![
             r#"
@@ -78,7 +114,7 @@ fn fn_params() {
 
 #[test]
 fn fn_params_annotation() {
-    check_all(
+    check_fn(
         "fn bla(a: blabla, b: bubu) { b }",
         expect![
             r#"
@@ -88,7 +124,7 @@ fn fn_params_annotation() {
 }
 #[test]
 fn let_infer_pattern() {
-    check_all(
+    check_fn(
         "type Biboop {Biboop(Int)} fn biboob(a) {let Biboop(b) = a b}",
         expect!["biboob: fn(Biboop) -> Int"],
     )
@@ -96,7 +132,7 @@ fn let_infer_pattern() {
 
 #[test]
 fn unsaturated_constructor() {
-    check_all(
+    check_fn(
         "type Snow { Snow(Int) } fn snow() {Snow}",
         expect!["snow: fn() -> fn(Int) -> Snow"],
     )
@@ -104,7 +140,7 @@ fn unsaturated_constructor() {
 
 #[test]
 fn let_infer() {
-    check_all(
+    check_fn(
         "type Biboop {Biboop(Int)} fn biboob(a) { let b = a b }",
         expect!["biboob: fn(a) -> a"],
     )
@@ -112,7 +148,7 @@ fn let_infer() {
 
 #[test]
 fn generic_params() {
-    check_all(
+    check_fn(
         "fn biboob(a: a, b: a) { a + 1 }",
         expect!["biboob: fn(Int, Int) -> Int"],
     )
@@ -120,7 +156,7 @@ fn generic_params() {
 
 #[test]
 fn generic_adt() {
-    check_all(
+    check_fn(
         r#"type Animal(a, b) {
         Dog(a, String)
         Cat(b)
@@ -137,13 +173,13 @@ fn generic_adt() {
 
 #[test]
 fn mutual_recursion() {
-    check_all(
+    check_fn(
         "fn ding() { wobsie(1) } fn wobsie(a) { ding() + 1 }",
         expect![[r#"
             ding: fn() -> Int
             wobsie: fn(Int) -> Int"#]],
     );
-    check_all(
+    check_fn(
         "fn wobsie(a) { ding() + 1 } fn ding() { wobsie(1) } ",
         expect![[r#"
             wobsie: fn(Int) -> Int
@@ -153,7 +189,7 @@ fn mutual_recursion() {
 
 #[test]
 fn generic_let() {
-    check_all(
+    check_fn(
         "fn woosa(a) { let a = a a }",
         expect![[r#"
         woosa: fn(a) -> a"#]],
@@ -162,7 +198,7 @@ fn generic_let() {
 
 #[test]
 fn lablelled_args() {
-    check_all(
+    check_fn(
         "fn wobble(b: generic, f a: Int) { a } fn main() { abc(1) }",
         expect![[r#"
             wobble: fn(a, Int) -> Int
@@ -172,7 +208,7 @@ fn lablelled_args() {
 
 #[test]
 fn case_expr() {
-    check_all(
+    check_fn(
         "type Massa { Much } fn bla() { case Much {
             Much -> 1
         }  }",
@@ -184,7 +220,7 @@ fn case_expr() {
 #[traced_test]
 #[test]
 fn pattern() {
-    check_all(
+    check_fn(
         "type Massa { Much } fn bla() { case Much {
             a -> a
         }  }",
@@ -192,7 +228,7 @@ fn pattern() {
         bla: fn() -> Massa"#]],
     );
 
-    check_all(
+    check_fn(
         "type Massa { Much(Int) } fn bla() { case Much(1) {
             Much(a) -> a
         }  }",
@@ -203,7 +239,7 @@ fn pattern() {
 
 #[test]
 fn as_pattern() {
-    check_all(
+    check_fn(
         "type Massa { Much } fn bla() { case Much {
             Much as a -> a
         }  }",
@@ -214,11 +250,11 @@ fn as_pattern() {
 
 #[test]
 fn function() {
-    check_all(
+    check_fn(
         "fn func() {fn(a,b) {a + b}",
         expect![["func: fn() -> fn(Int, Int) -> Int"]],
     );
-    check_all(
+    check_fn(
         "fn func() {fn(a,b) {a + b}(1, 1)",
         expect![["func: fn() -> Int"]],
     )
@@ -226,7 +262,7 @@ fn function() {
 
 #[test]
 fn binary() {
-    check_all(
+    check_fn(
         "fn bla(a, b, c, d) { a + 1 }",
         expect![[r#"
         bla: fn(Int, a, b, c) -> Int"#]],
@@ -235,7 +271,7 @@ fn binary() {
 
 #[test]
 fn adt_resolve() {
-    check_all(
+    check_fn(
         "fn bla(a, b, c, d) { a + 1 }",
         expect![[r#"
         bla: fn(Int, a, b, c) -> Int"#]],
@@ -244,7 +280,7 @@ fn adt_resolve() {
 
 #[test]
 fn pipe() {
-    check_all(
+    check_fn(
         "fn main(a) { 1 |> a(2) } ",
         expect![[r#"
         main: fn(fn(Int) -> fn(Int) -> a) -> a"#]],
@@ -253,12 +289,12 @@ fn pipe() {
 
 #[test]
 fn pipe_sugar() {
-    check_all(
+    check_fn(
         "fn main(a) { 1 |> a(2) } ",
         expect![[r#"
         main: fn(fn(Int) -> fn(Int) -> a) -> a"#]],
     );
-    check_all(
+    check_fn(
         "fn main() { 1 |> a(2) } ",
         expect![[r#"
         main: fn() -> a"#]],
@@ -267,7 +303,7 @@ fn pipe_sugar() {
 
 #[test]
 fn use_() {
-    check_all(
+    check_fn(
         "fn main(a) { 
             use param <- a(1)
             param
@@ -279,7 +315,7 @@ fn use_() {
 
 #[test]
 fn record_spread() {
-    check_all(
+    check_fn(
         "type Alias {
         Bla(name, dodo)
       }
@@ -292,7 +328,7 @@ fn record_spread() {
 
 #[test]
 fn use_pattern() {
-    check_all(
+    check_fn(
         "type BlaT { Bla(Int) } fn main(a) { 
             use Bla(b) <- a
             b
@@ -304,7 +340,7 @@ fn use_pattern() {
 
 #[test]
 fn case_fn() {
-    check_all(
+    check_fn(
         "fn main(b) { case b(1) { 1 -> 1 } }",
         expect![[r#"
         main: fn(fn(Int) -> Int) -> Int"#]],
@@ -313,7 +349,7 @@ fn case_fn() {
 
 #[test]
 fn case_infer() {
-    check_all(
+    check_fn(
         "fn do_reverse_acc(remaining) {
         case remaining {
           1 -> 1.1
@@ -326,7 +362,7 @@ fn case_infer() {
 
 #[test]
 fn tuple() {
-    check_all(
+    check_fn(
         "fn tuple(a) {
         case a {
             #(1, a) -> #(a, 5)
@@ -338,7 +374,7 @@ fn tuple() {
 
 #[test]
 fn case_multiple_subjects() {
-    check_all(
+    check_fn(
         "type Dog(a, a) { Dog(a, a) } fn subjects(a, b) {
         case a, b {
             #(1, more), Dog(2.5, d) -> Dog(more, d)
@@ -351,7 +387,7 @@ fn case_multiple_subjects() {
 
 #[test]
 fn pattern_spread() {
-    check_all(
+    check_fn(
         "fn spread() {
         case [1,2] {
             [1, ..name] -> name
@@ -363,7 +399,7 @@ fn pattern_spread() {
 
 #[test]
 fn boolean() {
-    check_all(
+    check_fn(
         "fn spread() {
         True
       }",
@@ -373,7 +409,7 @@ fn boolean() {
 
 #[test]
 fn let_block_let() {
-    check_all(
+    check_fn(
         "fn spread() {
         let x = {
             let y = 1
@@ -385,7 +421,7 @@ fn let_block_let() {
 
 #[test]
 fn lambda_shorthand() {
-    check_all(
+    check_fn(
         "fn add(a: Float, b: Int) {
         a
       }
@@ -410,7 +446,7 @@ fn lambda_shorthand() {
 #[test]
 #[traced_test]
 fn annotations() {
-    check_all(
+    check_fn(
         "fn ann(a: #(Int), b: fn(Int, Float) -> Int) -> Int { \"123\" } ",
         expect!["ann: fn(#(Int), fn(Int, Float) -> Int) -> Int"],
     )
@@ -419,12 +455,12 @@ fn annotations() {
 #[test]
 #[traced_test]
 fn annot() {
-    check_all(
+    check_fn(
         "fn ann(a: #(Int), b: fn(Int, Float) -> Int) -> Result(Int,Int) { Ok(\"123\") } ",
         expect!["ann: fn(#(Int), fn(Int, Float) -> Int) -> Result(Int, Int)"],
     );
-  
-    check_all(
+
+    check_fn(
         "fn ann(a: #(Int), b: fn(Int, Float) -> Int) -> Int) { \"123\" } ",
         expect!["ann: fn(#(Int), fn(Int, Float) -> Int) -> Int"],
     )
@@ -432,7 +468,7 @@ fn annot() {
 
 #[test]
 fn list_spread() {
-    check_all(
+    check_fn(
         "pub fn prepend(list, this item) {
         [item, ..list]
       }",
@@ -442,7 +478,7 @@ fn list_spread() {
 
 #[test]
 fn field_access() {
-    check_all(
+    check_fn(
         "type Wobble{ Wobble(name: Int) } fn name() { let w = Wobble(5) w.name }",
         expect!["name: fn() -> Int"],
     )
@@ -479,7 +515,7 @@ bla: fn() -> Bla"#
 
 #[test]
 fn spread_call() {
-    check_all(
+    check_fn(
         "fn unique(list) {
             case list {
               [] -> []
@@ -492,7 +528,7 @@ fn spread_call() {
 
 #[test]
 fn pipe_infer() {
-    check_all(
+    check_fn(
         "fn pipe(a: Int, b: Float) -> Int { 1 } 
             fn unique(a) {
             a |> pipe(1.1)
@@ -503,7 +539,7 @@ fn pipe_infer() {
 
 #[test]
 fn generic_params_naming() {
-    check_all(
+    check_fn(
         "fn do_filter_map(
             list,
             fun,
@@ -526,7 +562,7 @@ fn generic_params_naming() {
 
 #[test]
 fn alias_infer() {
-    check_all(
+    check_fn(
         "type Alias = String 
     fn main() -> Alias {
     }",
@@ -615,5 +651,17 @@ import test
 
 fn test(a: test.Wobble) { $0"" }"#,
         expect!["test: fn(String) -> String"],
+    )
+}
+
+#[test]
+fn annotation_infer() {
+    check_all(
+        r#"
+        fn main() -> Result(Int,Int) {
+            let b = Ok("123")
+            b
+        }"#,
+        expect!["main: fn() -> Result(Int, Int)\n  b: Result(String, a)"],
     )
 }

@@ -681,8 +681,8 @@ mod tests {
 
     #[test]
     fn const_tuple() {
-        let e = parse::<ConstantTuple>("const a = #(#(2,3),2)");
-        let mut iter = e.elements();
+        let e = parse::<Tuple>("const a = #(#(2,3),2)");
+        let mut iter = e.fields();
         iter.next().unwrap().syntax().should_eq("#(2,3)");
         iter.next().unwrap().syntax().should_eq("2");
         assert!(iter.next().is_none())

@@ -61,8 +61,8 @@ SOURCE_FILE@0..141
           CLAUSE@71..80
             ALTERNATIVE_PATTERN@71..80
               VARIANT_REF@71..80
-                MODULE_NAME@71..76
-                  NAME@71..76
+                MODULE_NAME_REF@71..76
+                  NAME_REF@71..76
                     IDENT@71..76 "local"
                 DOT@76..77 "."
                 WHITESPACE@77..80 "\n  "
