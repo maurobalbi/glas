@@ -1,0 +1,92 @@
+name: CI
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        target:
+          - x86_64-unknown-linux-musl
+          - aarch64-unknown-linux-musl
+          - x86_64-apple-darwin
+          - aarch64-apple-darwin
+          - x86_64-pc-windows-msvc
+        toolchain: [stable]
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            platform: linux
+            arch: x64
+            use-cross: true
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            platform: darwin
+            arch: x64
+            use-cross: false
+          - os: macos-11
+            target: aarch64-apple-darwin
+            platform: darwin
+            arch: arm64
+            use-cross: false
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            platform: win32
+            arch: x64
+            use-cross: false
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          target: ${{ matrix.target }}
+          override: true
+          default: true
+          profile: minimal
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 14.x
+      
+      - name: Handle Rust dependencies caching
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: v1-${{ matrix.target }}
+  
+      - name: Build release binary
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --target ${{ matrix.target }}
+          use-cross: ${{ matrix.use-cross }}
+
+      - run: npm ci 
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          npm_config_arch: ${{ matrix.npm_config_arch }}
+
+      - shell: pwsh
+        run: echo "target=${{ matrix.platform }}-${{ matrix.arch }}" >> $env:GITHUB_ENV
+
+      - run: npx vsce package --target ${{ env.target }}
+      
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ${{ env.target }}
+          path: "*.vsix"
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: build
+    if: success() && startsWith( github.ref, 'refs/tags/')
+    steps:
+      - uses: actions/download-artifact@v2
+      - run: npx vsce publish --packagePath $(find . -iname *.vsix)
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
