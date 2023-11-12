@@ -76,9 +76,11 @@ jobs:
 
       - run: |
          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            mkdir -p "../../target/${{ matrix.target }}/release"
             touch "../../target/${{ matrix.target }}/release/glas.exe" 
             cp "../../target/${{ matrix.target }}/release/glas.exe" "./gleam.exe"
           else
+            mkdir -p "../../target/${{ matrix.target }}/release"
             touch "../../target/${{ matrix.target }}/release/glas"
             cp "../../target/${{ matrix.target }}/release/glas" "./gleam"
           fi
