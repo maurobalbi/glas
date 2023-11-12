@@ -86,7 +86,7 @@ jobs:
           fi
         working-directory: editor/code
 
-      - run: npx vsce package --target ${{ env.target }} -o "./glas-${{ env.target }}.vsix""
+      - run: npx vsce package --target ${{ env.target }} -o "./glas-${{ env.target }}.vsix"
         working-directory: editor/code
 
       - uses: actions/upload-artifact@v2
