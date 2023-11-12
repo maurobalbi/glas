@@ -11,27 +11,27 @@ jobs:
     strategy:
       matrix:
         target:
-          - x86_64-unknown-linux-musl
-          - x86_64-apple-darwin
-          - aarch64-apple-darwin
+          # - x86_64-unknown-linux-musl
+          # - x86_64-apple-darwin
+          # - aarch64-apple-darwin
           - x86_64-pc-windows-msvc
         toolchain: [stable]
         include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-musl
-            platform: linux
-            arch: x64
-            use-cross: true
-          - os: macos-latest
-            target: x86_64-apple-darwin
-            platform: darwin
-            arch: x64
-            use-cross: false
-          - os: macos-11
-            target: aarch64-apple-darwin
-            platform: darwin
-            arch: arm64
-            use-cross: false
+          # - os: ubuntu-latest
+          #   target: x86_64-unknown-linux-musl
+          #   platform: linux
+          #   arch: x64
+          #   use-cross: true
+          # - os: macos-latest
+          #   target: x86_64-apple-darwin
+          #   platform: darwin
+          #   arch: x64
+          #   use-cross: false
+          # - os: macos-11
+          #   target: aarch64-apple-darwin
+          #   platform: darwin
+          #   arch: arm64
+          #   use-cross: false
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             platform: win32
@@ -74,7 +74,8 @@ jobs:
       - shell: bash
         run: echo "target=${{ matrix.platform }}-${{ matrix.arch }}" >> "$GITHUB_ENV"
 
-      - run: |
+      - shell: bash
+        run: |
          if [ "${{ matrix.os }}" = "windows-latest" ]; then
             mkdir -p "../../target/${{ matrix.target }}/release"
             touch "../../target/${{ matrix.target }}/release/glas.exe" 
@@ -91,7 +92,7 @@ jobs:
 
       - uses: actions/upload-artifact@v2
         with:
-          name: ${{ env.target }}
+          name: glas-${{ env.target }}
           path: "editor/code/*.vsix"
 
   publish:
