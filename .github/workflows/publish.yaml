@@ -6,6 +6,7 @@ on:
 
 jobs:
   build:
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         target:
@@ -36,7 +37,6 @@ jobs:
             platform: win32
             arch: x64
             use-cross: false
-    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -75,7 +75,7 @@ jobs:
         run: echo "target=${{ matrix.platform }}-${{ matrix.arch }}" >> $env:GITHUB_ENV
 
       - run: npx vsce package --target ${{ env.target }}
-      
+
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ env.target }}
