@@ -12,9 +12,9 @@ jobs:
       matrix:
         target:
           - x86_64-unknown-linux-musl
-          # - x86_64-apple-darwin
-          # - aarch64-apple-darwin
-          # - x86_64-pc-windows-msvc
+          - x86_64-apple-darwin
+          - aarch64-apple-darwin
+          - x86_64-pc-windows-msvc
         toolchain: [stable]
         include:
           - os: ubuntu-latest
@@ -22,21 +22,21 @@ jobs:
             platform: linux
             arch: x64
             use-cross: true
-          # - os: macos-latest
-          #   target: x86_64-apple-darwin
-          #   platform: darwin
-          #   arch: x64
-          #   use-cross: false
-          # - os: macos-11
-          #   target: aarch64-apple-darwin
-          #   platform: darwin
-          #   arch: arm64
-          #   use-cross: false
-          # - os: windows-latest
-          #   target: x86_64-pc-windows-msvc
-          #   platform: win32
-          #   arch: x64
-          #   use-cross: false
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            platform: darwin
+            arch: x64
+            use-cross: false
+          - os: macos-11
+            target: aarch64-apple-darwin
+            platform: darwin
+            arch: arm64
+            use-cross: false
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            platform: win32
+            arch: x64
+            use-cross: false
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -78,11 +78,11 @@ jobs:
          if [ "${{ matrix.os }}" = "windows-latest" ]; then
             mkdir -p "../../target/${{ matrix.target }}/release"
             touch "../../target/${{ matrix.target }}/release/glas.exe" 
-            cp "../../target/${{ matrix.target }}/release/glas.exe" "./gleam.exe"
+            cp "../../target/${{ matrix.target }}/release/glas.exe" "./glas.exe"
           else
             mkdir -p "../../target/${{ matrix.target }}/release"
             touch "../../target/${{ matrix.target }}/release/glas"
-            cp "../../target/${{ matrix.target }}/release/glas" "./gleam"
+            cp "../../target/${{ matrix.target }}/release/glas" "./glas"
           fi
         working-directory: editor/code
 
