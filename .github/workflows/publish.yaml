@@ -86,13 +86,13 @@ jobs:
           fi
         working-directory: editor/code
 
-      - run: npx vsce package --target ${{ env.target }}
+      - run: npx vsce package --target ${{ env.target }} -o "./glas-${{ env.target }}.vsix""
         working-directory: editor/code
 
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ env.target }}
-          path: "*.vsix"
+          path: "editor/code/*.vsix"
 
   publish:
     runs-on: ubuntu-latest
