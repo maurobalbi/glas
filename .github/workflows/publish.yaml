@@ -69,13 +69,22 @@ jobs:
       - run: npm ci 
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        working-directory: editors/code
+        working-directory: editor/code
 
-      - shell: pwsh
+      - shell: bash
         run: echo "target=${{ matrix.platform }}-${{ matrix.arch }}" >> $env:GITHUB_ENV
 
+      - shell: bash
+        run: |
+         if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            cp ""../../target/${{ matrix.target }}/release/glas.exe" "./gleam.exe"
+          else
+            cp ""../../target/${{ matrix.target }}/release/glas" "./gleam"
+          fi
+        working-directory: editor/code
+
       - run: npx vsce package --target ${{ env.target }}
-        working-directory: editors/code
+        working-directory: editor/code
 
       - uses: actions/upload-artifact@v2
         with:
