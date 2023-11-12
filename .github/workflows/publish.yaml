@@ -59,27 +59,28 @@ jobs:
         with:
           key: v1-${{ matrix.target }}
   
-      - name: Build release binary
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release --target ${{ matrix.target }}
-          use-cross: ${{ matrix.use-cross }}
+      # - name: Build release binary
+      #   uses: actions-rs/cargo@v1
+      #   with:
+      #     command: build
+      #     args: --release --target ${{ matrix.target }}
+      #     use-cross: ${{ matrix.use-cross }}
 
-      - run: yarn install --frozen-lockfile
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        working-directory: editor/code
+      # - run: yarn install --frozen-lockfile
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   working-directory: editor/code
 
       - shell: bash
         run: echo "target=${{ matrix.platform }}-${{ matrix.arch }}" >> $env:GITHUB_ENV
 
-      - shell: bash
-        run: |
+      - run: |
          if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            cp ""../../target/${{ matrix.target }}/release/glas.exe" "./gleam.exe"
+            touch "../../target/${{ matrix.target }}/release/glas.exe" 
+            cp "../../target/${{ matrix.target }}/release/glas.exe" "./gleam.exe"
           else
-            cp ""../../target/${{ matrix.target }}/release/glas" "./gleam"
+            touch "../../target/${{ matrix.target }}/release/glas"
+            cp "../../target/${{ matrix.target }}/release/glas" "./gleam"
           fi
         working-directory: editor/code
 
