@@ -49,14 +49,14 @@
     ]
   },
   "activationEvents": [
-        "workspaceContains:*/Cargo.toml",
-        "onLanguage:gleam"
+    "workspaceContains:*/Cargo.toml",
+    "onLanguage:gleam"
   ],
   "main": "./dist/extension.js",
   "scripts": {
-    "vscode:prepublish": "webpack --mode production",
-    "compile": "webpack --mode development",
-    "compile-watch": "webpack --mode development --watch",
+    "vscode:prepublish": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --minify",
+    "build": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap",
+    "watch": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap --watch",
     "test-compile": "tsc -p ./",
     "vscode:package": "vsce package"
   },
@@ -68,6 +68,7 @@
     "@typescript-eslint/eslint-plugin": "^4.9.0",
     "@typescript-eslint/parser": "^4.9.0",
     "@vscode/test-electron": "2.3.0",
+    "esbuild": "^0.19.5",
     "eslint": "^7.15.0",
     "glob": "^7.1.6",
     "mocha": "^10.1.0",
