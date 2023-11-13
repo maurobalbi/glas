@@ -4,6 +4,7 @@
   "description": "Gleam language server for VSCode",
   "repository": "https://github.com/maurobalbi/glas",
   "version": "0.0.1",
+  "publisher": "maurobalbi",
   "engines": {
     "vscode": "^1.76.0"
   },
