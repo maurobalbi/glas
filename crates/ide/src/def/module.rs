@@ -72,6 +72,7 @@ pub struct ModuleImport {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ImportData {
+    pub type_: bool, // .{ type ... }
     pub module: Idx<ModuleImport>, // e.g. import >>one/wobble<<
 
     pub unqualified_as_name: Option<SmolStr>, // e.g. {* as >>AsName<<}

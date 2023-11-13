@@ -930,7 +930,7 @@ fn pattern(p: &mut Parser) {
                 let concat = p.start_node_before(literal);
                 p.expect(T!["<>"]);
                 let var = p.start_node();
-                name(p);
+                pattern(p);
                 p.finish_node(var, PATTERN_VARIABLE);
                 literal = p.finish_node(concat, PATTERN_CONCAT);
             }
@@ -1149,13 +1149,21 @@ fn import(p: &mut Parser, m: MarkOpened) {
 
 fn unqualified_imports(p: &mut Parser) {
     assert!(p.at(T!["."]));
-    p.expect(T!["."]);
+    p.eat(T!["."]);
     p.expect(T!["{"]);
     while !p.eof() && !p.at(T!["}"]) {
         match p.nth(0) {
             IDENT => as_name(p),
             // U_IDENT => type_name(p) ToDo!
             U_IDENT => as_type_name(p),
+            T!["type"] => {
+                p.eat(T!["type"]);
+                if p.at(U_IDENT) {
+                    as_type_name(p)
+                } else {
+                    p.error(ErrorKind::ExpectedType)
+                };
+            }
             k if IMPORT_RECOVERY.contains(k) => break,
             _ => p.bump_with_error(ErrorKind::ExpectedParameter),
         }

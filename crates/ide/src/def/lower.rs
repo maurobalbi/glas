@@ -220,6 +220,7 @@ impl LowerCtx {
                     unqualified.as_name().and_then(|t| t.text());
 
                 self.alloc_unqualified_import(ImportData {
+                    type_: unqualified.is_type(),
                     module: module_id,
                     unqualified_as_name,
                     unqualified_name,

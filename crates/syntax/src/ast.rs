@@ -480,8 +480,12 @@ asts! {
         }
     },
     UNQUALIFIED_IMPORT = UnqualifiedImport {
-      name: TypeNameOrName,
-      as_name[1]: TypeNameOrName,
+        name: TypeNameOrName,
+        as_name[1]: TypeNameOrName,
+
+        pub fn is_type(&self) -> bool {
+            self.syntax().children_with_tokens().any(|it| it.kind() == T!["type"])
+        }
     },
     PARAM = Param {
         pattern: Pattern, // this is a pattern to make name resolution easier

@@ -170,6 +170,7 @@ pub struct ModuleScope {
     modules: IndexMap<SmolStr, FileId>,
 
     /// The defs declared in this module which can potentially be imported in another module
+    /// Split into value and type declarations
     declarations: IndexMap<SmolStr, Vec<(ModuleDefId, Visibility)>>,
 }
 
@@ -212,6 +213,7 @@ impl ModuleScope {
         let ImportData {
             unqualified_name: unqualifed_name,
             module,
+            type_,
             ..
         } = import;
         let module = &module_items[*module];
