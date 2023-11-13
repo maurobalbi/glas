@@ -1,4 +1,4 @@
-name: CI
+name: publish
 on:
   push:
     tags:
@@ -6,11 +6,11 @@ on:
 
 jobs:
   build:
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         target:
           - x86_64-unknown-linux-musl
-          - aarch64-unknown-linux-musl
           - x86_64-apple-darwin
           - aarch64-apple-darwin
           - x86_64-pc-windows-msvc
@@ -36,7 +36,6 @@ jobs:
             platform: win32
             arch: x64
             use-cross: false
-    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -66,20 +65,34 @@ jobs:
           args: --release --target ${{ matrix.target }}
           use-cross: ${{ matrix.use-cross }}
 
-      - run: npm ci 
+      - run: yarn install --frozen-lockfile
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          npm_config_arch: ${{ matrix.npm_config_arch }}
+        working-directory: editor/code
 
-      - shell: pwsh
-        run: echo "target=${{ matrix.platform }}-${{ matrix.arch }}" >> $env:GITHUB_ENV
+      - shell: bash
+        run: echo "target=${{ matrix.platform }}-${{ matrix.arch }}" >> "$GITHUB_ENV"
 
-      - run: npx vsce package --target ${{ env.target }}
-      
+      - shell: bash
+        run: |
+         if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            mkdir -p "../../target/${{ matrix.target }}/release"
+            touch "../../target/${{ matrix.target }}/release/glas.exe" 
+            cp "../../target/${{ matrix.target }}/release/glas.exe" "./glas.exe"
+          else
+            mkdir -p "../../target/${{ matrix.target }}/release"
+            touch "../../target/${{ matrix.target }}/release/glas"
+            cp "../../target/${{ matrix.target }}/release/glas" "./glas"
+          fi
+        working-directory: editor/code
+
+      - run: npx vsce package --target ${{ env.target }} -o "./glas-${{ env.target }}.vsix"
+        working-directory: editor/code
+
       - uses: actions/upload-artifact@v2
         with:
-          name: ${{ env.target }}
-          path: "*.vsix"
+          name: glas-${{ env.target }}
+          path: "editor/code/*.vsix"
 
   publish:
     runs-on: ubuntu-latest
