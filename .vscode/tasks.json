@@ -5,7 +5,7 @@
 	"tasks": [
 		{
 			"type": "npm",
-			"script": "compile",
+			"script": "build",
 			"path": "editor/code/",
 			"group": {
 				"kind": "build",
