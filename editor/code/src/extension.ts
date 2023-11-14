@@ -102,7 +102,7 @@ function createLanguageClient(context: vscode.ExtensionContext): LanguageClient 
     options: {
       env: Object.assign(process.env, {
         GLEAM_LOG: "info",
-        GLEAM_LOG_PATH: process.env["__GLAS_LSP_SERVER_PATH"] + "/log.log",
+        // GLEAM_LOG_PATH: process.env["__GLAS_LSP_SERVER_PATH"] + "/logs.log",
         GLEAM_LOG_NOCOLOUR: "1",
       }),
     },
