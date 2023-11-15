@@ -15,7 +15,7 @@ use ide::{
 };
 
 use indexmap::IndexSet;
-use lsp_types::notification::{Notification, PublishDiagnostics};
+use lsp_types::notification::{Notification, PublishDiagnostics, ShowMessage};
 use lsp_types::request::{self as req, Request};
 use lsp_types::{
     notification as notif, ClientCapabilities, ConfigurationItem, ConfigurationParams,
@@ -99,6 +99,30 @@ pub struct Server {
     capabilities: NegotiatedCapabilities,
     /// Messages to show once initialized.
     init_messages: Vec<ShowMessageParams>,
+}
+
+struct InteropClient {
+    client: ClientSocket,
+}
+
+impl InteropClient {
+    pub fn new_router(client: ClientSocket) -> Router<Self> {
+        let mut router = Router::new(InteropClient { client });
+        router
+            .notification::<PublishDiagnostics>(Self::on_publish_notification)
+            .notification::<notif::ShowMessage>(Self::on_notification);
+        router
+    }
+
+    fn on_notification(&mut self, params: ShowMessageParams) -> NotifyResult {
+        self.client.notify::<ShowMessage>(params);
+        ControlFlow::Continue(())
+    }
+
+    fn on_publish_notification(&mut self, params: PublishDiagnosticsParams) -> NotifyResult {
+        self.client.notify::<PublishDiagnostics>(params);
+        ControlFlow::Continue(())
+    }
 }
 
 #[derive(Debug, Default)]
@@ -199,13 +223,8 @@ impl Server {
         *Arc::get_mut(&mut self.config).expect("No concurrent access yet") = cfg;
 
         let (mainloop, mut server) = async_lsp::MainLoop::new_client(|_server| {
-            let mut router = Router::new(ClientState {});
-
             let client = self.client.clone();
-            router.notification::<PublishDiagnostics>(move |_, params| {
-                let _ = client.emit(CollectDiagnosticsEvent::External(params));
-                ControlFlow::Continue(())
-            });
+            let router = InteropClient::new_router(client);
 
             ServiceBuilder::new()
                 .layer(TracingLayer::default())
@@ -225,8 +244,13 @@ impl Server {
         let stdout = child.stdout.unwrap();
         let stdin = child.stdin.unwrap();
 
+        let mut client = self.client.clone();
+
         tokio::spawn(async move {
-            mainloop.run_buffered(stdout, stdin).await.unwrap();
+            match mainloop.run_buffered(stdout, stdin).await {
+                Ok(_) => {}
+                Err(e) => client.show_message_ext(MessageType::ERROR, e.to_string()),
+            };
         });
         self.gleam_interop_client = Some(server.clone());
 
@@ -852,7 +876,7 @@ impl Server {
                     true,
                 );
             }
-            tracing::info!("setting graph {:?}", graph);
+            tracing::info!("setting graph {:#?}", graph);
             vfs.set_package_graph(Some(graph));
         }
 
