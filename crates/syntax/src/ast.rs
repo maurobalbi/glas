@@ -1,5 +1,5 @@
 use crate::SyntaxKind::{self, *};
-use crate::{GleamLanguage, SyntaxNode, SyntaxToken};
+use crate::{GleamLanguage, SyntaxElementChildren, SyntaxNode, SyntaxToken};
 use rowan::ast::support::{child, children};
 use rowan::NodeOrToken;
 use smol_str::SmolStr;
@@ -385,7 +385,7 @@ asts! {
         return_type: TypeExpr,
         body: Block,
     },
-    FUNCTION = Function {
+    FUNCTION = Function [HasDocParts] {
         name: Name,
         param_list: ParamList,
         return_type: TypeExpr,
@@ -624,6 +624,24 @@ asts! {
     },
 }
 
+pub trait HasDocParts: AstNode<Language = GleamLanguage> {
+    fn doc_parts(&self) -> DocPartIter {
+        DocPartIter(self.syntax().children_with_tokens())
+    }
+}
+
+pub struct DocPartIter(SyntaxElementChildren);
+
+impl Iterator for DocPartIter {
+    type Item = SyntaxToken;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.find_map(|nt| match (nt.kind(), nt) {
+            (kind, NodeOrToken::Token(t)) if kind.is_doc() => Some(t),
+            _ => None,
+        })
+    }
+}
+
 impl Name {
     pub fn missing() -> SmolStr {
         "[missing]".into()
@@ -668,7 +686,7 @@ mod tests {
     #[test]
     fn assert() {
         let e = crate::parse_module(
-            "type Mogie { Mogie(name: Int) } fn wops() { let bobo = Mogie(name: 1) bobo.name}",
+            "type Mogie { Mogie(name: Int) } \n/// 123123\n// 123 \nfn wops() { let bobo = Mogie(name: 1) bobo.name}",
         );
         for error in e.errors() {
             println!("{}", error);
@@ -841,6 +859,22 @@ mod tests {
         fst.pattern().unwrap().syntax().should_eq("b");
         fst.ty().unwrap().syntax().should_eq("Int");
         assert!(params.next().is_none())
+    }
+    
+    #[test]
+    fn function_docs() {
+        let e = parse::<Function>("///123\n \n ///abc\n fn main(a b: Int) -> fn(Int) -> Int {}");
+        
+        let a = ["lol", "NaN", "2", "5"];
+
+        let first_number = a.iter().find_map(|s| s.parse().ok());
+
+        assert_eq!(first_number, Some(2));
+        assert_eq!(first_number, Some(5));
+
+        let mut doc_iter = e.doc_parts();
+        doc_iter.next().unwrap().should_eq("///123");
+        doc_iter.next().unwrap().should_eq("///abc");
     }
 
     #[test]
