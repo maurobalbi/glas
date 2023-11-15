@@ -120,6 +120,7 @@ impl TyDisplay for Ty {
             Ty::Int => write!(f, "Int"),
             Ty::Float => write!(f, "Float"),
             Ty::String => write!(f, "String"),
+            Ty::BitArray => write!(f, "BitArray"),
             Ty::Result { ok, err } => {
                 write!(f, "Result(")?;
                 ok.ty_fmt(f)?;

@@ -286,7 +286,7 @@ def! {
     BLOCK,
     EXPR_CALL,
     ARG,
-    BIT_STRING,
+    BIT_ARRAY,
     ARG_LIST,
     UNARY_OP,
     BINARY_OP,
@@ -350,7 +350,6 @@ def! {
     VARIANT_REF_FIELD,
     LIST,
     RECORD,
-    BITSTRING,
     EXTERNAL_ATTR,
     TARGET_ATTR,
 

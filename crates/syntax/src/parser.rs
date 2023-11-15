@@ -752,7 +752,7 @@ fn expr_unit(p: &mut Parser) -> Option<MarkClosed> {
             p.bump();
             p.finish_node(m, HOLE)
         }
-        T!["<<"] => bit_string(p),
+        T!["<<"] => bit_array(p),
         T!["{"] => block(p),
         T!["#"] => tuple(p),
         T!["["] => list(p),
@@ -783,7 +783,7 @@ fn expr_unit(p: &mut Parser) -> Option<MarkClosed> {
 }
 
 // ToDo: Parse bit string correctly
-fn bit_string(p: &mut Parser<'_>) -> MarkClosed {
+fn bit_array(p: &mut Parser<'_>) -> MarkClosed {
     assert!(p.at(T!["<<"]));
     p.expect(T!["<<"]);
     let m = p.start_node();
@@ -794,7 +794,7 @@ fn bit_string(p: &mut Parser<'_>) -> MarkClosed {
         }
     }
     p.expect(T![">>"]);
-    p.finish_node(m, BIT_STRING)
+    p.finish_node(m, BIT_ARRAY)
 }
 
 fn case(p: &mut Parser) -> MarkClosed {
@@ -942,7 +942,7 @@ fn pattern(p: &mut Parser) {
             }
             literal
         }
-        T!["<<"] => bit_string(p),
+        T!["<<"] => bit_array(p),
         T!["["] => pattern_list(p),
         T!["-"] | T!["!"] => {
             let u = p.start_node();

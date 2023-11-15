@@ -34,6 +34,7 @@ pub enum Ty {
     Int,
     Float,
     String,
+    BitArray,
     Result {
         ok: Arc<Ty>,
         err: Arc<Ty>,
@@ -94,6 +95,7 @@ pub fn ty_from_ast(ast_expr: ast::TypeExpr) -> Ty {
                     "Int" => return Ty::Int,
                     "Float" => return Ty::Float,
                     "String" => return Ty::String,
+                    "BitArray" => return Ty::BitArray,
                     "Bool" => return Ty::Bool,
                     "Nil" => return Ty::Nil,
                     // ToDo: Diagnostics

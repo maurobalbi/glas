@@ -31,6 +31,7 @@ enum Ty {
     Int,
     Float,
     String,
+    BitArray,
     Result {
         ok: TyVar,
         err: TyVar,
@@ -199,6 +200,7 @@ impl<'db> InferCtx<'db> {
             super::Ty::Int => Ty::Int,
             super::Ty::Float => Ty::Float,
             super::Ty::String => Ty::String,
+            super::Ty::BitArray => Ty::BitArray,
             super::Ty::Result { ok, err } => {
                 let ok = self.make_type(ok.deref().clone(), env);
                 let err = self.make_type(err.deref().clone(), env);
@@ -1093,6 +1095,7 @@ impl<'a> Collector<'a> {
             Ty::Int => super::Ty::Int,
             Ty::Float => super::Ty::Float,
             Ty::String => super::Ty::String,
+            Ty::BitArray => super::Ty::BitArray,
             Ty::Result { ok, err } => {
                 let ok = self.collect(*ok);
                 let err = self.collect(*err);

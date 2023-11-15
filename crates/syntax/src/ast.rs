@@ -190,7 +190,7 @@ enums! {
     },
     Expr {
         Case,
-        BitString,
+        BitArray,
         Literal,
         Block,
         Variable,
@@ -280,7 +280,7 @@ asts! {
     BLOCK = Block {
         expressions: [StatementExpr],
     },
-    BIT_STRING = BitString {
+    BIT_ARRAY = BitArray {
 
     },
     BINARY_OP = BinaryOp {
@@ -998,8 +998,8 @@ mod tests {
     }
 
     #[test]
-    fn bit_string() {
-        let _b = parse::<BitString>("fn a() { <<a:size(0)>> <<a:8, rest:bit_string>> }");
+    fn bit_array() {
+        let _b = parse::<BitArray>("fn a() { <<a:size(0)>> <<a:8, rest:bit_array>> }");
     }
 
     #[test]
