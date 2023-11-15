@@ -1,5 +1,5 @@
 use crate::lexer::lex_string;
-pub use logos::{Lexer, Logos};
+pub use logos::Logos;
 use std::fmt;
 
 macro_rules! def {

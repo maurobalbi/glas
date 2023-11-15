@@ -13,11 +13,10 @@ SOURCE_FILE@0..47
       L_BRACE@10..11 "{"
       WHITESPACE@11..16 "\n    "
       STMT_EXPR@16..19
-        BINARY_OP@16..19
-          LITERAL@16..17
-            INTEGER@16..17 "1"
-          WHITESPACE@17..18 " "
-          PLUS@18..19 "+"
+        LITERAL@16..17
+          INTEGER@16..17 "1"
+        WHITESPACE@17..18 " "
+        PLUS@18..19 "+"
       WHITESPACE@19..20 "\n"
       R_BRACE@20..21 "}"
   WHITESPACE@21..23 "\n\n"

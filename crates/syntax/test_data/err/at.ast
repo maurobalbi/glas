@@ -1,0 +1,6 @@
+1..1: ExpectedAttribute
+1..1: ExpectedStatement
+SOURCE_FILE@0..1
+  ERROR@0..1
+    ERROR@0..1
+      AT@0..1 "@"

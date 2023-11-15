@@ -2,5 +2,5 @@
 use libfuzzer_sys::fuzz_target;
 
 fuzz_target!(|text: &str| {
-    syntax::parse_file(text);
+    syntax::parse_module(text);
 });

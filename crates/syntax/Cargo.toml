@@ -28,6 +28,7 @@ features = [
 [dev-dependencies]
 criterion = "0.3"
 expect-test = "1.4.1"
+tracing-test = "0.1"
 
 [[bench]]
 name = "lexer_bench"

@@ -1458,6 +1458,7 @@ dependencies = [
  "smol_str",
  "tracing",
  "tracing-subscriber 0.3.16",
+ "tracing-test",
 ]
 
 [[package]]

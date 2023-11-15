@@ -101,7 +101,7 @@ pub fn parse_module(src: &str) -> Parse {
         errors: Vec::new(),
         src,
         pos: 0,
-        fuel: Cell::new(256),
+        fuel: Cell::new(1024),
         events: Vec::new(),
     };
     module(&mut p);
@@ -244,7 +244,7 @@ impl<'i> Parser<'i> {
 
     fn bump(&mut self) {
         assert!(!self.eof());
-        self.fuel.set(256);
+        self.fuel.set(1024);
         self.events.push(Event::Advance);
         self.pos += 1;
     }
@@ -318,15 +318,16 @@ fn statement(p: &mut Parser) {
         }
         T!["import"] => {
             if is_pub {
-                p.bump_with_error(ErrorKind::UnexpectedImport);
-            } else {
-                import(p, m);
-            }
+                p.error(ErrorKind::UnexpectedImport);
+            } 
+            import(p, m);
         }
         T!["type"] | T!["opaque"] => custom_type(p, m),
         _ => {
             p.error(ErrorKind::ExpectedStatement);
-            p.bump();
+            if !p.eof() {
+                p.bump()
+            };
             p.finish_node(m, ERROR);
         }
     }
@@ -712,9 +713,14 @@ fn expr_bp(p: &mut Parser, min_bp: u8) {
             break;
         }
 
-        let m = p.start_node_before(lhs);
         p.bump(); // Infix op.
+        if !p.at_any(EXPR_FIRST) {
+            break;
+        }
+        
+        let m = p.start_node_before(lhs);
         expr_bp(p, rbp);
+
         if right == T!["|>"] {
             lhs = p.finish_node(m, PIPE);
         } else {
@@ -938,8 +944,12 @@ fn pattern(p: &mut Parser) {
         }
         T!["<<"] => bit_string(p),
         T!["["] => pattern_list(p),
-        T!["-"] => todo!("unary"),
-        // tuple
+        T!["-"] | T!["!"] => {
+            let u = p.start_node();
+            p.bump();
+            pattern(p);
+            p.finish_node(u, UNARY_OP)
+        },
         T!("#") => pattern_tuple(p),
         T![".."] => {
             let spread = p.start_node();
@@ -956,7 +966,7 @@ fn pattern(p: &mut Parser) {
     };
     if p.eat(T!["as"]) {
         let var = p.start_node();
-        if p.at_any(TokenSet::new(&[IDENT, U_IDENT])) {
+        if p.at(IDENT) {
             name(p);
         } else {
             p.error(ErrorKind::ExpectedIdentifier);
