@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use smol_str::SmolStr;
-use syntax::ast::{self, AstNode};
+use syntax::ast::{self, AstNode, HasDocParts};
 
 use crate::{
     impl_from,
@@ -12,7 +12,7 @@ use crate::{
 use super::{
     hir_def::{AdtId, LocalFieldId, LocalVariantId, TypeAliasId, VariantId},
     module::{AdtData, FieldData, FunctionData, Param, PatternId, TypeAliasData, VariantData},
-    FunctionId,
+    FunctionId, source::HasSource,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -256,6 +256,10 @@ impl Function {
 
     pub fn module(&self, db: &dyn DefDatabase) -> Module {
         db.lookup_intern_function(self.id).file_id.into()
+    }
+
+    pub fn docs(&self, db: &dyn DefDatabase) -> String {
+        self.source(db).expect("This should not happen").value.doc_text()
     }
 }
 

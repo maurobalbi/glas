@@ -1,5 +1,6 @@
 use crate::SyntaxKind::{self, *};
 use crate::{GleamLanguage, SyntaxElementChildren, SyntaxNode, SyntaxToken};
+use itertools::Itertools;
 use rowan::ast::support::{child, children};
 use rowan::NodeOrToken;
 use smol_str::SmolStr;
@@ -628,6 +629,10 @@ pub trait HasDocParts: AstNode<Language = GleamLanguage> {
     fn doc_parts(&self) -> DocPartIter {
         DocPartIter(self.syntax().children_with_tokens())
     }
+
+    fn doc_text(&self) -> String {
+        self.doc_parts().map(|docpart|docpart.text()[3..].to_string()).join("\n").into()
+    }
 }
 
 pub struct DocPartIter(SyntaxElementChildren);
@@ -864,13 +869,6 @@ mod tests {
     #[test]
     fn function_docs() {
         let e = parse::<Function>("///123\n \n ///abc\n fn main(a b: Int) -> fn(Int) -> Int {}");
-        
-        let a = ["lol", "NaN", "2", "5"];
-
-        let first_number = a.iter().find_map(|s| s.parse().ok());
-
-        assert_eq!(first_number, Some(2));
-        assert_eq!(first_number, Some(5));
 
         let mut doc_iter = e.doc_parts();
         doc_iter.next().unwrap().should_eq("///123");

@@ -88,16 +88,16 @@ pub(crate) fn to_completion_item(line_map: &LineMap, item: CompletionItem) -> ls
             range: to_range(line_map, item.source_range),
             new_text: item.replace.into(),
         })),
-        detail: item.description,
-        documentation: item.documentation.map(|doc| {
-            Documentation::MarkupContent(MarkupContent {
+        detail: item.signature.clone(),
+        documentation: 
+            Some(Documentation::MarkupContent(MarkupContent {
                 kind: MarkupKind::Markdown,
-                value: doc,
-            })
-        }),
+                value: item.documentation.unwrap_or(String::from("")),
+            }))
+        ,
         label_details: Some(lsp::CompletionItemLabelDetails {
-            detail: item.signature.map(|sig| format!(": {sig}")),
-            description: None,
+            detail: None,
+            description: item.signature,
         }),
         ..lsp::CompletionItem::default()
     }

@@ -742,11 +742,9 @@ impl<'db> InferCtx<'db> {
     fn unify_var_ty(&mut self, var: TyVar, rhs: Ty) -> bool {
         let lhs = mem::replace(self.table.get_mut(var.0), Ty::Unknown { idx: 0 });
         if let Ok(ret) = self.unify(lhs.clone(), rhs) {
-            tracing::info!("Ret {:?}", ret);
             *self.table.get_mut(var.0) = ret;
             return true;
         } else {
-            tracing::info!("Err {:?}", lhs);
             *self.table.get_mut(var.0) = lhs;
             return false;
         };
@@ -760,11 +758,6 @@ impl<'db> InferCtx<'db> {
         let rhs_ty = self.table.get_mut(rhs.0).clone();
         let unified = self.unify_var_ty(lhs, rhs_ty);
         if unified {
-            tracing::info!(
-                "unifieing table {:?} {:?}",
-                self.table.get_mut(lhs.0).clone(),
-                self.table.get_mut(rhs.0)
-            );
             self.table.unify(lhs.0, rhs.0);
             return Ok(());
         };
@@ -930,7 +923,6 @@ impl<'db> InferCtx<'db> {
     }
 
     fn unify(&mut self, lhs: Ty, rhs: Ty) -> Result<Ty, ()> {
-        tracing::info!("unify ty {:?} {:?}", lhs, rhs);
         let ty = match (lhs, rhs) {
             (Ty::Unknown { idx }, Ty::Unknown { idx: idx2 }) => Ty::Unknown {
                 idx: min(idx, idx2),
@@ -1076,7 +1068,7 @@ impl<'a> Collector<'a> {
 
     fn collect_uncached(&mut self, i: u32) -> super::Ty {
         let ty = mem::replace(self.table.get_mut(i), Ty::Unknown { idx: 0 });
-        match &ty {
+        let ret = match &ty {
             Ty::Unknown { idx } => {
                 let lookup = self.env.get(idx);
                 let name = match lookup.cloned() {
@@ -1147,6 +1139,8 @@ impl<'a> Collector<'a> {
                     params: Arc::new(params),
                 }
             }
-        }
+        };
+        let _ = mem::replace(self.table.get_mut(i), ty);
+        ret
     }
 }

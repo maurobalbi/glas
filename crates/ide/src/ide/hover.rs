@@ -27,6 +27,7 @@ pub(crate) fn hover(db: &dyn TyDatabase, FilePos { file_id, pos }: FilePos) -> O
         }),
         semantics::Definition::Function(it) => {
             let name = it.name(db.upcast());
+            let docs = it.docs(db.upcast());
             match it.ty(db) {
                 ty::Ty::Function { params, return_ } => {
                     let params = params
@@ -37,7 +38,7 @@ pub(crate) fn hover(db: &dyn TyDatabase, FilePos { file_id, pos }: FilePos) -> O
                     Some(HoverResult {
                         range: tok.text_range(),
                         markup: format!(
-                            "```gleam\nfn {}({}) -> {}\n```",
+                            "```gleam\nfn {}({}) -> {}\n```\n___\n{docs}",
                             name,
                             params,
                             return_.display(db)
@@ -117,6 +118,7 @@ mod tests {
                 ```gleam
                 fn main() -> a
                 ```
+                ___
             "#]],
         );
     }
