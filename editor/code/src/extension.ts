@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { workspace } from "vscode";
+import { workspace, ExtensionMode } from "vscode";
 import {
   LanguageClient,
   LanguageClientOptions,
@@ -101,7 +101,7 @@ function createLanguageClient(context: vscode.ExtensionContext): LanguageClient 
     transport: TransportKind.stdio,
     options: {
       env: Object.assign(process.env, {
-        GLEAM_LOG: "info",
+        GLEAM_LOG: context.extensionMode === ExtensionMode.Development ? "info" : "error",
         // GLEAM_LOG_PATH: process.env["__GLAS_LSP_SERVER_PATH"] + "/logs.log",
         GLEAM_LOG_NOCOLOUR: "1",
       }),
