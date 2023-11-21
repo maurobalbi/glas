@@ -65,7 +65,7 @@ pub enum ResolveResult {
 }
 
 impl Resolver {
-    pub fn names_in_scope(&self) -> IndexMap<SmolStr, ResolveResult> {
+    pub fn values_names_in_scope(&self) -> IndexMap<SmolStr, ResolveResult> {
         let mut map = ScopeNames::default();
 
         for scope in self.scopes() {

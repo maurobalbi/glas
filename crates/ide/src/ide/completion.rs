@@ -1,3 +1,5 @@
+mod render;
+
 use smol_str::SmolStr;
 use syntax::{
     ast::{self, AstNode, SourceFile},
@@ -226,7 +228,7 @@ fn complete_dot(acc: &mut Vec<CompletionItem>, ctx: CompletionContext<'_>) -> Op
                     match def {
                         // ToDo: Extract to function because it's also used in complete_expr
                         ModuleDefId::FunctionId(it) => {
-                            acc.push(render_fn(&ctx, it));
+                            acc.push(render::render_fn(&ctx, it));
                         }
                         ModuleDefId::VariantId(it) => {
                             // let it = Variant { parent: it.parent, id: it.local_id };
@@ -271,45 +273,6 @@ fn complete_dot(acc: &mut Vec<CompletionItem>, ctx: CompletionContext<'_>) -> Op
     Some(())
 }
 
-fn render_fn(ctx: &CompletionContext<'_>, id: &FunctionId) -> CompletionItem {
-    let it = Function { id: *id };
-    let params = it.params(ctx.db.upcast());
-    let params = params
-        .iter()
-        .enumerate()
-        .map(|(i, p)| match p.label.clone() {
-            Some(label) => {
-                format!("{}: ${{{}:{}}}", label, i + 1, p.name)
-            }
-            None => {
-                format!("${{{}:{}}}", i + 1, p.name)
-            }
-        })
-        .collect::<Vec<_>>()
-        .join(", ");
-    let name = it.name(ctx.db.upcast());
-    let label = if !params.is_empty() {
-        format!("{}(…)", name)
-    } else {
-        format!("{}()", name)
-    };
-
-    let replace = format!("{}({})", name, params);
-
-    let docs = it.docs(ctx.db.upcast());
-
-    CompletionItem {
-        label: label.into(),
-        source_range: ctx.source_range,
-        replace: replace.into(),
-        kind: CompletionItemKind::Function,
-        signature: Some(it.ty(ctx.db).display(ctx.db).to_string()),
-        description: None,
-        documentation: Some(docs),
-        is_snippet: false,
-    }
-}
-
 fn complete_import(acc: &mut Vec<CompletionItem>, ctx: &CompletionContext<'_>) -> Option<()> {
     if ctx
         .tok
@@ -349,7 +312,7 @@ fn complete_expr(acc: &mut Vec<CompletionItem>, ctx: &CompletionContext<'_>) -> 
         _ => resolver_for_toplevel(ctx.db.upcast(), expr_ptr.file_id),
     };
 
-    for (name, def) in resolver.names_in_scope() {
+    for (name, def) in resolver.values_names_in_scope() {
         let kind = match def {
             ResolveResult::Module(_) => CompletionItemKind::Module,
             ResolveResult::Local(_) => CompletionItemKind::Param,
@@ -361,7 +324,7 @@ fn complete_expr(acc: &mut Vec<CompletionItem>, ctx: &CompletionContext<'_>) -> 
         };
         match def {
             ResolveResult::Function(it) => {
-                acc.push(render_fn(ctx, &it.id));
+                acc.push(render::render_fn(ctx, &it.id));
             }
             ResolveResult::Local(it) => acc.push(CompletionItem {
                 label: name.clone(),
@@ -389,16 +352,10 @@ fn complete_expr(acc: &mut Vec<CompletionItem>, ctx: &CompletionContext<'_>) -> 
     let module_data = ctx.db.module_items(expr_ptr.file_id);
 
     for (_, import) in module_data.module_imports() {
-        acc.push(CompletionItem {
-            label: import.accessor.clone(),
-            source_range: ctx.source_range,
-            replace: import.accessor.clone(),
-            kind: CompletionItemKind::Module,
-            signature: None,
-            description: None,
-            documentation: None,
-            is_snippet: false,
-        })
+        let module = resolver.resolve_module(&import.accessor);
+        module.map(|id| acc.push(
+           render::render_module(ctx, &id)
+        ));
     }
 
     Some(())

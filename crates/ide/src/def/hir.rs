@@ -12,7 +12,8 @@ use crate::{
 use super::{
     hir_def::{AdtId, LocalFieldId, LocalVariantId, TypeAliasId, VariantId},
     module::{AdtData, FieldData, FunctionData, Param, PatternId, TypeAliasData, VariantData},
-    FunctionId, source::HasSource,
+    source::HasSource,
+    FunctionId,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -77,6 +78,22 @@ impl Module {
     pub fn package(self, db: &dyn DefDatabase) -> Package {
         let root = db.file_source_root(self.id);
         Package { id: root }
+    }
+
+    pub fn import_accessor(self, db: &dyn DefDatabase) -> SmolStr {
+        let name = self.name(db);
+        SmolStr::from(
+            name.split("/")
+                .last()
+                .expect("This is a compiler error. A module should always have a name"),
+        )
+    }
+
+    pub fn docs(&self, db: &dyn DefDatabase) -> String {
+        self.source(db)
+            .expect("This should not happen")
+            .value
+            .doc_text()
     }
 }
 
@@ -161,6 +178,13 @@ impl Adt {
 
     pub fn module(&self, db: &dyn DefDatabase) -> Module {
         db.lookup_intern_adt(self.id).file_id.into()
+    }
+
+    pub fn docs(&self, db: &dyn DefDatabase) -> String {
+        self.source(db)
+            .expect("This should not happen")
+            .value
+            .doc_text()
     }
 }
 
@@ -259,7 +283,10 @@ impl Function {
     }
 
     pub fn docs(&self, db: &dyn DefDatabase) -> String {
-        self.source(db).expect("This should not happen").value.doc_text()
+        self.source(db)
+            .expect("This should not happen")
+            .value
+            .doc_text()
     }
 }
 

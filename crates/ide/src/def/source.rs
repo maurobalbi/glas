@@ -2,7 +2,7 @@ use syntax::ast;
 
 use crate::{DefDatabase, InFile};
 
-use super::hir::{Adt, Field, Function, TypeAlias, Variant};
+use super::hir::{Adt, Field, Function, TypeAlias, Variant, Module};
 
 pub trait HasSource {
     type Ast;
@@ -10,6 +10,14 @@ pub trait HasSource {
     /// Using [`crate::Semantics::source`] is preferred when working with [`crate::Semantics`],
     /// as that caches the parsed file in the semantics' cache.
     fn source(self, db: &dyn DefDatabase) -> Option<InFile<Self::Ast>>;
+}
+
+impl HasSource for Module {
+    type Ast = ast::SourceFile;
+    fn source(self, db: &dyn DefDatabase) -> Option<InFile<Self::Ast>> {
+        let root = db.parse(self.id);
+        Some(InFile { file_id: self.id, value: root.root() })
+    }
 }
 
 impl HasSource for Function {

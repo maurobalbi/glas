@@ -346,7 +346,7 @@ asts! {
             })
         }
     },
-    ADT = Adt {
+    ADT = Adt [HasDocParts] {
         name: TypeName,
         constructors: [Variant],
         generic_params: GenericParamList,
@@ -428,14 +428,13 @@ asts! {
     EXPR_SPREAD = ExprSpread {
         expr: Expr,
     },
-    SOURCE_FILE = SourceFile {
+    SOURCE_FILE = SourceFile [HasDocParts] {
         statements: [ModuleStatement],
     },
     MODULE_NAME_REF = ModuleNameRef {
         name: NameRef,
     },
-    // Change to body with expression to be able to reuse parser / collecting logic and validate constant during lowering
-    MODULE_CONSTANT = ModuleConstant {
+    MODULE_CONSTANT = ModuleConstant [HasDocParts] {
         name: Name,
         value: ConstantExpr,
         annotation: TypeExpr,
@@ -631,7 +630,21 @@ pub trait HasDocParts: AstNode<Language = GleamLanguage> {
     }
 
     fn doc_text(&self) -> String {
-        self.doc_parts().map(|docpart|docpart.text()[3..].to_string()).join("\n").into()
+        self.doc_parts()
+            .filter_map(|docpart| {
+                let slashes = number_of_slashes(&docpart).clone();
+                Some(docpart.text()[slashes?..].to_string())
+            })
+            .join("\n")
+    }
+}
+
+fn number_of_slashes(token: &SyntaxToken) -> Option<usize> {
+    match token.kind() {
+        COMMENT => Some(2),
+        COMMENT_STATEMENT => Some(3),
+        COMMENT_MODULE => Some(4),
+        _ => None,
     }
 }
 
@@ -690,9 +703,7 @@ mod tests {
 
     #[test]
     fn assert() {
-        let e = crate::parse_module(
-            "type Mogie { Mogie(name: Int) } \n/// 123123\n// 123 \nfn wops() { let bobo = Mogie(name: 1) bobo.name}",
-        );
+        let e = crate::parse_module("import module/bla.{adf}");
         for error in e.errors() {
             println!("{}", error);
         }
@@ -865,7 +876,7 @@ mod tests {
         fst.ty().unwrap().syntax().should_eq("Int");
         assert!(params.next().is_none())
     }
-    
+
     #[test]
     fn function_docs() {
         let e = parse::<Function>("///123\n \n ///abc\n fn main(a b: Int) -> fn(Int) -> Int {}");
