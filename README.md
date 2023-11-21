@@ -6,9 +6,13 @@ A language server for the [Gleam](https://gleam.run/) programming language.
 
 ## Installation
 
-At this early stage no pre-built binaries are available.
+### MacOS (arm64, x86), Linux (x86), Windows (x86) 
 
-- For testing, clone this repo, open it in VSCode and hit F5
+Insttall the extension from [VisualStudio Marketplace](https://marketplace.visualstudio.com/items?itemName=maurobalbi.glas-vscode)
+
+### Others
+
+For other platforms binaries have to be built from source.
 
 ## Features
 
@@ -19,6 +23,7 @@ At this early stage no pre-built binaries are available.
 - Highlight-Related
 - Hover-Info
 - Syntax-Errors
+- Semantic highlighting
 - Show syntax-tree
 
 ## Acknowledgments
