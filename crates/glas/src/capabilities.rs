@@ -1,7 +1,9 @@
 use lsp_types::{
     CompletionOptions, HoverProviderCapability, InitializeParams, OneOf, ServerCapabilities,
-    TextDocumentSyncCapability, TextDocumentSyncKind, TextDocumentSyncOptions,
+    TextDocumentSyncCapability, TextDocumentSyncKind, TextDocumentSyncOptions, SemanticTokensServerCapabilities, SemanticTokensOptions, WorkDoneProgressOptions, SemanticTokensLegend, SemanticTokensFullOptions,
 };
+
+use crate::semantic_tokens::{SEMANTIC_TOKEN_TYPES, SEMANTIC_TOKEN_MODIFIERS};
 
 macro_rules! test {
     ($lhs:ident $(.$field:ident)*) => {
@@ -62,6 +64,17 @@ pub(crate) fn negotiate_capabilities(
             trigger_characters: Some(vec![".".into(), "@".into()]),
             ..Default::default()
         }),
+        semantic_tokens_provider: Some(SemanticTokensServerCapabilities::SemanticTokensOptions(
+            SemanticTokensOptions {
+                work_done_progress_options: WorkDoneProgressOptions::default(),
+                legend: SemanticTokensLegend {
+                    token_types: SEMANTIC_TOKEN_TYPES.to_vec(),
+                    token_modifiers: SEMANTIC_TOKEN_MODIFIERS.to_vec(),
+                },
+                range: Some(true),
+                full: Some(SemanticTokensFullOptions::Delta { delta: Some(false) }),
+            },
+        )),
         document_highlight_provider: Some(OneOf::Left(true)),
         hover_provider: Some(HoverProviderCapability::Simple(true)),
         definition_provider: Some(OneOf::Left(true)),

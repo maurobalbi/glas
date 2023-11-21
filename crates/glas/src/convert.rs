@@ -1,11 +1,11 @@
-use crate::{LineMap, Result, Vfs};
+use crate::{semantic_tokens, LineMap, Result, Vfs};
 use ide::{
     CompletionItem, CompletionItemKind, Diagnostic, DiagnosticKind, FileId, FilePos, FileRange,
-    HlRelated, HoverResult, Severity,
+    HlRelated, HoverResult, Severity, HlRange
 };
 use lsp::{
     DiagnosticTag, DocumentHighlight, DocumentHighlightKind, Documentation, Hover, MarkupContent,
-    MarkupKind,
+    MarkupKind, SemanticToken,
 };
 use lsp_types::{
     self as lsp, DiagnosticRelatedInformation, DiagnosticSeverity, Location, NumberOrString,
@@ -186,4 +186,52 @@ pub(crate) fn to_document_highlight(
             }),
         })
         .collect()
+}
+
+pub(crate) fn to_semantic_tokens(line_map: &LineMap, hls: &[HlRange]) -> Vec<SemanticToken> {
+    // We must not exceed the last line.
+    let last_line = line_map.last_line();
+
+    let mut toks = Vec::with_capacity(hls.len());
+    let (mut prev_line, mut prev_start) = (0, 0);
+    for hl in hls {
+        let (ty_idx, mod_set) = semantic_tokens::to_semantic_type_and_modifiers(hl.tag);
+        let range = to_range(line_map, hl.range);
+        for line in range.start.line..=range.end.line.min(last_line) {
+            // N.B. For relative encoding, column offset is relative to
+            // the previous token *in the same line*.
+            if line != prev_line {
+                prev_start = 0;
+            }
+
+            let mut start = 0;
+            let mut end = line_map.end_col_for_line(line);
+            if line == range.start.line {
+                start = start.max(range.start.character);
+            }
+            if line == range.end.line {
+                end = end.min(range.end.character);
+            }
+
+            // Don't emit empty token.
+            // N.B. When there is a newline at EOF and a unterminated string,
+            // the newline itself is in highlighted range.
+            // We must ignore this case since newlines cannot be highlighted in LSP.
+            if start == end {
+                continue;
+            }
+
+            toks.push(SemanticToken {
+                delta_line: line - prev_line,
+                delta_start: start - prev_start,
+                length: end - start,
+                token_type: ty_idx as u32,
+                token_modifiers_bitset: mod_set.0,
+            });
+
+            (prev_line, prev_start) = (line, start);
+        }
+    }
+
+    toks
 }

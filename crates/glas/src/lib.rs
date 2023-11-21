@@ -7,6 +7,7 @@ mod lsp_ext;
 mod meter;
 pub mod server;
 mod vfs;
+mod semantic_tokens;
 
 use anyhow::Result;
 use async_lsp::client_monitor::ClientProcessMonitorLayer;

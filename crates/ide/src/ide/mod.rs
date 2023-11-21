@@ -5,6 +5,7 @@ mod highlight_related;
 mod hover;
 mod references;
 mod syntax_tree;
+mod semantic_highlighting;
 
 use crate::base::SourceDatabaseStorage;
 use crate::def::{DefDatabaseStorage, InternDatabaseStorage};
@@ -21,6 +22,7 @@ pub use completion::{CompletionItem, CompletionItemKind};
 pub use goto_definition::GotoDefinitionResult;
 pub use highlight_related::HlRelated;
 pub use hover::HoverResult;
+pub use semantic_highlighting::{HlRange, HlTag};
 
 pub const DEFAULT_LRU_CAP: usize = 128;
 
@@ -180,5 +182,13 @@ impl Analysis {
 
     pub fn syntax_tree(&self, file_id: FileId) -> Cancellable<String> {
         self.with_db(|db| syntax_tree::syntax_tree(db, file_id))
+    }
+    
+    pub fn syntax_highlight(
+        &self,
+        file: FileId,
+        range: Option<TextRange>,
+    ) -> Cancellable<Vec<HlRange>> {
+        self.with_db(|db| semantic_highlighting::highlight(db, file, range))
     }
 }

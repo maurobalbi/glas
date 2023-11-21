@@ -4,7 +4,7 @@ use ide::{FileRange, GotoDefinitionResult};
 use lsp_types::{
     CompletionParams, CompletionResponse, Diagnostic, DocumentHighlight, DocumentHighlightParams,
     GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverParams, Location, ReferenceParams,
-    Url,
+    Url, SemanticTokensParams, SemanticTokensResult, SemanticTokensRangeParams, SemanticTokensRangeResult, SemanticTokens,
 };
 
 const MAX_DIAGNOSTICS_CNT: usize = 128;
@@ -96,4 +96,35 @@ pub(crate) fn syntax_tree(snap: StateSnapshot, params: SyntaxTreeParams) -> Resu
     let (file, _) = convert::from_file(&snap.vfs(), &params.text_document)?;
     let syntax_tree = snap.analysis.syntax_tree(file)?;
     Ok(syntax_tree)
+}
+
+pub(crate) fn semantic_token_full(
+    snap: StateSnapshot,
+    params: SemanticTokensParams,
+) -> Result<Option<SemanticTokensResult>> {
+    let (file, line_map) = convert::from_file(&snap.vfs(), &params.text_document)?;
+    let hls = snap.analysis.syntax_highlight(file, None)?;
+    let toks = convert::to_semantic_tokens(&line_map, &hls);
+    Ok(Some(SemanticTokensResult::Tokens(SemanticTokens {
+        result_id: None,
+        data: toks,
+    })))
+}
+
+pub(crate) fn semantic_token_range(
+    snap: StateSnapshot,
+    params: SemanticTokensRangeParams,
+) -> Result<Option<SemanticTokensRangeResult>> {
+    let (file, range, line_map) = {
+        let vfs = snap.vfs();
+        let (file, line_map) = convert::from_file(&vfs, &params.text_document)?;
+        let (_, range) = convert::from_range(&vfs, file, params.range)?;
+        (file, range, line_map)
+    };
+    let hls = snap.analysis.syntax_highlight(file, Some(range))?;
+    let toks = convert::to_semantic_tokens(&line_map, &hls);
+    Ok(Some(SemanticTokensRangeResult::Tokens(SemanticTokens {
+        result_id: None,
+        data: toks,
+    })))
 }

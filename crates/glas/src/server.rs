@@ -157,6 +157,8 @@ impl Server {
             .request_snap::<req::DocumentHighlightRequest>(handler::document_highlight)
             .request_snap::<req::References>(handler::references)
             .request_snap::<lsp_ext::SyntaxTree>(handler::syntax_tree)
+            .request_snap::<req::SemanticTokensFullRequest>(handler::semantic_token_full)
+            .request_snap::<req::SemanticTokensRangeRequest>(handler::semantic_token_range)
             //// Events ////
             .event(Self::on_set_package_info)
             .event(Self::on_update_config)
