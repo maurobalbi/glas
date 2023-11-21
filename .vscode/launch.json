@@ -6,12 +6,31 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
-			"name": "Run Extension (Debug Build)",
+			"name": "Run Extension (Debug Build), others disabled",
 			"type": "extensionHost",
 			"request": "launch",
 			"sourceMaps": true,
 			"args": [
 				"--disable-extensions",
+				"--extensionDevelopmentPath=${workspaceFolder}/editor/code"
+			],
+			"skipFiles": [
+				"<node_internals>/**/*.js"
+			],
+			"outFiles": [
+				"${workspaceFolder}/editors/code/out/**/*.js"
+			],
+			"preLaunchTask": "Build Server and Extension",
+			"env": {
+				"__GLAS_LSP_SERVER_PATH": "${workspaceFolder}/target/debug/glas"
+			}
+		},
+		{
+			"name": "Run Extension (Debug Build)",
+			"type": "extensionHost",
+			"request": "launch",
+			"sourceMaps": true,
+			"args": [
 				"--extensionDevelopmentPath=${workspaceFolder}/editor/code"
 			],
 			"skipFiles": [

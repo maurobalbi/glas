@@ -19,6 +19,17 @@ export const syntaxTree = new lc.RequestType<SyntaxTreeParams, string, void>(
 );
 
 export function activate(context: vscode.ExtensionContext) {
+  if (vscode.extensions.getExtension("gleam.gleam")) {
+        vscode.window
+            .showWarningMessage(
+                `You have both the glas and gleam ` +
+                    "plugins enabled. Having both plugins enabled at the same time could " +
+                    "cause them to not work correctly. You should disable one of them.",
+                "Got it",
+            )
+            .then(() => {}, console.error);
+    }
+
   client = createLanguageClient(context);
   // Start the client. This will also launch the server
   client.start();
