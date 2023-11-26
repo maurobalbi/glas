@@ -1,4 +1,4 @@
-use crate::{def::{hir_def::{FunctionId, AdtId}, hir::{Function, Adt, Module}}, CompletionItem, CompletionItemKind, ty::display::TyDisplay, FileId};
+use crate::{def::{hir_def::{FunctionId, AdtId}, hir::{Function, Adt, Module}}, CompletionItem, CompletionItemKind, ty::display::TyDisplay, FileId, CompletionRelevance};
 
 use super::CompletionContext;
 
@@ -35,6 +35,7 @@ pub fn render_fn(ctx: &CompletionContext<'_>, id: &FunctionId) -> CompletionItem
         replace: replace.into(),
         kind: CompletionItemKind::Function,
         signature: Some(it.ty(ctx.db).display(ctx.db).to_string()),
+        relevance: CompletionRelevance::default(),
         description: None,
         documentation: Some(docs),
         is_snippet: false,
@@ -53,6 +54,7 @@ pub fn render_adt(ctx: &CompletionContext<'_>, id: &AdtId) -> CompletionItem {
         source_range: ctx.source_range,
         replace: label.into(),
         kind: CompletionItemKind::Function,
+        relevance: CompletionRelevance::default(),
         signature: None,
         description: None,
         documentation: Some(docs),
@@ -71,6 +73,7 @@ pub fn render_module(ctx: &CompletionContext<'_>, id: &FileId) -> CompletionItem
         source_range: ctx.source_range,
         replace: label.into(),
         kind: CompletionItemKind::Module,
+        relevance: CompletionRelevance::default(),
         signature: Some(format!("import {}", it.name(ctx.db.upcast()).to_string())),
         description: None,
         documentation: Some(docs),

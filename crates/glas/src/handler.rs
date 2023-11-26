@@ -27,9 +27,10 @@ pub(crate) fn completion(
     let Some(items) = snap.analysis.completions(fpos, trigger_char)? else {
         return Ok(None);
     };
+    let max_relevance = items.iter().map(|it| it.relevance.score()).max().unwrap_or_default();
     let items = items
         .into_iter()
-        .map(|item| convert::to_completion_item(&line_map, item))
+        .map(|item| convert::to_completion_item(&line_map, max_relevance, item))
         .collect::<Vec<_>>();
     Ok(Some(CompletionResponse::Array(items)))
 }

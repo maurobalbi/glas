@@ -72,7 +72,7 @@ pub(crate) fn negotiate_capabilities(
                     token_modifiers: SEMANTIC_TOKEN_MODIFIERS.to_vec(),
                 },
                 range: Some(true),
-                full: Some(SemanticTokensFullOptions::Delta { delta: Some(false) }),
+                full: None,
             },
         )),
         document_highlight_provider: Some(OneOf::Left(true)),

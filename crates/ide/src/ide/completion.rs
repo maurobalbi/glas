@@ -35,10 +35,52 @@ pub struct CompletionItem {
     pub signature: Option<String>,
     /// A brief description.
     pub description: Option<String>,
+    pub relevance: CompletionRelevance,
     /// The detailed documentation.
     pub documentation: Option<String>,
     /// Is this a snippet.
     pub is_snippet: bool,
+}
+
+impl CompletionRelevance {
+    /// Provides a relevance score. Higher values are more relevant.
+    ///
+    /// The absolute value of the relevance score is not meaningful, for
+    /// example a value of 0 doesn't mean "not relevant", rather
+    /// it means "least relevant". The score value should only be used
+    /// for relative ordering.
+    ///
+    /// See is_relevant if you need to make some judgement about score
+    /// in an absolute sense.
+    pub fn score(self) -> u32 {
+        let mut score = 0;
+        let CompletionRelevance {
+            exact_name_match,
+            type_match,
+            is_local,
+        } = self;
+
+        if exact_name_match {
+            score += 10;
+        }
+        score += match type_match {
+            Some(CompletionRelevanceTypeMatch::Exact) => 8,
+            Some(CompletionRelevanceTypeMatch::CouldUnify) => 3,
+            None => 0,
+        };
+        // slightly prefer locals
+        if is_local {
+            score += 1;
+        }
+        score
+    }
+
+    /// Returns true when the score for this threshold is above
+    /// some threshold such that we think it is especially likely
+    /// to be relevant.
+    pub fn is_relevant(&self) -> bool {
+        self.score() > 0
+    }
 }
 
 /// The type of the completion item.
@@ -52,6 +94,19 @@ pub enum CompletionItemKind {
     Module,
     Pattern,
     Field,
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Default)]
+pub struct CompletionRelevance {
+    pub exact_name_match: bool,
+    pub type_match: Option<CompletionRelevanceTypeMatch>,
+    pub is_local: bool,
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum CompletionRelevanceTypeMatch {
+    CouldUnify,
+    Exact,
 }
 
 pub struct CompletionContext<'db> {
@@ -169,6 +224,7 @@ fn complete_at(acc: &mut Vec<CompletionItem>, ctx: CompletionContext<'_>) {
         label: "target(javscript)".into(),
         source_range: ctx.source_range,
         replace: "target(javascript)".into(),
+        relevance: CompletionRelevance::default(),
         kind: CompletionItemKind::Keyword,
         signature: None,
         description: None,
@@ -179,6 +235,7 @@ fn complete_at(acc: &mut Vec<CompletionItem>, ctx: CompletionContext<'_>) {
         label: "target(erlang)".into(),
         source_range: ctx.source_range,
         replace: "target(erlang)".into(),
+        relevance: CompletionRelevance::default(),
         kind: CompletionItemKind::Keyword,
         signature: None,
         description: None,
@@ -190,6 +247,7 @@ fn complete_at(acc: &mut Vec<CompletionItem>, ctx: CompletionContext<'_>) {
         source_range: ctx.source_range,
         replace: "external(javascript, \"$1\", \"$2\")".into(),
         kind: CompletionItemKind::Keyword,
+        relevance: CompletionRelevance::default(),
         signature: None,
         description: None,
         documentation: None,
@@ -200,6 +258,7 @@ fn complete_at(acc: &mut Vec<CompletionItem>, ctx: CompletionContext<'_>) {
         source_range: ctx.source_range,
         replace: "external(erlang, \"$1\", \"$2\")".into(),
         kind: CompletionItemKind::Keyword,
+        relevance: CompletionRelevance::default(),
         signature: None,
         description: None,
         documentation: None,
@@ -286,6 +345,7 @@ fn complete_import(acc: &mut Vec<CompletionItem>, ctx: &CompletionContext<'_>) -
                 source_range: ctx.source_range,
                 replace: name.clone(),
                 kind: CompletionItemKind::Module,
+                relevance: CompletionRelevance::default(),
                 signature: None,
                 description: None,
                 documentation: None,
@@ -326,20 +386,26 @@ fn complete_expr(acc: &mut Vec<CompletionItem>, ctx: &CompletionContext<'_>) -> 
             ResolveResult::Function(it) => {
                 acc.push(render::render_fn(ctx, &it.id));
             }
-            ResolveResult::Local(it) => acc.push(CompletionItem {
+            ResolveResult::Local(it) => {
+                let mut relevance = CompletionRelevance::default();
+                relevance.is_local = true;
+
+                acc.push(CompletionItem {
                 label: name.clone(),
                 source_range: ctx.source_range,
                 replace: format!("{}", name).into(),
                 kind,
                 signature: Some(it.ty(ctx.db).display(ctx.db).to_string()),
+                relevance: relevance,
                 description: None,
                 documentation: None,
                 is_snippet: false,
-            }),
+            })},
             _ => acc.push(CompletionItem {
                 label: name.clone(),
                 source_range: ctx.source_range,
                 replace: format!("{}", name).into(),
+                relevance: CompletionRelevance::default(),
                 kind,
                 signature: None,
                 description: None,
@@ -353,9 +419,7 @@ fn complete_expr(acc: &mut Vec<CompletionItem>, ctx: &CompletionContext<'_>) -> 
 
     for (_, import) in module_data.module_imports() {
         let module = resolver.resolve_module(&import.accessor);
-        module.map(|id| acc.push(
-           render::render_module(ctx, &id)
-        ));
+        module.map(|id| acc.push(render::render_module(ctx, &id)));
     }
 
     Some(())
@@ -373,6 +437,7 @@ fn complete_snippet(acc: &mut Vec<CompletionItem>, ctx: &CompletionContext) {
         signature: None,
         description: Some("fn name() { }".into()),
         documentation: None,
+        relevance: CompletionRelevance::default(),
         is_snippet: true,
     });
     acc.push(CompletionItem {
@@ -380,6 +445,7 @@ fn complete_snippet(acc: &mut Vec<CompletionItem>, ctx: &CompletionContext) {
         source_range: ctx.source_range,
         replace: "import ${1:module}".into(),
         kind: CompletionItemKind::Keyword,
+        relevance: CompletionRelevance::default(),
         signature: None,
         description: None,
         documentation: None,

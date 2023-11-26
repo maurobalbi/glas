@@ -1,7 +1,7 @@
 use crate::{semantic_tokens, LineMap, Result, Vfs};
 use ide::{
-    CompletionItem, CompletionItemKind, Diagnostic, DiagnosticKind, FileId, FilePos, FileRange,
-    HlRelated, HoverResult, Severity, HlRange
+    CompletionItem, CompletionItemKind, CompletionRelevance, Diagnostic, DiagnosticKind, FileId,
+    FilePos, FileRange, HlRange, HlRelated, HoverResult, Severity,
 };
 use lsp::{
     DiagnosticTag, DocumentHighlight, DocumentHighlightKind, Documentation, Hover, MarkupContent,
@@ -66,7 +66,29 @@ pub(crate) fn to_hover(line_map: &LineMap, hover: HoverResult) -> Hover {
     }
 }
 
-pub(crate) fn to_completion_item(line_map: &LineMap, item: CompletionItem) -> lsp::CompletionItem {
+fn set_score(
+    res: &mut lsp_types::CompletionItem,
+    max_relevance: u32,
+    relevance: CompletionRelevance,
+) {
+    if relevance.is_relevant() && relevance.score() == max_relevance {
+        res.preselect = Some(true);
+    }
+    // The relevance needs to be inverted to come up with a sort score
+    // because the client will sort ascending.
+    let sort_score = relevance.score() ^ 0xFF_FF_FF_FF;
+    // Zero pad the string to ensure values can be properly sorted
+    // by the client. Hex format is used because it is easier to
+    // visually compare very large values, which the sort text
+    // tends to be since it is the opposite of the score.
+    res.sort_text = Some(format!("{sort_score:08x}"));
+}
+
+pub(crate) fn to_completion_item(
+    line_map: &LineMap,
+    max_relevance: u32,
+    item: CompletionItem,
+) -> lsp::CompletionItem {
     let kind = match item.kind {
         CompletionItemKind::Keyword => lsp::CompletionItemKind::KEYWORD,
         CompletionItemKind::Param => lsp::CompletionItemKind::VARIABLE,
@@ -77,7 +99,7 @@ pub(crate) fn to_completion_item(line_map: &LineMap, item: CompletionItem) -> ls
         CompletionItemKind::Adt => lsp::CompletionItemKind::CLASS,
         CompletionItemKind::Module => lsp::CompletionItemKind::MODULE,
     };
-    lsp::CompletionItem {
+    let mut completion_item = lsp::CompletionItem {
         label: item.label.into(),
         kind: Some(kind),
         insert_text: None,
@@ -89,18 +111,21 @@ pub(crate) fn to_completion_item(line_map: &LineMap, item: CompletionItem) -> ls
             new_text: item.replace.into(),
         })),
         detail: item.signature.clone(),
-        documentation: 
-            Some(Documentation::MarkupContent(MarkupContent {
-                kind: MarkupKind::Markdown,
-                value: item.documentation.unwrap_or(String::from("")),
-            }))
-        ,
+        documentation: Some(Documentation::MarkupContent(MarkupContent {
+            kind: MarkupKind::Markdown,
+            value: item.documentation.unwrap_or(String::from("")),
+        })),
         label_details: Some(lsp::CompletionItemLabelDetails {
             detail: None,
             description: item.signature,
         }),
         ..lsp::CompletionItem::default()
-    }
+    };
+
+    set_score(&mut completion_item, max_relevance, item.relevance);
+    tracing::info!("relevance {:?}", item.relevance);
+
+    completion_item
 }
 
 pub(crate) fn to_diagnostics(

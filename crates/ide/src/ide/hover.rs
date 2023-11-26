@@ -176,6 +176,7 @@ mod tests {
                 ```gleam
                 import test
                 ```
+                ___
             "#]],
         );
     }

@@ -18,7 +18,7 @@ use salsa::{Database, Durability, ParallelDatabase};
 use std::fmt;
 use syntax::TextRange;
 
-pub use completion::{CompletionItem, CompletionItemKind};
+pub use completion::{CompletionItem, CompletionItemKind, CompletionRelevance};
 pub use goto_definition::GotoDefinitionResult;
 pub use highlight_related::HlRelated;
 pub use hover::HoverResult;
