@@ -20,7 +20,6 @@ For other platforms binaries have to be built from source.
 - Completions
 - Goto-Definition
 - Find References
-- References
 - Highlight-Related
 - Hover-Info
 - Syntax-Errors
