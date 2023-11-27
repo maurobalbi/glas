@@ -578,7 +578,7 @@ fn aliased_import() {
 pub type Bla = String
 
 #- test2.gleam
-import test.{Bla, main as dodo}
+import test.{type Bla, main as dodo}
 
 fn test(a: String) -> Bla { $0 }"#,
         expect!["test: fn(String) -> String"],
@@ -594,7 +594,7 @@ pub type Wobble(name) {
 }
 
 #- test2.gleam
-import test.{Wobble as Bobo, main as dodo}
+import test.{type Wobble as Bobo, main as dodo}
 pub opaque type Nasty {
     Nasty
 }

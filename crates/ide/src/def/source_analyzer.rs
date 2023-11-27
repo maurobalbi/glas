@@ -78,23 +78,6 @@ impl SourceAnalyzer {
         let expr_id = self.expr_id(expr)?;
         self.infer.as_ref().and_then(|i| i.resolve_module(expr_id))
     }
-
-    // pub(crate) fn resolve_field_access_expr(
-    //     &self,
-    //     db: &dyn DefDatabase,
-    //     field_expr: &ast::FieldAccessExpr,
-    // ) -> Option<FunctionId> {
-    //     let base_ty = self.type_of_expr(db, &field_expr.container()?)?;
-
-    // let (op_trait, op_fn) = self.lang_trait_fn(db, LangItem::Index, &name![index])?;
-    // // HACK: subst for all methods coincides with that for their trait because the methods
-    // // don't have any generic parameters, so we skip building another subst for the methods.
-    // let substs = hir_ty::TyBuilder::subst_for_def(db, op_trait, None)
-    //     .push(base_ty.clone())
-    //     .push(index_ty.clone())
-    //     .build();
-    // Some(self.resolve_impl_method_or_trait_def(db, op_fn, substs))
-    // }
 }
 
 fn scope_for(

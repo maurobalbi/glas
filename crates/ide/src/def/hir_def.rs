@@ -3,8 +3,8 @@ use la_arena::Idx;
 use crate::{impl_from, impl_intern, FileId, InFile};
 
 use super::{
-    hir::{Adt, Field, Function, Module, TypeAlias, Variant},
-    module::{AdtData, FieldData, FunctionData, TypeAliasData, VariantData},
+    hir::{Adt, Field, Function, Module, TypeAlias, Variant, Import},
+    module::{AdtData, FieldData, FunctionData, TypeAliasData, VariantData, ImportData},
     DefDatabase,
 };
 use crate::impl_intern_key;
@@ -28,7 +28,8 @@ from_id!(
     (FunctionId, Function),
     (AdtId, Adt),
     (FileId, Module),
-    (TypeAliasId, TypeAlias)
+    (TypeAliasId, TypeAlias),
+    (ImportId, Import)
 );
 
 impl From<VariantId> for Variant {
@@ -57,6 +58,16 @@ impl_intern!(
     FunctionLoc,
     intern_function,
     lookup_intern_function
+);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ImportId(pub salsa::InternId);
+pub type ImportLoc = InFile<Idx<ImportData>>;
+impl_intern!(
+    ImportId,
+    ImportLoc,
+    intern_import,
+    lookup_intern_import
 );
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

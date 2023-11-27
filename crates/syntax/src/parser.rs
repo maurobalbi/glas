@@ -319,7 +319,7 @@ fn statement(p: &mut Parser) {
         T!["import"] => {
             if is_pub {
                 p.error(ErrorKind::UnexpectedImport);
-            } 
+            }
             import(p, m);
         }
         T!["type"] | T!["opaque"] => custom_type(p, m),
@@ -717,7 +717,7 @@ fn expr_bp(p: &mut Parser, min_bp: u8) {
         if !p.at_any(EXPR_FIRST) {
             break;
         }
-        
+
         let m = p.start_node_before(lhs);
         expr_bp(p, rbp);
 
@@ -949,7 +949,7 @@ fn pattern(p: &mut Parser) {
             p.bump();
             pattern(p);
             p.finish_node(u, UNARY_OP)
-        },
+        }
         T!("#") => pattern_tuple(p),
         T![".."] => {
             let spread = p.start_node();
@@ -1165,14 +1165,9 @@ fn unqualified_imports(p: &mut Parser) {
         match p.nth(0) {
             IDENT => as_name(p),
             // U_IDENT => type_name(p) ToDo!
-            U_IDENT => as_type_name(p),
+            U_IDENT => as_name(p),
             T!["type"] => {
-                p.eat(T!["type"]);
-                if p.at(U_IDENT) {
                     as_type_name(p)
-                } else {
-                    p.error(ErrorKind::ExpectedType)
-                };
             }
             k if IMPORT_RECOVERY.contains(k) => break,
             _ => p.bump_with_error(ErrorKind::ExpectedParameter),
@@ -1182,13 +1177,21 @@ fn unqualified_imports(p: &mut Parser) {
 }
 
 fn as_name(p: &mut Parser) {
-    assert!(p.at(IDENT));
+    const AS_NAME_TOKENS: TokenSet = TokenSet::new(&[U_IDENT, IDENT]);
+    assert!(p.at_any(TokenSet::new(&[U_IDENT, IDENT])));
     let m = p.start_node();
-    name(p);
+    let name = p.start_node();
+    p.bump();
+    p.finish_node(name, NAME);
     if p.at(T!["as"]) {
         p.expect(T!["as"]);
         let n = p.start_node();
-        p.expect(IDENT);
+        if p.at_any(AS_NAME_TOKENS) {
+            p.bump();
+        }
+        else {
+            p.error(ErrorKind::ExpectedIdentifier);
+        }
         p.finish_node(n, NAME);
     }
     if !p.at(T!["}"]) {
@@ -1198,9 +1201,14 @@ fn as_name(p: &mut Parser) {
 }
 
 fn as_type_name(p: &mut Parser) {
-    assert!(p.at(U_IDENT));
+    assert!(p.at(T!["type"]));
     let m = p.start_node();
-    type_name(p);
+    p.eat(T!["type"]);
+    if p.at(U_IDENT) {
+        type_name(p);
+    } else {
+        p.error(ErrorKind::ExpectedType)
+    }
     if p.at(T!["as"]) {
         p.expect(T!["as"]);
         let n = p.start_node();

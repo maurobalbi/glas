@@ -21,7 +21,7 @@ pub use semantics::{classify_node, find_container, Semantics};
 pub use syntax::ast::{AstNode, BinaryOpKind as BinaryOp, Expr, UnaryOpKind as UnaryOp};
 
 use self::body::{Body, BodySourceMap};
-use self::hir_def::{AdtId, AdtLoc, FunctionId, FunctionLoc, TypeAliasId, TypeAliasLoc};
+use self::hir_def::{AdtId, AdtLoc, FunctionId, FunctionLoc, TypeAliasId, TypeAliasLoc, ImportLoc, ImportId};
 use self::lower::lower_module;
 pub use self::lower::ModuleItemData;
 use self::scope::{
@@ -34,6 +34,9 @@ pub use search::SearchScope;
 pub trait InternDatabase: SourceDatabase {
     #[salsa::interned]
     fn intern_function(&self, loc: FunctionLoc) -> FunctionId;
+
+    #[salsa::interned]
+    fn intern_import(&self, loc: ImportLoc) -> ImportId;
 
     #[salsa::interned]
     fn intern_adt(&self, loc: AdtLoc) -> AdtId;

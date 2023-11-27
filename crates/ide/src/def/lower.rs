@@ -75,6 +75,14 @@ impl Index<Idx<AdtData>> for ModuleItemData {
     }
 }
 
+impl Index<Idx<ImportData>> for ModuleItemData {
+    type Output = ImportData;
+
+    fn index(&self, index: Idx<ImportData>) -> &Self::Output {
+        &self.unqualified_imports[index]
+    }
+}
+
 impl Index<Idx<VariantData>> for ModuleItemData {
     type Output = VariantData;
 
@@ -183,7 +191,7 @@ impl LowerCtx {
             _ => (),
         }
     }
-    /// Here were resolving the imports and allocating the
+    /// Here were resolving the imports
     fn lower_import(&mut self, i: &ast::Import) {
         let ast_ptr = AstPtr::new(i);
 
@@ -220,7 +228,7 @@ impl LowerCtx {
                     unqualified.as_name().and_then(|t| t.text());
 
                 self.alloc_unqualified_import(ImportData {
-                    type_: unqualified.is_type(),
+                    is_type_import: unqualified.is_type(),
                     module: module_id,
                     unqualified_as_name,
                     unqualified_name,

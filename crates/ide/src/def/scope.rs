@@ -12,7 +12,7 @@ use crate::{DefDatabase, FileId, ModuleMap};
 use super::{
     body::Body,
     hir::Module,
-    hir_def::{AdtId, AdtLoc, FunctionLoc, ModuleDefId, TypeAliasId, TypeAliasLoc, VariantId},
+    hir_def::{AdtId, AdtLoc, FunctionLoc, ModuleDefId, TypeAliasId, TypeAliasLoc, VariantId, ImportId, ImportLoc},
     module::{Clause, Expr, ExprId, ImportData, Pattern, PatternId, Statement, Visibility},
     resolver::ResolveResult,
     resolver_for_expr, FunctionId, ModuleItemData,
@@ -24,7 +24,6 @@ pub fn module_scope_with_map_query(
 ) -> (Arc<ModuleScope>, Arc<ModuleSourceMap>) {
     let module_data = db.module_items(file_id);
     let module_map = Module { id: file_id }.package(db).visible_modules(db);
-    tracing::info!("Module scope query {:?}", module_map);
 
     let mut scope = ModuleScope::default();
     let mut module_source_map = ModuleSourceMap::default();
@@ -38,12 +37,25 @@ pub fn module_scope_with_map_query(
         scope.modules.insert(imported_module.accessor.clone(), file);
     }
 
-    for (_, import) in module_data.unqualified_imports() {
-        for val in scope.resolve_import(db, &module_map, &module_data, import) {
+    for (import_id, import) in module_data.unqualified_imports() {
+        let import_loc = db.intern_import(ImportLoc {
+            file_id,
+            value: import_id,
+        });
+
+        module_source_map
+            .import_map
+            .insert(import.ast_ptr.clone(), import_loc);
+        for (is_type_import, val) in scope.resolve_import(db, &module_map, &module_data, import) {
             match val {
-                ModuleDefId::AdtId(_) => scope.types.insert(import.local_name(), val),
-                ModuleDefId::TypeAliasId(_) => scope.types.insert(import.local_name(), val),
-                _ => scope.values.insert(import.local_name(), val),
+                ModuleDefId::AdtId(_) if is_type_import => {
+                    scope.types.insert(import.local_name(), val)
+                }
+                ModuleDefId::TypeAliasId(_) if is_type_import => {
+                    scope.types.insert(import.local_name(), val)
+                }
+                _ if !is_type_import => scope.values.insert(import.local_name(), val),
+                _ => None,
             };
         }
     }
@@ -137,12 +149,18 @@ pub struct ModuleSourceMap {
     adt_map: HashMap<AstPtr<ast::Adt>, AdtId>,
     variant_map: HashMap<AstPtr<ast::Variant>, VariantId>,
     type_alias_map: HashMap<AstPtr<ast::TypeAlias>, TypeAliasId>,
+    import_map: HashMap<AstPtr<ast::UnqualifiedImport>, ImportId>,
 }
 
 impl ModuleSourceMap {
     pub fn node_to_function(&self, node: &ast::Function) -> Option<FunctionId> {
         let src = AstPtr::new(node);
         self.function_map.get(&src).copied()
+    }
+
+    pub fn node_to_import(&self, node: &ast::UnqualifiedImport) -> Option<ImportId> {
+        let src = AstPtr::new(node);
+        self.import_map.get(&src).copied()
     }
 
     pub fn node_to_adt(&self, node: &ast::Adt) -> Option<AdtId> {
@@ -209,11 +227,11 @@ impl ModuleScope {
         module_map: &ModuleMap,
         module_items: &ModuleItemData,
         import: &ImportData,
-    ) -> Vec<ModuleDefId> {
+    ) -> Vec<(bool, ModuleDefId)> {
         let ImportData {
             unqualified_name: unqualifed_name,
             module,
-            type_,
+            is_type_import: is_type,
             ..
         } = import;
         let module = &module_items[*module];
@@ -228,8 +246,7 @@ impl ModuleScope {
         items
             .iter()
             .filter(|i| i.1 == Visibility::Public)
-            .map(|i| i.0.clone())
-            .clone()
+            .map(|i| (is_type.clone(), i.0.clone()))
             .collect()
     }
 }

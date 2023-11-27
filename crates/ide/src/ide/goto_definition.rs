@@ -280,7 +280,7 @@ fn test(test: Internal) { test.$0print }"#,
 pub type Test
 
 #- test2.gleam
-import test.{Test as Dodo}
+import test.{type Test as Dodo}
 
 type Local = $0Dodo"#,
             expect![

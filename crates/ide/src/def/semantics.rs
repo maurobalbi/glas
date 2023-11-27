@@ -14,7 +14,7 @@ use crate::{
 };
 
 use super::{
-    hir::{Adt, BuiltIn, Field, Function, Local, Module, TypeAlias, Variant},
+    hir::{Adt, BuiltIn, Field, Function, Import, Local, Module, TypeAlias, Variant},
     hir_def::ModuleDefId,
     resolver::{resolver_for_toplevel, ResolveResult},
     source::HasSource,
@@ -213,6 +213,16 @@ fn classify_name(sema: &Semantics, name: &ast::Name) -> Option<Definition> {
 
                 return def
             },
+            ast::UnqualifiedImport(it) => {
+                let src = sema
+                    .find_file(it.syntax())
+                    .with_value(&it)
+                    .cloned();
+                let map = sema.db.module_source_map(src.file_id);
+                let import_id = map.node_to_import(&src.value);
+                let import: Import = import_id.map(From::from)?;
+                return import.definition(sema.db.upcast());
+            },
             ast::VariantField(it) => {
                 let def = sema.to_def(&it).map(From::from);
                 return def;
@@ -227,7 +237,7 @@ fn classify_name(sema: &Semantics, name: &ast::Name) -> Option<Definition> {
 fn classify_name_ref(sema: &Semantics, name_ref: &ast::NameRef) -> Option<Definition> {
     let parent = name_ref.syntax().parent()?;
 
-    if let Some(expr) = ast::FieldAccessExpr::cast(parent) {
+    if let Some(expr) = ast::FieldAccessExpr::cast(parent.clone()) {
         return sema.resolve_field(expr).map(Into::into);
     }
 
@@ -236,6 +246,13 @@ fn classify_name_ref(sema: &Semantics, name_ref: &ast::NameRef) -> Option<Defini
 
 fn classify_type_name(sema: &Semantics, type_name: &ast::TypeName) -> Option<Definition> {
     let parent = type_name.syntax().parent()?;
+    if let Some(it) = ast::UnqualifiedImport::cast(parent.clone()) {
+        let src = sema.find_file(it.syntax()).with_value(&it).cloned();
+        let map = sema.db.module_source_map(src.file_id);
+        let import_id = map.node_to_import(&src.value);
+        let import: Import = import_id.map(From::from)?;
+        return import.definition(sema.db.upcast());
+    };
 
     ast::TypeNameRef::cast(parent)
         .and_then(|t| {
@@ -367,6 +384,16 @@ impl ToDef for ast::Function {
         let map = sema.db.module_source_map(src.file_id);
         let fn_id = map.node_to_function(&src.value);
         fn_id.map(From::from)
+    }
+}
+
+impl ToDef for ast::UnqualifiedImport {
+    type Def = Import;
+
+    fn to_def(sema: &Semantics<'_>, src: InFile<Self>) -> Option<Self::Def> {
+        let map = sema.db.module_source_map(src.file_id);
+        let import_id = map.node_to_import(&src.value);
+        import_id.map(From::from)
     }
 }
 

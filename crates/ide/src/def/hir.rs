@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, fs::File, sync::Arc};
 
 use smol_str::SmolStr;
 use syntax::ast::{self, AstNode, HasDocParts};
@@ -10,8 +10,12 @@ use crate::{
 };
 
 use super::{
-    hir_def::{AdtId, LocalFieldId, LocalVariantId, TypeAliasId, VariantId},
-    module::{AdtData, FieldData, FunctionData, Param, PatternId, TypeAliasData, VariantData},
+    hir_def::{AdtId, ImportId, LocalFieldId, LocalVariantId, TypeAliasId, VariantId},
+    module::{
+        AdtData, FieldData, FunctionData, ImportData, Param, PatternId, TypeAliasData, VariantData,
+    },
+    resolver::resolver_for_toplevel,
+    semantics::Definition,
     source::HasSource,
     FunctionId,
 };
@@ -294,6 +298,62 @@ impl_from!(
     Function
     for ModuleDef
 );
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Import {
+    pub(crate) id: ImportId,
+}
+
+impl Import {
+    pub fn imported_name(self, db: &dyn DefDatabase) -> SmolStr {
+        self.data(db).unqualified_name.clone()
+    }
+
+    pub fn is_type_import(self, db: &dyn DefDatabase) -> bool {
+        self.data(db).is_type_import
+    }
+
+    pub fn imported_alias(self, db: &dyn DefDatabase) -> Option<SmolStr> {
+        self.data(db).unqualified_as_name.clone()
+    }
+
+    pub fn definition(self, db: &dyn DefDatabase) -> Option<Definition> {
+        let module = self.imported_from_module(db)?;
+        let resolver = resolver_for_toplevel(db, module);
+        if self.is_type_import(db) {
+            resolver
+                .resolve_type(&self.imported_name(db))
+                .map(Into::into)
+        } else {
+            resolver
+                .resolve_name(&self.imported_name(db))
+                .map(Into::into)
+        }
+    }
+
+    pub fn import_from_module_name(self, db: &dyn DefDatabase) -> SmolStr {
+        let import = db.lookup_intern_import(self.id);
+        let module_idx = self.data(db).module;
+        db.module_items(import.file_id)[module_idx].accessor.clone()
+    }
+
+    pub fn imported_from_module(self, db: &dyn DefDatabase) -> Option<FileId> {
+        let import = db.lookup_intern_import(self.id);
+        let module_accessor = self.import_from_module_name(db);
+        let resolver = resolver_for_toplevel(db, import.file_id);
+        tracing::info!("MOUDLE MAP {:?}", resolver);
+        resolver.resolve_module(&module_accessor)
+    }
+
+    fn data(self, db: &dyn DefDatabase) -> ImportData {
+        let import = db.lookup_intern_import(self.id);
+        db.module_items(import.file_id)[import.value].clone()
+    }
+
+    pub fn module(&self, db: &dyn DefDatabase) -> Module {
+        db.lookup_intern_import(self.id).file_id.into()
+    }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Local {
