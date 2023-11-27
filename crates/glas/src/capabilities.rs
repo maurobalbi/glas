@@ -1,9 +1,11 @@
 use lsp_types::{
-    CompletionOptions, HoverProviderCapability, InitializeParams, OneOf, ServerCapabilities,
-    TextDocumentSyncCapability, TextDocumentSyncKind, TextDocumentSyncOptions, SemanticTokensServerCapabilities, SemanticTokensOptions, WorkDoneProgressOptions, SemanticTokensLegend, SemanticTokensFullOptions,
+    CompletionOptions, HoverProviderCapability, InitializeParams, OneOf,
+    SemanticTokensLegend, SemanticTokensOptions, SemanticTokensServerCapabilities,
+    ServerCapabilities, TextDocumentSyncCapability, TextDocumentSyncKind, TextDocumentSyncOptions,
+    WorkDoneProgressOptions,
 };
 
-use crate::semantic_tokens::{SEMANTIC_TOKEN_TYPES, SEMANTIC_TOKEN_MODIFIERS};
+use crate::semantic_tokens::{SEMANTIC_TOKEN_MODIFIERS, SEMANTIC_TOKEN_TYPES};
 
 macro_rules! test {
     ($lhs:ident $(.$field:ident)*) => {

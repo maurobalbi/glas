@@ -5,9 +5,9 @@ mod handler;
 mod loading_service;
 mod lsp_ext;
 mod meter;
+mod semantic_tokens;
 pub mod server;
 mod vfs;
-mod semantic_tokens;
 
 use anyhow::Result;
 use async_lsp::client_monitor::ClientProcessMonitorLayer;

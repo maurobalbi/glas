@@ -10,8 +10,8 @@ mod tests;
 pub const DEFAULT_IMPORT_FILE: &str = "gleam.toml";
 
 pub use self::ide::{
-    Analysis, AnalysisHost, Cancelled, CompletionItem, CompletionItemKind, CompletionRelevance, GotoDefinitionResult,
-    HlRelated, HoverResult, HlRange, HlTag,
+    Analysis, AnalysisHost, Cancelled, CompletionItem, CompletionItemKind, CompletionRelevance,
+    GotoDefinitionResult, HlRange, HlRelated, HlTag, HoverResult,
 };
 pub use base::{
     module_name, Change, Dependency, FileId, FilePos, FileRange, FileSet, InFile, ModuleMap,

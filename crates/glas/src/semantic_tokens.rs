@@ -1,4 +1,4 @@
-use ide::{HlTag};
+use ide::HlTag;
 use lsp_types::{SemanticTokenModifier, SemanticTokenType};
 
 macro_rules! def_index {
@@ -22,7 +22,6 @@ def_index! {
     Function => SemanticTokenType::FUNCTION,
 }
 
-
 def_index! {
     SemanticTokenModifier, SEMANTIC_TOKEN_MODIFIERS, TokenModIdx;
 
@@ -45,7 +44,7 @@ impl TokenModSet {
 }
 
 pub(crate) fn to_semantic_type_and_modifiers(tag: HlTag) -> (TokenTypeIdx, TokenModSet) {
-    let mut mods = TokenModSet::default();
+    let mods = TokenModSet::default();
     let ty = match tag {
         HlTag::Function => TokenTypeIdx::Function,
         HlTag::Module => TokenTypeIdx::Module,

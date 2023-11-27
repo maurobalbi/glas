@@ -12,7 +12,10 @@ use crate::{DefDatabase, FileId, ModuleMap};
 use super::{
     body::Body,
     hir::Module,
-    hir_def::{AdtId, AdtLoc, FunctionLoc, ModuleDefId, TypeAliasId, TypeAliasLoc, VariantId, ImportId, ImportLoc},
+    hir_def::{
+        AdtId, AdtLoc, FunctionLoc, ImportId, ImportLoc, ModuleDefId, TypeAliasId, TypeAliasLoc,
+        VariantId,
+    },
     module::{Clause, Expr, ExprId, ImportData, Pattern, PatternId, Statement, Visibility},
     resolver::ResolveResult,
     resolver_for_expr, FunctionId, ModuleItemData,

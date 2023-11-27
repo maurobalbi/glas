@@ -21,7 +21,9 @@ pub use semantics::{classify_node, find_container, Semantics};
 pub use syntax::ast::{AstNode, BinaryOpKind as BinaryOp, Expr, UnaryOpKind as UnaryOp};
 
 use self::body::{Body, BodySourceMap};
-use self::hir_def::{AdtId, AdtLoc, FunctionId, FunctionLoc, TypeAliasId, TypeAliasLoc, ImportLoc, ImportId};
+use self::hir_def::{
+    AdtId, AdtLoc, FunctionId, FunctionLoc, ImportId, ImportLoc, TypeAliasId, TypeAliasLoc,
+};
 use self::lower::lower_module;
 pub use self::lower::ModuleItemData;
 use self::scope::{

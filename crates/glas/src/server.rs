@@ -115,12 +115,12 @@ impl InteropClient {
     }
 
     fn on_notification(&mut self, params: ShowMessageParams) -> NotifyResult {
-        self.client.notify::<ShowMessage>(params);
+        let _ = self.client.notify::<ShowMessage>(params);
         ControlFlow::Continue(())
     }
 
     fn on_publish_notification(&mut self, params: PublishDiagnosticsParams) -> NotifyResult {
-        self.client.notify::<PublishDiagnostics>(params);
+        let _ = self.client.notify::<PublishDiagnostics>(params);
         ControlFlow::Continue(())
     }
 }

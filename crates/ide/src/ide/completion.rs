@@ -10,9 +10,8 @@ use syntax::{
 use crate::{
     def::{
         find_container,
-        hir::Function,
-        hir::{Module, Package, Variant},
-        hir_def::{FunctionId, ModuleDefId},
+        hir::{Module, Package},
+        hir_def::{ModuleDefId},
         resolver::{resolver_for_toplevel, ResolveResult},
         resolver_for_expr, Semantics,
     },
@@ -289,7 +288,7 @@ fn complete_dot(acc: &mut Vec<CompletionItem>, ctx: CompletionContext<'_>) -> Op
                         ModuleDefId::FunctionId(it) => {
                             acc.push(render::render_fn(&ctx, it));
                         }
-                        ModuleDefId::VariantId(it) => {
+                        ModuleDefId::VariantId(_it) => {
                             // let it = Variant { parent: it.parent, id: it.local_id };
                             // let fields = it.fields(ctx.db.upcast());
                             // let fields_str = fields
@@ -391,16 +390,17 @@ fn complete_expr(acc: &mut Vec<CompletionItem>, ctx: &CompletionContext<'_>) -> 
                 relevance.is_local = true;
 
                 acc.push(CompletionItem {
-                label: name.clone(),
-                source_range: ctx.source_range,
-                replace: format!("{}", name).into(),
-                kind,
-                signature: Some(it.ty(ctx.db).display(ctx.db).to_string()),
-                relevance: relevance,
-                description: None,
-                documentation: None,
-                is_snippet: false,
-            })},
+                    label: name.clone(),
+                    source_range: ctx.source_range,
+                    replace: format!("{}", name).into(),
+                    kind,
+                    signature: Some(it.ty(ctx.db).display(ctx.db).to_string()),
+                    relevance: relevance,
+                    description: None,
+                    documentation: None,
+                    is_snippet: false,
+                })
+            }
             _ => acc.push(CompletionItem {
                 label: name.clone(),
                 source_range: ctx.source_range,

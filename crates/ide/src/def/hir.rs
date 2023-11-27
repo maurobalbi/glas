@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs::File, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 
 use smol_str::SmolStr;
 use syntax::ast::{self, AstNode, HasDocParts};

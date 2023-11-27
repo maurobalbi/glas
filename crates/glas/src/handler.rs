@@ -4,7 +4,8 @@ use ide::{FileRange, GotoDefinitionResult};
 use lsp_types::{
     CompletionParams, CompletionResponse, Diagnostic, DocumentHighlight, DocumentHighlightParams,
     GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverParams, Location, ReferenceParams,
-    Url, SemanticTokensParams, SemanticTokensResult, SemanticTokensRangeParams, SemanticTokensRangeResult, SemanticTokens,
+    SemanticTokens, SemanticTokensParams, SemanticTokensRangeParams, SemanticTokensRangeResult,
+    SemanticTokensResult, Url,
 };
 
 const MAX_DIAGNOSTICS_CNT: usize = 128;
@@ -27,7 +28,11 @@ pub(crate) fn completion(
     let Some(items) = snap.analysis.completions(fpos, trigger_char)? else {
         return Ok(None);
     };
-    let max_relevance = items.iter().map(|it| it.relevance.score()).max().unwrap_or_default();
+    let max_relevance = items
+        .iter()
+        .map(|it| it.relevance.score())
+        .max()
+        .unwrap_or_default();
     let items = items
         .into_iter()
         .map(|item| convert::to_completion_item(&line_map, max_relevance, item))

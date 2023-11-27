@@ -1166,9 +1166,7 @@ fn unqualified_imports(p: &mut Parser) {
             IDENT => as_name(p),
             // U_IDENT => type_name(p) ToDo!
             U_IDENT => as_name(p),
-            T!["type"] => {
-                    as_type_name(p)
-            }
+            T!["type"] => as_type_name(p),
             k if IMPORT_RECOVERY.contains(k) => break,
             _ => p.bump_with_error(ErrorKind::ExpectedParameter),
         }
@@ -1188,8 +1186,7 @@ fn as_name(p: &mut Parser) {
         let n = p.start_node();
         if p.at_any(AS_NAME_TOKENS) {
             p.bump();
-        }
-        else {
+        } else {
             p.error(ErrorKind::ExpectedIdentifier);
         }
         p.finish_node(n, NAME);

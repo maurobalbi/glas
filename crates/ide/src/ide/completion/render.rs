@@ -1,4 +1,11 @@
-use crate::{def::{hir_def::{FunctionId, AdtId}, hir::{Function, Adt, Module}}, CompletionItem, CompletionItemKind, ty::display::TyDisplay, FileId, CompletionRelevance};
+use crate::{
+    def::{
+        hir::{Adt, Function, Module},
+        hir_def::{AdtId, FunctionId},
+    },
+    ty::display::TyDisplay,
+    CompletionItem, CompletionItemKind, CompletionRelevance, FileId,
+};
 
 use super::CompletionContext;
 

@@ -72,9 +72,13 @@ pub(crate) fn hover(db: &dyn TyDatabase, FilePos { file_id, pos }: FilePos) -> O
         semantics::Definition::Module(it) => {
             let docs = it.docs(db.upcast());
             Some(HoverResult {
-            range: tok.text_range(),
-            markup: format!("```gleam\nimport {}\n```\n___\n{docs}", it.name(db.upcast())),
-        })},
+                range: tok.text_range(),
+                markup: format!(
+                    "```gleam\nimport {}\n```\n___\n{docs}",
+                    it.name(db.upcast())
+                ),
+            })
+        }
         semantics::Definition::BuiltIn(it) => Some(HoverResult {
             range: tok.text_range(),
             markup: format!("```gleam\n{:?}\n```", it),

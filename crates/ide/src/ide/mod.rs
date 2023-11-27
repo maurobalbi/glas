@@ -4,8 +4,8 @@ mod goto_definition;
 mod highlight_related;
 mod hover;
 mod references;
-mod syntax_tree;
 mod semantic_highlighting;
+mod syntax_tree;
 
 use crate::base::SourceDatabaseStorage;
 use crate::def::{DefDatabaseStorage, InternDatabaseStorage};
@@ -183,7 +183,7 @@ impl Analysis {
     pub fn syntax_tree(&self, file_id: FileId) -> Cancellable<String> {
         self.with_db(|db| syntax_tree::syntax_tree(db, file_id))
     }
-    
+
     pub fn syntax_highlight(
         &self,
         file: FileId,

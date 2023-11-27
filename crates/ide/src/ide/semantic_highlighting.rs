@@ -1,12 +1,10 @@
 //! This is actually so-called "semantic highlighting".
-//! Ref: <https://github.com/rust-lang/rust-analyzer/blob/a670ff888437f4b6a3d24cc2996e9f969a87cbae/crates/ide/src/syntax_highlighting/tags.rs>
 use crate::def::semantics::Definition;
 use crate::def::{classify_node, Semantics};
-use crate::ty::{TyDatabase, Ty};
-// use crate::def::{AstPtr, Expr, Literal, NameKind, ResolveResult};
-use crate::{DefDatabase, FileId};
+use crate::ty::{Ty, TyDatabase};
+use crate::FileId;
 use syntax::ast::AstNode;
-use syntax::{ast, match_ast, SyntaxKind, SyntaxToken, TextRange, T};
+use syntax::{ast, match_ast, SyntaxToken, TextRange};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HlRange {
@@ -30,7 +28,7 @@ pub(crate) fn highlight(
     let root_node = parse.syntax();
 
     let token_tag = |tok: &SyntaxToken| -> Option<HlTag> {
-         match_ast! {
+        match_ast! {
             match (tok.parent()?) {
                 ast::NameRef(node) => {
                     let def = classify_node(&sema, node.syntax())?;
@@ -48,7 +46,7 @@ pub(crate) fn highlight(
                 _ => return None,
             }
         };
-        return None
+        return None;
     };
 
     let (first_tok, end_pos) = match range {
