@@ -1,0 +1,34 @@
+2..3: ExpectedIdentifier
+2..3: ExpectedStatement
+4..5: ExpectedStatement
+6..8: ExpectedAttribute
+8..9: ExpectedIdentifier
+9..10: ExpectedParameter
+10..11: ExpectedParameter
+11..12: ExpectedParameter
+26..26: ExpectToken(COMMA)
+26..26: ExpectToken(R_PAREN)
+SOURCE_FILE@0..26
+  FUNCTION@0..2
+    FN_KW@0..2 "fn"
+  ERROR@2..3
+    PERCENT@2..3 "%"
+  WHITESPACE@3..4 "\n"
+  ERROR@4..5
+    DOT@4..5 "."
+  FUNCTION@5..13
+    ERROR@5..6
+      AT@5..6 "@"
+    FN_KW@6..8 "fn"
+    PARAM_LIST@8..13
+      L_PAREN@8..9 "("
+      ERROR@9..10
+        L_SQUARE@9..10 "["
+      ERROR@10..11
+        L_PAREN@10..11 "("
+      ERROR@11..12
+        COMMA@11..12 ","
+      PARAM@12..13
+        HOLE@12..13
+          DISCARD_IDENT@12..13 "_"
+  COMMENT@13..26 "//\\nn@\\u{7b8}"

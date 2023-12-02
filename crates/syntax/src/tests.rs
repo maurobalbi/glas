@@ -1,8 +1,9 @@
 use crate::{parse_module, GleamLanguage};
 use expect_test::expect_file;
+use itertools::Itertools;
 use rowan::ast::AstNode;
 use std::fmt::Write;
-use std::fs;
+use std::{fs, iter};
 use std::path::Path;
 
 #[track_caller]
@@ -46,6 +47,9 @@ fn run_test(dir: &Path, ok: bool) {
 
         let expect_path = path.with_extension("ast");
         expect_file![expect_path].assert_eq(&got);
+
+        let out = iter::successors(ast.syntax_node().first_token(), |t| t.next_token()).map(|t| t.to_string()).join("");
+        assert_eq!(src, out);
     }
 }
 

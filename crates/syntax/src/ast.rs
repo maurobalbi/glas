@@ -937,7 +937,7 @@ mod tests {
             .next()
             .unwrap()
             .syntax()
-            .should_eq("#(Int)");
+            .should_eq("(#(Int))");
     }
 
     #[test]
