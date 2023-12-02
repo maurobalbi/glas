@@ -32,8 +32,6 @@ const PATTERN_FIRST: TokenSet = TokenSet::new(&[
     INTEGER,
     FLOAT,
     STRING,
-    T!["True"],
-    T!["False"],
     T!["<<"],
     T!["["],
     T!["#"],
@@ -57,8 +55,6 @@ const EXPR_FIRST: TokenSet = TokenSet::new(&[
     T!["["],
     T!["{"],
     T!["case"],
-    T!["True"],
-    T!["False"],
     T!["fn"],
     T![".."],
 ]);
@@ -732,7 +728,7 @@ fn expr_bp(p: &mut Parser, min_bp: u8) {
 // The cases that match EXPR_FIRST have to consume a token, otherwise the parser might get stuck
 fn expr_unit(p: &mut Parser) -> Option<MarkClosed> {
     let res = match p.nth(0) {
-        INTEGER | FLOAT | STRING | T!["True"] | T!["False"] => {
+        INTEGER | FLOAT | STRING => {
             let m = p.start_node();
             p.bump();
             p.finish_node(m, LITERAL)
@@ -928,7 +924,7 @@ fn pattern(p: &mut Parser) {
             p.bump();
             p.finish_node(m, HOLE)
         }
-        s @ (INTEGER | FLOAT | STRING | T!["False"] | T!["True"]) => {
+        s @ (INTEGER | FLOAT | STRING ) => {
             let m = p.start_node();
             p.bump();
             let mut literal = p.finish_node(m, LITERAL);

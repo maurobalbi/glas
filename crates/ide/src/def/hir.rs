@@ -388,6 +388,8 @@ pub enum BuiltIn {
     Nil,
     Ok,
     Error,
+    True,
+    False
 }
 
 impl BuiltIn {
@@ -396,6 +398,8 @@ impl BuiltIn {
             ("Nil".into(), BuiltIn::Nil),
             ("Ok".into(), BuiltIn::Ok),
             ("Error".into(), BuiltIn::Error),
+            ("True".into(), BuiltIn::True),
+            ("False".into(), BuiltIn::False)
         ]
         .into_iter()
         .collect()

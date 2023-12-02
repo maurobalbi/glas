@@ -42,8 +42,7 @@ pub enum UnaryOpKind {
 pub enum LiteralKind {
     Int,
     Float,
-    String,
-    Bool,
+    String
 }
 
 trait NodeWrapper {
@@ -341,7 +340,6 @@ asts! {
                 INTEGER => LiteralKind::Int,
                 FLOAT => LiteralKind::Float,
                 STRING => LiteralKind::String,
-                T!["False"] | T!["True"] => LiteralKind::Bool,
                 _ => return None,
             })
         }
@@ -1148,5 +1146,16 @@ mod tests {
         let alias = parse::<TypeAlias>(r#"type Alias = String"#);
         alias.name().unwrap().syntax().should_eq("Alias");
         alias.type_().unwrap().syntax().should_eq("String");
+    }
+
+    // https://github.com/maurobalbi/glas/issues/10
+    #[test]
+    fn allow_true_false_constructor() {
+        let _ = parse::<Adt>(r#"
+        pub type Test {
+            Foo
+            True
+            False
+        }"#);
     }
 }

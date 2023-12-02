@@ -1006,8 +1006,9 @@ SOURCE_FILE@0..45079
             WHITESPACE@3595..3596 " "
             R_ARROW@3596..3598 "->"
             WHITESPACE@3598..3599 " "
-            LITERAL@3599..3604
-              FALSE_KW@3599..3604 "False"
+            VARIANT_CONSTRUCTOR@3599..3604
+              NAME_REF@3599..3604
+                U_IDENT@3599..3604 "False"
           WHITESPACE@3604..3609 "\n    "
           CLAUSE@3609..3645
             ALTERNATIVE_PATTERN@3609..3620
@@ -1038,8 +1039,9 @@ SOURCE_FILE@0..45079
             WHITESPACE@3637..3638 " "
             R_ARROW@3638..3640 "->"
             WHITESPACE@3640..3641 " "
-            LITERAL@3641..3645
-              TRUE_KW@3641..3645 "True"
+            VARIANT_CONSTRUCTOR@3641..3645
+              NAME_REF@3641..3645
+                U_IDENT@3641..3645 "True"
           WHITESPACE@3645..3650 "\n    "
           CLAUSE@3650..3685
             ALTERNATIVE_PATTERN@3650..3661
@@ -2014,8 +2016,9 @@ SOURCE_FILE@0..45079
                   WHITESPACE@5755..5764 "\n        "
                   CLAUSE@5764..5782
                     ALTERNATIVE_PATTERN@5764..5768
-                      LITERAL@5764..5768
-                        TRUE_KW@5764..5768 "True"
+                      VARIANT_REF@5764..5768
+                        NAME_REF@5764..5768
+                          U_IDENT@5764..5768 "True"
                     WHITESPACE@5768..5769 " "
                     R_ARROW@5769..5771 "->"
                     WHITESPACE@5771..5772 " "
@@ -2035,8 +2038,9 @@ SOURCE_FILE@0..45079
                   WHITESPACE@5782..5791 "\n        "
                   CLAUSE@5791..5803
                     ALTERNATIVE_PATTERN@5791..5796
-                      LITERAL@5791..5796
-                        FALSE_KW@5791..5796 "False"
+                      VARIANT_REF@5791..5796
+                        NAME_REF@5791..5796
+                          U_IDENT@5791..5796 "False"
                     WHITESPACE@5796..5797 " "
                     R_ARROW@5797..5799 "->"
                     WHITESPACE@5799..5800 " "
@@ -4565,8 +4569,9 @@ SOURCE_FILE@0..45079
           WHITESPACE@11226..11231 "\n    "
           CLAUSE@11231..11243
             ALTERNATIVE_PATTERN@11231..11235
-              LITERAL@11231..11235
-                TRUE_KW@11231..11235 "True"
+              VARIANT_REF@11231..11235
+                NAME_REF@11231..11235
+                  U_IDENT@11231..11235 "True"
             WHITESPACE@11235..11236 " "
             R_ARROW@11236..11238 "->"
             WHITESPACE@11238..11239 " "
@@ -4576,8 +4581,9 @@ SOURCE_FILE@0..45079
           WHITESPACE@11243..11248 "\n    "
           CLAUSE@11248..11336
             ALTERNATIVE_PATTERN@11248..11253
-              LITERAL@11248..11253
-                FALSE_KW@11248..11253 "False"
+              VARIANT_REF@11248..11253
+                NAME_REF@11248..11253
+                  U_IDENT@11248..11253 "False"
             WHITESPACE@11253..11254 " "
             R_ARROW@11254..11256 "->"
             WHITESPACE@11256..11263 "\n      "
@@ -4739,8 +4745,9 @@ SOURCE_FILE@0..45079
           WHITESPACE@11420..11425 "\n    "
           CLAUSE@11425..11445
             ALTERNATIVE_PATTERN@11425..11429
-              LITERAL@11425..11429
-                TRUE_KW@11425..11429 "True"
+              VARIANT_REF@11425..11429
+                NAME_REF@11425..11429
+                  U_IDENT@11425..11429 "True"
             WHITESPACE@11429..11430 " "
             R_ARROW@11430..11432 "->"
             WHITESPACE@11432..11433 " "
@@ -4758,8 +4765,9 @@ SOURCE_FILE@0..45079
           WHITESPACE@11445..11450 "\n    "
           CLAUSE@11450..11563
             ALTERNATIVE_PATTERN@11450..11455
-              LITERAL@11450..11455
-                FALSE_KW@11450..11455 "False"
+              VARIANT_REF@11450..11455
+                NAME_REF@11450..11455
+                  U_IDENT@11450..11455 "False"
             WHITESPACE@11455..11456 " "
             R_ARROW@11456..11458 "->"
             WHITESPACE@11458..11465 "\n      "
@@ -7654,8 +7662,9 @@ SOURCE_FILE@0..45079
               WHITESPACE@18355..18364 "\n        "
               CLAUSE@18364..18377
                 ALTERNATIVE_PATTERN@18364..18368
-                  LITERAL@18364..18368
-                    TRUE_KW@18364..18368 "True"
+                  VARIANT_REF@18364..18368
+                    NAME_REF@18364..18368
+                      U_IDENT@18364..18368 "True"
                 WHITESPACE@18368..18369 " "
                 R_ARROW@18369..18371 "->"
                 WHITESPACE@18371..18372 " "
@@ -8105,8 +8114,9 @@ SOURCE_FILE@0..45079
             WHITESPACE@19687..19688 " "
             R_ARROW@19688..19690 "->"
             WHITESPACE@19690..19691 " "
-            LITERAL@19691..19695
-              TRUE_KW@19691..19695 "True"
+            VARIANT_CONSTRUCTOR@19691..19695
+              NAME_REF@19691..19695
+                U_IDENT@19691..19695 "True"
           WHITESPACE@19695..19700 "\n    "
           CLAUSE@19700..19816
             ALTERNATIVE_PATTERN@19700..19715
@@ -8144,8 +8154,9 @@ SOURCE_FILE@0..45079
               WHITESPACE@19748..19757 "\n        "
               CLAUSE@19757..19785
                 ALTERNATIVE_PATTERN@19757..19761
-                  LITERAL@19757..19761
-                    TRUE_KW@19757..19761 "True"
+                  VARIANT_REF@19757..19761
+                    NAME_REF@19757..19761
+                      U_IDENT@19757..19761 "True"
                 WHITESPACE@19761..19762 " "
                 R_ARROW@19762..19764 "->"
                 WHITESPACE@19764..19765 " "
@@ -8169,13 +8180,15 @@ SOURCE_FILE@0..45079
               WHITESPACE@19785..19794 "\n        "
               CLAUSE@19794..19808
                 ALTERNATIVE_PATTERN@19794..19799
-                  LITERAL@19794..19799
-                    FALSE_KW@19794..19799 "False"
+                  VARIANT_REF@19794..19799
+                    NAME_REF@19794..19799
+                      U_IDENT@19794..19799 "False"
                 WHITESPACE@19799..19800 " "
                 R_ARROW@19800..19802 "->"
                 WHITESPACE@19802..19803 " "
-                LITERAL@19803..19808
-                  FALSE_KW@19803..19808 "False"
+                VARIANT_CONSTRUCTOR@19803..19808
+                  NAME_REF@19803..19808
+                    U_IDENT@19803..19808 "False"
               WHITESPACE@19808..19815 "\n      "
               R_BRACE@19815..19816 "}"
           WHITESPACE@19816..19819 "\n  "
@@ -8318,8 +8331,9 @@ SOURCE_FILE@0..45079
             WHITESPACE@20446..20447 " "
             R_ARROW@20447..20449 "->"
             WHITESPACE@20449..20450 " "
-            LITERAL@20450..20455
-              FALSE_KW@20450..20455 "False"
+            VARIANT_CONSTRUCTOR@20450..20455
+              NAME_REF@20450..20455
+                U_IDENT@20450..20455 "False"
           WHITESPACE@20455..20460 "\n    "
           CLAUSE@20460..20575
             ALTERNATIVE_PATTERN@20460..20475
@@ -8357,18 +8371,21 @@ SOURCE_FILE@0..45079
               WHITESPACE@20508..20517 "\n        "
               CLAUSE@20517..20529
                 ALTERNATIVE_PATTERN@20517..20521
-                  LITERAL@20517..20521
-                    TRUE_KW@20517..20521 "True"
+                  VARIANT_REF@20517..20521
+                    NAME_REF@20517..20521
+                      U_IDENT@20517..20521 "True"
                 WHITESPACE@20521..20522 " "
                 R_ARROW@20522..20524 "->"
                 WHITESPACE@20524..20525 " "
-                LITERAL@20525..20529
-                  TRUE_KW@20525..20529 "True"
+                VARIANT_CONSTRUCTOR@20525..20529
+                  NAME_REF@20525..20529
+                    U_IDENT@20525..20529 "True"
               WHITESPACE@20529..20538 "\n        "
               CLAUSE@20538..20567
                 ALTERNATIVE_PATTERN@20538..20543
-                  LITERAL@20538..20543
-                    FALSE_KW@20538..20543 "False"
+                  VARIANT_REF@20538..20543
+                    NAME_REF@20538..20543
+                      U_IDENT@20538..20543 "False"
                 WHITESPACE@20543..20544 " "
                 R_ARROW@20544..20546 "->"
                 WHITESPACE@20546..20547 " "
@@ -8958,8 +8975,9 @@ SOURCE_FILE@0..45079
           WHITESPACE@21944..21949 "\n    "
           CLAUSE@21949..21977
             ALTERNATIVE_PATTERN@21949..21953
-              LITERAL@21949..21953
-                TRUE_KW@21949..21953 "True"
+              VARIANT_REF@21949..21953
+                NAME_REF@21949..21953
+                  U_IDENT@21949..21953 "True"
             WHITESPACE@21953..21954 " "
             R_ARROW@21954..21956 "->"
             WHITESPACE@21956..21957 " "
@@ -8991,8 +9009,9 @@ SOURCE_FILE@0..45079
           WHITESPACE@21977..21982 "\n    "
           CLAUSE@21982..22012
             ALTERNATIVE_PATTERN@21982..21987
-              LITERAL@21982..21987
-                FALSE_KW@21982..21987 "False"
+              VARIANT_REF@21982..21987
+                NAME_REF@21982..21987
+                  U_IDENT@21982..21987 "False"
             WHITESPACE@21987..21988 " "
             R_ARROW@21988..21990 "->"
             WHITESPACE@21990..21991 " "
@@ -9741,8 +9760,9 @@ SOURCE_FILE@0..45079
           WHITESPACE@23567..23572 "\n    "
           CLAUSE@23572..23626
             ALTERNATIVE_PATTERN@23572..23576
-              LITERAL@23572..23576
-                TRUE_KW@23572..23576 "True"
+              VARIANT_REF@23572..23576
+                NAME_REF@23572..23576
+                  U_IDENT@23572..23576 "True"
             WHITESPACE@23576..23577 " "
             R_ARROW@23577..23579 "->"
             WHITESPACE@23579..23586 "\n      "
@@ -9774,8 +9794,9 @@ SOURCE_FILE@0..45079
           WHITESPACE@23626..23631 "\n    "
           CLAUSE@23631..23650
             ALTERNATIVE_PATTERN@23631..23636
-              LITERAL@23631..23636
-                FALSE_KW@23631..23636 "False"
+              VARIANT_REF@23631..23636
+                NAME_REF@23631..23636
+                  U_IDENT@23631..23636 "False"
             WHITESPACE@23636..23637 " "
             R_ARROW@23637..23639 "->"
             WHITESPACE@23639..23640 " "
@@ -11272,8 +11293,9 @@ SOURCE_FILE@0..45079
           WHITESPACE@25714..25719 "\n    "
           CLAUSE@25719..25865
             ALTERNATIVE_PATTERN@25719..25723
-              LITERAL@25719..25723
-                TRUE_KW@25719..25723 "True"
+              VARIANT_REF@25719..25723
+                NAME_REF@25719..25723
+                  U_IDENT@25719..25723 "True"
             WHITESPACE@25723..25724 " "
             R_ARROW@25724..25726 "->"
             WHITESPACE@25726..25733 "\n      "
@@ -11288,8 +11310,9 @@ SOURCE_FILE@0..45079
               WHITESPACE@25744..25753 "\n        "
               CLAUSE@25753..25801
                 ALTERNATIVE_PATTERN@25753..25757
-                  LITERAL@25753..25757
-                    TRUE_KW@25753..25757 "True"
+                  VARIANT_REF@25753..25757
+                    NAME_REF@25753..25757
+                      U_IDENT@25753..25757 "True"
                 WHITESPACE@25757..25758 " "
                 R_ARROW@25758..25760 "->"
                 WHITESPACE@25760..25761 " "
@@ -11344,8 +11367,9 @@ SOURCE_FILE@0..45079
               WHITESPACE@25801..25810 "\n        "
               CLAUSE@25810..25857
                 ALTERNATIVE_PATTERN@25810..25815
-                  LITERAL@25810..25815
-                    FALSE_KW@25810..25815 "False"
+                  VARIANT_REF@25810..25815
+                    NAME_REF@25810..25815
+                      U_IDENT@25810..25815 "False"
                 WHITESPACE@25815..25816 " "
                 R_ARROW@25816..25818 "->"
                 WHITESPACE@25818..25819 " "
@@ -11402,8 +11426,9 @@ SOURCE_FILE@0..45079
           WHITESPACE@25865..25870 "\n    "
           CLAUSE@25870..26339
             ALTERNATIVE_PATTERN@25870..25875
-              LITERAL@25870..25875
-                FALSE_KW@25870..25875 "False"
+              VARIANT_REF@25870..25875
+                NAME_REF@25870..25875
+                  U_IDENT@25870..25875 "False"
             WHITESPACE@25875..25876 " "
             R_ARROW@25876..25878 "->"
             WHITESPACE@25878..25885 "\n      "
@@ -11418,8 +11443,9 @@ SOURCE_FILE@0..45079
               WHITESPACE@25896..25905 "\n        "
               CLAUSE@25905..26115
                 ALTERNATIVE_PATTERN@25905..25909
-                  LITERAL@25905..25909
-                    TRUE_KW@25905..25909 "True"
+                  VARIANT_REF@25905..25909
+                    NAME_REF@25905..25909
+                      U_IDENT@25905..25909 "True"
                 WHITESPACE@25909..25910 " "
                 R_ARROW@25910..25912 "->"
                 WHITESPACE@25912..25923 "\n          "
@@ -11475,8 +11501,9 @@ SOURCE_FILE@0..45079
                             COMMA@26006..26007 ","
                           WHITESPACE@26007..26008 " "
                           ARG@26008..26013
-                            LITERAL@26008..26013
-                              FALSE_KW@26008..26013 "False"
+                            VARIANT_CONSTRUCTOR@26008..26013
+                              NAME_REF@26008..26013
+                                U_IDENT@26008..26013 "False"
                           R_PAREN@26013..26014 ")"
                       COMMA@26014..26015 ","
                     WHITESPACE@26015..26028 "\n            "
@@ -11513,8 +11540,9 @@ SOURCE_FILE@0..45079
                             COMMA@26057..26058 ","
                           WHITESPACE@26058..26059 " "
                           ARG@26059..26064
-                            LITERAL@26059..26064
-                              FALSE_KW@26059..26064 "False"
+                            VARIANT_CONSTRUCTOR@26059..26064
+                              NAME_REF@26059..26064
+                                U_IDENT@26059..26064 "False"
                           R_PAREN@26064..26065 ")"
                       COMMA@26065..26066 ","
                     WHITESPACE@26066..26079 "\n            "
@@ -11534,8 +11562,9 @@ SOURCE_FILE@0..45079
               WHITESPACE@26115..26124 "\n        "
               CLAUSE@26124..26331
                 ALTERNATIVE_PATTERN@26124..26129
-                  LITERAL@26124..26129
-                    FALSE_KW@26124..26129 "False"
+                  VARIANT_REF@26124..26129
+                    NAME_REF@26124..26129
+                      U_IDENT@26124..26129 "False"
                 WHITESPACE@26129..26130 " "
                 R_ARROW@26130..26132 "->"
                 WHITESPACE@26132..26143 "\n          "
@@ -11591,8 +11620,9 @@ SOURCE_FILE@0..45079
                             COMMA@26224..26225 ","
                           WHITESPACE@26225..26226 " "
                           ARG@26226..26230
-                            LITERAL@26226..26230
-                              TRUE_KW@26226..26230 "True"
+                            VARIANT_CONSTRUCTOR@26226..26230
+                              NAME_REF@26226..26230
+                                U_IDENT@26226..26230 "True"
                           R_PAREN@26230..26231 ")"
                       COMMA@26231..26232 ","
                     WHITESPACE@26232..26245 "\n            "
@@ -11629,8 +11659,9 @@ SOURCE_FILE@0..45079
                             COMMA@26274..26275 ","
                           WHITESPACE@26275..26276 " "
                           ARG@26276..26280
-                            LITERAL@26276..26280
-                              TRUE_KW@26276..26280 "True"
+                            VARIANT_CONSTRUCTOR@26276..26280
+                              NAME_REF@26276..26280
+                                U_IDENT@26276..26280 "True"
                           R_PAREN@26280..26281 ")"
                       COMMA@26281..26282 ","
                     WHITESPACE@26282..26295 "\n            "
@@ -11785,8 +11816,9 @@ SOURCE_FILE@0..45079
               COMMA@26706..26707 ","
             WHITESPACE@26707..26708 " "
             ARG@26708..26712
-              LITERAL@26708..26712
-                TRUE_KW@26708..26712 "True"
+              VARIANT_CONSTRUCTOR@26708..26712
+                NAME_REF@26708..26712
+                  U_IDENT@26708..26712 "True"
             R_PAREN@26712..26713 ")"
       WHITESPACE@26713..26714 "\n"
       R_BRACE@26714..26715 "}"
@@ -12228,8 +12260,9 @@ SOURCE_FILE@0..45079
           WHITESPACE@27476..27481 "\n    "
           CLAUSE@27481..27492
             ALTERNATIVE_PATTERN@27481..27485
-              LITERAL@27481..27485
-                TRUE_KW@27481..27485 "True"
+              VARIANT_REF@27481..27485
+                NAME_REF@27481..27485
+                  U_IDENT@27481..27485 "True"
             WHITESPACE@27485..27486 " "
             R_ARROW@27486..27488 "->"
             WHITESPACE@27488..27489 " "
@@ -12239,8 +12272,9 @@ SOURCE_FILE@0..45079
           WHITESPACE@27492..27497 "\n    "
           CLAUSE@27497..27541
             ALTERNATIVE_PATTERN@27497..27502
-              LITERAL@27497..27502
-                FALSE_KW@27497..27502 "False"
+              VARIANT_REF@27497..27502
+                NAME_REF@27497..27502
+                  U_IDENT@27497..27502 "False"
             WHITESPACE@27502..27503 " "
             R_ARROW@27503..27505 "->"
             WHITESPACE@27505..27506 " "
@@ -12505,8 +12539,9 @@ SOURCE_FILE@0..45079
           WHITESPACE@27952..27957 "\n    "
           CLAUSE@27957..27988
             ALTERNATIVE_PATTERN@27957..27961
-              LITERAL@27957..27961
-                TRUE_KW@27957..27961 "True"
+              VARIANT_REF@27957..27961
+                NAME_REF@27957..27961
+                  U_IDENT@27957..27961 "True"
             WHITESPACE@27961..27962 " "
             R_ARROW@27962..27964 "->"
             WHITESPACE@27964..27965 " "
@@ -12533,8 +12568,9 @@ SOURCE_FILE@0..45079
           WHITESPACE@27988..27993 "\n    "
           CLAUSE@27993..28118
             ALTERNATIVE_PATTERN@27993..27998
-              LITERAL@27993..27998
-                FALSE_KW@27993..27998 "False"
+              VARIANT_REF@27993..27998
+                NAME_REF@27993..27998
+                  U_IDENT@27993..27998 "False"
             WHITESPACE@27998..27999 " "
             R_ARROW@27999..28001 "->"
             WHITESPACE@28001..28008 "\n      "
@@ -12968,8 +13004,9 @@ SOURCE_FILE@0..45079
               WHITESPACE@28853..28862 "\n        "
               CLAUSE@28862..28892
                 ALTERNATIVE_PATTERN@28862..28867
-                  LITERAL@28862..28867
-                    FALSE_KW@28862..28867 "False"
+                  VARIANT_REF@28862..28867
+                    NAME_REF@28862..28867
+                      U_IDENT@28862..28867 "False"
                 WHITESPACE@28867..28868 " "
                 R_ARROW@28868..28870 "->"
                 WHITESPACE@28870..28871 " "
@@ -13396,8 +13433,9 @@ SOURCE_FILE@0..45079
                       WHITESPACE@30366..30375 "\n        "
                       CLAUSE@30375..30392
                         ALTERNATIVE_PATTERN@30375..30379
-                          LITERAL@30375..30379
-                            TRUE_KW@30375..30379 "True"
+                          VARIANT_REF@30375..30379
+                            NAME_REF@30375..30379
+                              U_IDENT@30375..30379 "True"
                         WHITESPACE@30379..30380 " "
                         R_ARROW@30380..30382 "->"
                         WHITESPACE@30382..30383 " "
@@ -13415,8 +13453,9 @@ SOURCE_FILE@0..45079
                       WHITESPACE@30392..30401 "\n        "
                       CLAUSE@30401..30420
                         ALTERNATIVE_PATTERN@30401..30406
-                          LITERAL@30401..30406
-                            FALSE_KW@30401..30406 "False"
+                          VARIANT_REF@30401..30406
+                            NAME_REF@30401..30406
+                              U_IDENT@30401..30406 "False"
                         WHITESPACE@30406..30407 " "
                         R_ARROW@30407..30409 "->"
                         WHITESPACE@30409..30410 " "
@@ -13535,8 +13574,9 @@ SOURCE_FILE@0..45079
               WHITESPACE@30568..30577 "\n        "
               CLAUSE@30577..30625
                 ALTERNATIVE_PATTERN@30577..30581
-                  LITERAL@30577..30581
-                    TRUE_KW@30577..30581 "True"
+                  VARIANT_REF@30577..30581
+                    NAME_REF@30577..30581
+                      U_IDENT@30577..30581 "True"
                 WHITESPACE@30581..30582 " "
                 R_ARROW@30582..30584 "->"
                 WHITESPACE@30584..30585 " "
@@ -13585,8 +13625,9 @@ SOURCE_FILE@0..45079
               WHITESPACE@30625..30634 "\n        "
               CLAUSE@30634..30682
                 ALTERNATIVE_PATTERN@30634..30639
-                  LITERAL@30634..30639
-                    FALSE_KW@30634..30639 "False"
+                  VARIANT_REF@30634..30639
+                    NAME_REF@30634..30639
+                      U_IDENT@30634..30639 "False"
                 WHITESPACE@30639..30640 " "
                 R_ARROW@30640..30642 "->"
                 WHITESPACE@30642..30643 " "
@@ -15263,8 +15304,9 @@ SOURCE_FILE@0..45079
               WHITESPACE@34825..34834 "\n        "
               CLAUSE@34834..34892
                 ALTERNATIVE_PATTERN@34834..34838
-                  LITERAL@34834..34838
-                    TRUE_KW@34834..34838 "True"
+                  VARIANT_REF@34834..34838
+                    NAME_REF@34834..34838
+                      U_IDENT@34834..34838 "True"
                 WHITESPACE@34838..34839 " "
                 R_ARROW@34839..34841 "->"
                 WHITESPACE@34841..34842 " "
@@ -15310,8 +15352,9 @@ SOURCE_FILE@0..45079
               WHITESPACE@34892..34901 "\n        "
               CLAUSE@34901..34960
                 ALTERNATIVE_PATTERN@34901..34906
-                  LITERAL@34901..34906
-                    FALSE_KW@34901..34906 "False"
+                  VARIANT_REF@34901..34906
+                    NAME_REF@34901..34906
+                      U_IDENT@34901..34906 "False"
                 WHITESPACE@34906..34907 " "
                 R_ARROW@34907..34909 "->"
                 WHITESPACE@34909..34910 " "
@@ -15710,8 +15753,9 @@ SOURCE_FILE@0..45079
                                                   WHITESPACE@35710..35725 "\n              "
                                                   CLAUSE@35725..35736
                                                     ALTERNATIVE_PATTERN@35725..35729
-                                                      LITERAL@35725..35729
-                                                        TRUE_KW@35725..35729 "True"
+                                                      VARIANT_REF@35725..35729
+                                                        NAME_REF@35725..35729
+                                                          U_IDENT@35725..35729 "True"
                                                     WHITESPACE@35729..35730 " "
                                                     R_ARROW@35730..35732 "->"
                                                     WHITESPACE@35732..35733 " "
@@ -15721,8 +15765,9 @@ SOURCE_FILE@0..45079
                                                   WHITESPACE@35736..35751 "\n              "
                                                   CLAUSE@35751..35770
                                                     ALTERNATIVE_PATTERN@35751..35756
-                                                      LITERAL@35751..35756
-                                                        FALSE_KW@35751..35756 "False"
+                                                      VARIANT_REF@35751..35756
+                                                        NAME_REF@35751..35756
+                                                          U_IDENT@35751..35756 "False"
                                                     WHITESPACE@35756..35757 " "
                                                     R_ARROW@35757..35759 "->"
                                                     WHITESPACE@35759..35760 " "
@@ -15955,8 +16000,9 @@ SOURCE_FILE@0..45079
           WHITESPACE@36065..36070 "\n    "
           CLAUSE@36070..36119
             ALTERNATIVE_PATTERN@36070..36074
-              LITERAL@36070..36074
-                TRUE_KW@36070..36074 "True"
+              VARIANT_REF@36070..36074
+                NAME_REF@36070..36074
+                  U_IDENT@36070..36074 "True"
             WHITESPACE@36074..36075 " "
             R_ARROW@36075..36077 "->"
             WHITESPACE@36077..36078 " "
@@ -16009,8 +16055,9 @@ SOURCE_FILE@0..45079
           WHITESPACE@36119..36124 "\n    "
           CLAUSE@36124..36136
             ALTERNATIVE_PATTERN@36124..36129
-              LITERAL@36124..36129
-                FALSE_KW@36124..36129 "False"
+              VARIANT_REF@36124..36129
+                NAME_REF@36124..36129
+                  U_IDENT@36124..36129 "False"
             WHITESPACE@36129..36130 " "
             R_ARROW@36130..36132 "->"
             WHITESPACE@36132..36133 " "
@@ -16419,8 +16466,9 @@ SOURCE_FILE@0..45079
               WHITESPACE@37118..37127 "\n        "
               CLAUSE@37127..37160
                 ALTERNATIVE_PATTERN@37127..37131
-                  LITERAL@37127..37131
-                    TRUE_KW@37127..37131 "True"
+                  VARIANT_REF@37127..37131
+                    NAME_REF@37127..37131
+                      U_IDENT@37127..37131 "True"
                 WHITESPACE@37131..37132 " "
                 R_ARROW@37132..37134 "->"
                 WHITESPACE@37134..37135 " "
@@ -16444,8 +16492,9 @@ SOURCE_FILE@0..45079
               WHITESPACE@37160..37169 "\n        "
               CLAUSE@37169..37187
                 ALTERNATIVE_PATTERN@37169..37174
-                  LITERAL@37169..37174
-                    FALSE_KW@37169..37174 "False"
+                  VARIANT_REF@37169..37174
+                    NAME_REF@37169..37174
+                      U_IDENT@37169..37174 "False"
                 WHITESPACE@37174..37175 " "
                 R_ARROW@37175..37177 "->"
                 WHITESPACE@37177..37178 " "
@@ -16622,8 +16671,9 @@ SOURCE_FILE@0..45079
               WHITESPACE@37386..37395 "\n        "
               CLAUSE@37395..37449
                 ALTERNATIVE_PATTERN@37395..37399
-                  LITERAL@37395..37399
-                    TRUE_KW@37395..37399 "True"
+                  VARIANT_REF@37395..37399
+                    NAME_REF@37395..37399
+                      U_IDENT@37395..37399 "True"
                 WHITESPACE@37399..37400 " "
                 R_ARROW@37400..37402 "->"
                 WHITESPACE@37402..37403 " "
@@ -16663,8 +16713,9 @@ SOURCE_FILE@0..45079
               WHITESPACE@37449..37458 "\n        "
               CLAUSE@37458..37479
                 ALTERNATIVE_PATTERN@37458..37463
-                  LITERAL@37458..37463
-                    FALSE_KW@37458..37463 "False"
+                  VARIANT_REF@37458..37463
+                    NAME_REF@37458..37463
+                      U_IDENT@37458..37463 "False"
                 WHITESPACE@37463..37464 " "
                 R_ARROW@37464..37466 "->"
                 WHITESPACE@37466..37467 " "
@@ -17010,8 +17061,9 @@ SOURCE_FILE@0..45079
                   WHITESPACE@38069..38078 "\n        "
                   CLAUSE@38078..38205
                     ALTERNATIVE_PATTERN@38078..38083
-                      LITERAL@38078..38083
-                        FALSE_KW@38078..38083 "False"
+                      VARIANT_REF@38078..38083
+                        NAME_REF@38078..38083
+                          U_IDENT@38078..38083 "False"
                     WHITESPACE@38083..38084 " "
                     R_ARROW@38084..38086 "->"
                     WHITESPACE@38086..38087 " "
@@ -17650,8 +17702,9 @@ SOURCE_FILE@0..45079
                   WHITESPACE@39144..39153 "\n        "
                   CLAUSE@39153..39225
                     ALTERNATIVE_PATTERN@39153..39158
-                      LITERAL@39153..39158
-                        FALSE_KW@39153..39158 "False"
+                      VARIANT_REF@39153..39158
+                        NAME_REF@39153..39158
+                          U_IDENT@39153..39158 "False"
                     WHITESPACE@39158..39159 " "
                     R_ARROW@39159..39161 "->"
                     WHITESPACE@39161..39162 " "
@@ -17711,8 +17764,9 @@ SOURCE_FILE@0..45079
                   WHITESPACE@39225..39234 "\n        "
                   CLAUSE@39234..39291
                     ALTERNATIVE_PATTERN@39234..39238
-                      LITERAL@39234..39238
-                        TRUE_KW@39234..39238 "True"
+                      VARIANT_REF@39234..39238
+                        NAME_REF@39234..39238
+                          U_IDENT@39234..39238 "True"
                     WHITESPACE@39238..39239 " "
                     R_ARROW@39239..39241 "->"
                     WHITESPACE@39241..39242 " "

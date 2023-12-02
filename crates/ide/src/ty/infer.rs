@@ -409,7 +409,6 @@ impl<'db> InferCtx<'db> {
                 LiteralKind::Int => Ty::Int,
                 LiteralKind::Float => Ty::Float,
                 LiteralKind::String => Ty::String,
-                LiteralKind::Bool => Ty::Bool,
             }
             .intern(self),
             Expr::Block { stmts } => {
@@ -814,7 +813,6 @@ impl<'db> InferCtx<'db> {
                     LiteralKind::Int => self.unify_var_ty(pat_var, Ty::Int),
                     LiteralKind::Float => self.unify_var_ty(pat_var, Ty::Float),
                     LiteralKind::String => self.unify_var_ty(pat_var, Ty::String),
-                    LiteralKind::Bool => self.unify_var_ty(pat_var, Ty::Bool),
                 };
             }
             Pattern::Spread { name: _ } => {
@@ -905,6 +903,9 @@ impl<'db> InferCtx<'db> {
                         .intern(self),
                         vec![(None, ok)],
                     )
+                },
+                hir::BuiltIn::True | hir::BuiltIn::False => {
+                    (Ty::Bool.intern(self), Vec::default())
                 }
                 hir::BuiltIn::Error => {
                     let err = self.new_ty_var();
