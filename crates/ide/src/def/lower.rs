@@ -1,11 +1,11 @@
 use std::{collections::HashMap, ops::Index};
 
-use crate::{ty, Diagnostic};
+use crate::Diagnostic;
 
 use super::{
     hir_def::LocalFieldId,
     module::{
-        AdtData, FieldData, FunctionData, ImportData, ModuleImport, Param, TypeAliasData,
+        self, AdtData, FieldData, FunctionData, ImportData, ModuleImport, Param, TypeAliasData,
         VariantData, Visibility,
     },
     AstPtr,
@@ -269,7 +269,7 @@ impl LowerCtx {
         let mut generic_params = Vec::new();
         if let Some(params) = ct.generic_params() {
             for param in params.params() {
-                generic_params.push(ty::ty_from_ast(param));
+                generic_params.push(module::typeref_from_ast(param));
             }
         }
 
@@ -282,7 +282,11 @@ impl LowerCtx {
         let mut fields_iter = fields.into_iter();
         let mut common_fields = fields_iter.next().unwrap_or_default();
         for other in fields_iter {
-            common_fields.retain(|k, _| other.get(k).is_some());
+            common_fields.retain(|k, ty| {
+                let other = other.get(k);
+                let Some(other) = other else { return false };
+                other == ty
+            });
         }
         Some(self.alloc_custom_type(AdtData {
             name,
@@ -300,13 +304,13 @@ impl LowerCtx {
         let mut generic_params = Vec::new();
         if let Some(params) = alias.generic_params() {
             for param in params.params() {
-                generic_params.push(ty::ty_from_ast(param));
+                generic_params.push(module::typeref_from_ast(param));
             }
         }
 
         let visibility = Visibility::Public;
 
-        let body = ty::ty_from_ast_opt(alias.type_());
+        let body = module::typeref_from_ast_opt(alias.type_());
         Some(self.alloc_type_alias(TypeAliasData {
             name,
             body,
@@ -319,7 +323,7 @@ impl LowerCtx {
     fn lower_constructors(
         &mut self,
         constructors: ast::AstChildren<ast::Variant>,
-        fields: &mut Vec<HashMap<SmolStr, LocalFieldId>>,
+        fields: &mut Vec<HashMap<SmolStr, module::TypeRef>>,
     ) -> IdxRange<VariantData> {
         let start = self.next_constructor_idx();
         for constructor in constructors {
@@ -335,7 +339,7 @@ impl LowerCtx {
     fn lower_constructor(
         &mut self,
         constructor: &ast::Variant,
-    ) -> Option<(Idx<VariantData>, HashMap<SmolStr, LocalFieldId>)> {
+    ) -> Option<(Idx<VariantData>, HashMap<SmolStr, module::TypeRef>)> {
         let ast_ptr = AstPtr::new(constructor);
         let name = constructor.name()?.text()?;
 
@@ -344,15 +348,15 @@ impl LowerCtx {
         let start = self.next_field_idx();
         if let Some(fields) = constructor.field_list() {
             for field in fields.fields() {
-                if let Some(type_ref) = ty::ty_from_ast_opt(field.type_()) {
+                if let Some(type_ref) = module::typeref_from_ast_opt(field.type_()) {
                     let label = field.label().and_then(|t| t.text());
-                    let idx = self.alloc_field(FieldData {
+                    self.alloc_field(FieldData {
                         label: label.clone(),
-                        type_ref,
+                        type_ref: type_ref.clone(),
                         ast_ptr: AstPtr::new(&field),
                     });
                     if let Some(label) = label {
-                        field_set.insert(label, idx);
+                        field_set.insert(label, type_ref);
                     }
                 }
             }

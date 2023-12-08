@@ -61,7 +61,6 @@ mod tests {
         let (db, f) = TestDB::from_fixture(fixture).unwrap();
         assert_eq!(f.markers().len(), 1);
         let mut hls = super::highlight_related(&db, f[0]).unwrap_or_default();
-        tracing::info!("{:?}", hls);
         hls.sort_by_key(|hl| hl.range.start());
         assert!(!hls.is_empty(), "No highlights");
 

@@ -123,7 +123,6 @@ pub(crate) fn to_completion_item(
     };
 
     set_score(&mut completion_item, max_relevance, item.relevance);
-    tracing::info!("relevance {:?}", item.relevance);
 
     completion_item
 }

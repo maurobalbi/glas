@@ -9,7 +9,7 @@ use crate::{
         body::Body,
         hir::{self, Adt, Field, ModuleDef, TypeAlias},
         hir_def::{AdtId, FunctionId},
-        module::{Expr, ExprId, Pattern, PatternId, Statement},
+        module::{self, Expr, ExprId, Pattern, PatternId, Statement, TypeRef},
         resolver::{resolver_for_toplevel, ResolveResult, Resolver},
         resolver_for_expr,
     },
@@ -178,6 +178,125 @@ impl<'db> InferCtx<'db> {
         ty_var
     }
 
+    fn make_ty_from_typeref(
+        &mut self,
+        ty: module::TypeRef,
+        env: &mut HashMap<SmolStr, TyVar>,
+    ) -> TyVar {
+        let ty = match ty {
+            TypeRef::Function { params, return_ } => {
+                let mut fn_params = Vec::new();
+                for ty in params.iter() {
+                    fn_params.push((None, self.make_ty_from_typeref(ty.clone(), env)));
+                }
+                let ret = self.make_ty_from_typeref(return_.deref().clone(), env);
+                Ty::Function {
+                    params: fn_params,
+                    return_: ret,
+                }
+            }
+            TypeRef::Tuple { fields } => {
+                let mut fields_ = Vec::new();
+                for ty in fields.iter() {
+                    fields_.push(self.make_ty_from_typeref(ty.clone(), env));
+                }
+                Ty::Tuple { fields: fields_ }
+            }
+            TypeRef::Adt {
+                module,
+                name,
+                params,
+            } => {
+                let mut pars = Vec::new();
+
+                for param in params.deref().iter() {
+                    let par_var = self.new_ty_var();
+                    let par_ty = self.make_ty_from_typeref(param.clone(), env);
+                    self.unify_var(par_var, par_ty);
+                    pars.push(par_var);
+                }
+                let module_def = match module {
+                    Some(module) => self.resolver.resolve_module(&module).and_then(|m| {
+                        // ToDo: use something like Module.exports().get instead
+                        let resolver = resolver_for_toplevel(self.db.upcast(), m);
+                        resolver.resolve_type(&name)
+                    }),
+                    None => self.resolver.resolve_type(&name),
+                };
+                match module_def {
+                    Some(type_) => match type_ {
+                        ResolveResult::Adt(adt) => Ty::Adt {
+                            generic_params: pars,
+                            adt_id: adt.id,
+                        },
+                        ResolveResult::TypeAlias(alias) => {
+                            let data = TypeAlias { id: alias.id }.data(self.db.upcast());
+                            let type_alias = self.db.lookup_intern_type_alias(alias.id);
+                            if let Some(ty) = data.body {
+                                let resolver = std::mem::replace(
+                                    &mut self.resolver,
+                                    resolver_for_toplevel(self.db.upcast(), type_alias.file_id),
+                                );
+                                let ty = self.make_ty_from_typeref(ty, env);
+                                let _ = std::mem::replace(&mut self.resolver, resolver);
+                                return ty;
+                            }
+                            self.idx += 1;
+                            Ty::Unknown { idx: self.idx }
+                        }
+                        _ => {
+                            self.idx += 1;
+                            Ty::Unknown { idx: self.idx }
+                        }
+                    },
+                    None => match name.as_str() {
+                        "Int" => Ty::Int,
+                        "Float" => Ty::Float,
+                        "String" => Ty::String,
+                        "BitArray" => Ty::BitArray,
+                        "Bool" => Ty::Bool,
+                        "Nil" => Ty::Nil,
+                        "List" => Ty::List {
+                            of: self.make_ty_from_typeref(
+                                params.get(0).unwrap_or(&TypeRef::Unknown).clone(),
+                                env,
+                            ),
+                        },
+                        "Result" => {
+                            let ok = self.make_ty_from_typeref(
+                                params.get(0).unwrap_or(&TypeRef::Unknown).clone(),
+                                env,
+                            );
+                            let err = self.make_ty_from_typeref(
+                                params.get(1).unwrap_or(&TypeRef::Unknown).clone(),
+                                env,
+                            );
+                            Ty::Result { ok, err }
+                        },
+                        _ => return self.new_ty_var()
+                    },
+                }
+            }
+            TypeRef::Hole => {
+                self.idx += 1;
+                Ty::Unknown { idx: self.idx }
+            }
+            TypeRef::Unknown => return self.new_ty_var(),
+            TypeRef::Generic { name } => {
+                return match env.get(&name) {
+                    Some(var) => *var,
+                    None => {
+                        let var = self.new_ty_var();
+                        self.unify_var_ty(var, Ty::Unknown { idx: var.0 });
+                        env.insert(name, var);
+                        var
+                    }
+                }
+            },
+        };
+        ty.intern(self)
+    }
+
     // ToDo: Add context file_id to make proper resolver!
     fn make_type(&mut self, ty: super::Ty, env: &mut HashMap<SmolStr, TyVar>) -> TyVar {
         let ty = match ty {
@@ -234,11 +353,7 @@ impl<'db> InferCtx<'db> {
                 }
                 Ty::Tuple { fields: field_tys }
             }
-            super::Ty::Adt {
-                module,
-                name,
-                params,
-            } => {
+            super::Ty::Adt { adt_id, params } => {
                 let mut pars = Vec::new();
 
                 for param in params.deref().iter() {
@@ -247,44 +362,9 @@ impl<'db> InferCtx<'db> {
                     self.unify_var(par_var, par_ty);
                     pars.push(par_var);
                 }
-                let module_def = match module {
-                    Some(module) => self.resolver.resolve_module(&module).and_then(|m| {
-                        // ToDo: use something like Module.exports().get instead
-                        let resolver = resolver_for_toplevel(self.db.upcast(), m);
-                        resolver.resolve_type(&name)
-                    }),
-                    None => self.resolver.resolve_type(&name),
-                };
-                match module_def {
-                    Some(type_) => match type_ {
-                        ResolveResult::Adt(adt) => Ty::Adt {
-                            generic_params: pars,
-                            adt_id: adt.id,
-                        },
-                        ResolveResult::TypeAlias(alias) => {
-                            let data = TypeAlias { id: alias.id }.data(self.db.upcast());
-                            let type_alias = self.db.lookup_intern_type_alias(alias.id);
-                            if let Some(ty) = data.body {
-                                let resolver = std::mem::replace(
-                                    &mut self.resolver,
-                                    resolver_for_toplevel(self.db.upcast(), type_alias.file_id),
-                                );
-                                let ty = self.make_type(ty, env);
-                                let _ = std::mem::replace(&mut self.resolver, resolver);
-                                return ty;
-                            }
-                            self.idx += 1;
-                            Ty::Unknown { idx: self.idx }
-                        }
-                        _ => {
-                            self.idx += 1;
-                            Ty::Unknown { idx: self.idx }
-                        }
-                    },
-                    None => {
-                        self.idx += 1;
-                        Ty::Unknown { idx: self.idx }
-                    }
+                Ty::Adt {
+                    adt_id,
+                    generic_params: pars,
                 }
             }
         };
@@ -297,7 +377,7 @@ impl<'db> InferCtx<'db> {
         for (param, ty, label) in &body.params {
             let pat_ty = self.ty_for_pattern(*param);
             if let Some(ty) = ty {
-                let param_ty = self.make_type(ty.clone(), &mut env);
+                let param_ty = self.make_ty_from_typeref(ty.clone(), &mut env);
                 self.unify_var(pat_ty, param_ty);
             }
             param_tys.push((label.clone(), pat_ty));
@@ -305,7 +385,7 @@ impl<'db> InferCtx<'db> {
         let return_ = body
             .return_
             .as_ref()
-            .map(|r| self.make_type(r.clone(), &mut env));
+            .map(|r| self.make_ty_from_typeref(r.clone(), &mut env));
         let body_ty = self.infer_expr(body.body_expr);
         if let Some(ret) = return_ {
             self.unify_var(ret, body_ty);
@@ -642,21 +722,25 @@ impl<'db> InferCtx<'db> {
                 let base_ty = self.infer_expr(*container);
                 // ToDo: This is wrong, since it might also be a module_access
                 let adt = self.table.get_mut(base_ty.0);
-                if let Ty::Adt { adt_id, generic_params } = adt.clone() {
+                if let Ty::Adt {
+                    adt_id,
+                    generic_params,
+                } = adt.clone()
+                {
                     let adt = Adt { id: adt_id };
                     if let Some(field) = adt.common_fields(self.db.upcast()).get(label_name) {
                         let mut env = HashMap::new();
                         let uninstantiated_params = adt.generic_params(self.db.upcast());
                         for (uparam, inst) in uninstantiated_params.iter().zip(generic_params) {
-                            let ty = self.make_type(uparam.clone(), &mut env);
+                            let ty = self.make_ty_from_typeref(uparam.clone(), &mut env);
                             self.unify_var(ty, inst);
                         }
                         self.body_ctx
                             .field_resolution
                             .insert(tgt_expr, FieldResolution::Field(*field));
-                        let ty =  self.make_type(field.ty(self.db.upcast()), &mut env);
+                        let ty = self.make_ty_from_typeref(field.ty(self.db.upcast()), &mut env);
                         self.body_ctx.expr_to_ty.insert(tgt_expr, ty);
-                        return ty
+                        return ty;
                     }
                 }
 
@@ -881,7 +965,7 @@ impl<'db> InferCtx<'db> {
                     .map(|field| {
                         (
                             field.label(self.db.upcast()),
-                            self.make_type(field.ty(self.db.upcast()), &mut ty_env),
+                            self.make_ty_from_typeref(field.ty(self.db.upcast()), &mut ty_env),
                         )
                     })
                     .collect();
@@ -889,7 +973,7 @@ impl<'db> InferCtx<'db> {
                 let adt_data = Adt::from(variant.parent).data(self.db.upcast());
                 let mut generic_params = Vec::new();
                 for param in adt_data.params.iter() {
-                    generic_params.push(self.make_type(param.clone(), &mut ty_env));
+                    generic_params.push(self.make_ty_from_typeref(param.clone(), &mut ty_env));
                 }
 
                 let ty = Ty::Adt {
@@ -911,10 +995,8 @@ impl<'db> InferCtx<'db> {
                         .intern(self),
                         vec![(None, ok)],
                     )
-                },
-                hir::BuiltIn::True | hir::BuiltIn::False => {
-                    (Ty::Bool.intern(self), Vec::default())
                 }
+                hir::BuiltIn::True | hir::BuiltIn::False => (Ty::Bool.intern(self), Vec::default()),
                 hir::BuiltIn::Error => {
                     let err = self.new_ty_var();
                     (
@@ -1133,9 +1215,6 @@ impl<'a> Collector<'a> {
                 adt_id,
                 generic_params,
             } => {
-                let adt = self.db.lookup_intern_adt(*adt_id);
-                let module = self.db.module_items(adt.file_id);
-                let adt_data = &module[adt.value];
                 let mut params = Vec::new();
                 for param in generic_params {
                     params.push(self.collect(*param));
@@ -1143,8 +1222,7 @@ impl<'a> Collector<'a> {
 
                 super::Ty::Adt {
                     // try to use module from adt
-                    module: None,
-                    name: adt_data.name.clone(),
+                    adt_id: adt_id.clone(),
                     params: Arc::new(params),
                 }
             }

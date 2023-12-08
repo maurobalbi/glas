@@ -1,6 +1,6 @@
 use crate::ty;
 
-use syntax::ast::AstNode;
+use syntax::ast::{self, AstNode};
 use syntax::{best_token_at_offset, TextRange};
 
 use crate::def::{semantics, Semantics};
@@ -19,6 +19,14 @@ pub(crate) fn hover(db: &dyn TyDatabase, FilePos { file_id, pos }: FilePos) -> O
 
     let parse = sema.parse(file_id);
     let tok = best_token_at_offset(parse.syntax(), pos)?;
+    if let Some(it) = tok.parent()?.parent().and_then(ast::FieldAccessExpr::cast) {
+        let analyzer = sema.analyze(it.base()?.syntax())?;
+        let ty = analyzer.type_of_expr(&ast::Expr::from(it))?;
+        return Some(HoverResult {
+            range: tok.text_range(),
+            markup: format!("```gleam\n{}\n```", ty.display(db)),
+        });
+    };
 
     match semantics::classify_node(&sema, &tok.parent()?)? {
         semantics::Definition::Adt(it) => {
@@ -59,7 +67,7 @@ pub(crate) fn hover(db: &dyn TyDatabase, FilePos { file_id, pos }: FilePos) -> O
             let ty = it.ty(db.upcast());
             Some(HoverResult {
                 range: tok.text_range(),
-                markup: format!("```gleam\n{}\n```", ty.display(db)),
+                markup: format!("```gleam\n{:?}\n```", ty),
             })
         }
         semantics::Definition::Local(it) => {
@@ -95,6 +103,7 @@ mod tests {
     use crate::base::SourceDatabase;
     use crate::tests::TestDB;
     use expect_test::{expect, Expect};
+    use tracing_test::traced_test;
 
     #[track_caller]
     fn check(fixture: &str, full: &str, expect: Expect) {
@@ -128,6 +137,19 @@ mod tests {
                 fn main() -> a
                 ```
                 ___
+            "#]],
+        );
+    }
+
+    #[test]
+    fn generic_field() {
+        check(
+            "type Bla(a) { Bla( name: a) } fn main(b: Bla(String)) { b.$0name }",
+            "name",
+            expect![[r#"
+                ```gleam
+                String
+                ```
             "#]],
         );
     }

@@ -2,7 +2,7 @@ use std::fmt;
 
 use smol_str::SmolStr;
 
-use crate::def::hir_def::ModuleDefId;
+use crate::def::{hir_def::ModuleDefId, hir::Adt};
 
 use super::{Ty, TyDatabase};
 
@@ -111,7 +111,7 @@ where
 impl TyDisplay for Ty {
     fn ty_fmt(
         &self,
-        f @ &mut TyFormatter { db: _, .. }: &mut TyFormatter<'_>,
+        f @ &mut TyFormatter { db, .. }: &mut TyFormatter<'_>,
     ) -> Result<(), TyDisplayError> {
         match self {
             Ty::Unknown => write!(f, "?"),
@@ -162,8 +162,7 @@ impl TyDisplay for Ty {
                 write!(f, ")")
             }
             Ty::Adt {
-                module: _,
-                name,
+                adt_id, 
                 params,
             } => {
                 // let adt = db.lookup_intern_adt(*adt_id);
@@ -176,6 +175,8 @@ impl TyDisplay for Ty {
                 // } else {
                 //     write!(f, "{}", adt.name)
                 // }
+                let adt = Adt {id: *adt_id};
+                let name = adt.name(db.upcast());
                 if params.len() > 0 {
                     write!(f, "{}", name)?;
                     write!(f, "(")?;

@@ -316,7 +316,7 @@ impl<'db> Semantics<'db> {
             .resolve_type(&(type_name.text()?))
     }
 
-    fn analyze(&self, node: &SyntaxNode) -> Option<SourceAnalyzer> {
+    pub(crate) fn analyze(&self, node: &SyntaxNode) -> Option<SourceAnalyzer> {
         let node = self.find_file(node);
         let resolver = match find_container(self.db.upcast(), node) {
             Some(ModuleDefId::FunctionId(id)) => {

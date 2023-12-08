@@ -16,6 +16,7 @@ pub struct HlRange {
 pub enum HlTag {
     Function,
     Module,
+    Constructor,
 }
 
 pub(crate) fn highlight(
@@ -42,6 +43,15 @@ pub(crate) fn highlight(
                             return Some(HlTag::Function);
                         }
                     };
+
+                    if let Definition::Variant(_) = def {
+                        return Some(HlTag::Constructor);
+                    }
+                },
+                ast::Name(node) => {
+                    if let Some(_) = ast::Variant::cast(node.syntax().parent()?) {
+                        return Some(HlTag::Constructor)
+                    }
                 },
                 _ => return None,
             }

@@ -10,12 +10,12 @@ use syntax::{
 use crate::{
     def::{
         find_container,
-        hir::{Module, Package},
+        hir::{Module, Package, Adt},
         hir_def::{ModuleDefId},
         resolver::{resolver_for_toplevel, ResolveResult},
         resolver_for_expr, Semantics,
     },
-    ty::{display::TyDisplay, TyDatabase},
+    ty::{display::TyDisplay, TyDatabase, Ty},
     FilePos, InFile,
 };
 
@@ -270,19 +270,31 @@ fn complete_dot(acc: &mut Vec<CompletionItem>, ctx: CompletionContext<'_>) -> Op
     match_ast! {
         match (trigger_tok.parent()?) {
             ast::FieldAccessExpr(it) => {
-                // let receiver = find_opt_node_in_file(&ctx.original_file, it.base())?;
-                // let ty = ctx.sema.ty_of_expr(&receiver);
+                let analyzer = ctx.sema.analyze(it.base()?.syntax())?;
+                let ty = analyzer.type_of_expr(&it.base()?);
+
+                if let Some(Ty::Adt { adt_id, .. }) = ty {
+                    let fields = Adt {id: adt_id}.common_fields(ctx.db.upcast());
+                    for (name, field) in fields {
+                        acc.push(CompletionItem {
+                            label: name.clone(),
+                            source_range: ctx.source_range,
+                            replace: name,
+                            kind: CompletionItemKind::Field,
+                            relevance: CompletionRelevance::default(),
+                            signature: Some(format!("{:?}", field.ty(ctx.db.upcast()))),
+                            description: None,
+                            documentation: None,
+                            is_snippet: false,
+                        })
+                    }
+                };
+
                 let file = ctx.sema.resolve_module(it.base()?)?;
 
                 let module_items = ctx.db.module_scope(file);
 
                 for (def, _) in module_items.declarations().flatten() {
-                    // let kind = match def {
-                    //     ModuleDefId::FunctionId(_) => CompletionItemKind::Function,
-                    //     ModuleDefId::AdtId(_) => CompletionItemKind::Adt,
-                    //     ModuleDefId::VariantId(_) => CompletionItemKind::Variant,
-                    //     ModuleDefId::TypeAliasId(_) => CompletionItemKind::Adt,
-                    // };
                     match def {
                         // ToDo: Extract to function because it's also used in complete_expr
                         ModuleDefId::FunctionId(it) => {

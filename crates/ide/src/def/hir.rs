@@ -12,7 +12,7 @@ use crate::{
 use super::{
     hir_def::{AdtId, ImportId, LocalFieldId, LocalVariantId, TypeAliasId, VariantId},
     module::{
-        AdtData, FieldData, FunctionData, ImportData, Param, PatternId, TypeAliasData, VariantData,
+        AdtData, FieldData, FunctionData, ImportData, Param, PatternId, TypeAliasData, VariantData, TypeRef,
     },
     resolver::resolver_for_toplevel,
     semantics::Definition,
@@ -158,6 +158,11 @@ impl Adt {
             .collect()
     }
 
+    pub fn generic_params(self, db: &dyn DefDatabase) -> Vec<TypeRef> {
+        let data = self.data(db);
+        data.params
+    }
+
     pub fn common_fields(self, db: &dyn DefDatabase) -> HashMap<SmolStr, Field> {
         let mut fields = HashMap::new();
         for (name, _) in self.data(db).common_fields.iter() {
@@ -247,7 +252,8 @@ impl Field {
         data.label
     }
 
-    pub fn ty(self, db: &dyn DefDatabase) -> Ty {
+    // returns the type of the field as in the definition of the custom type
+    pub fn ty(self, db: &dyn DefDatabase) -> TypeRef {
         self.data(db).type_ref
     }
 
@@ -341,7 +347,6 @@ impl Import {
         let import = db.lookup_intern_import(self.id);
         let module_accessor = self.import_from_module_name(db);
         let resolver = resolver_for_toplevel(db, import.file_id);
-        tracing::info!("MOUDLE MAP {:?}", resolver);
         resolver.resolve_module(&module_accessor)
     }
 

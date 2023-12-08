@@ -42,7 +42,6 @@ impl SearchScope {
             let sid = db.file_source_root(package_info.gleam_toml);
             let source_root = db.source_root(sid);
             for (file_id, path) in source_root.module_files() {
-                tracing::info!("search graph {:?}", path);
                 entries.insert(file_id, None);
             }
         }

@@ -20,6 +20,7 @@ def_index! {
 
     Module => SemanticTokenType::NAMESPACE,
     Function => SemanticTokenType::FUNCTION,
+    Constructor => SemanticTokenType::TYPE,
 }
 
 def_index! {
@@ -48,6 +49,7 @@ pub(crate) fn to_semantic_type_and_modifiers(tag: HlTag) -> (TokenTypeIdx, Token
     let ty = match tag {
         HlTag::Function => TokenTypeIdx::Function,
         HlTag::Module => TokenTypeIdx::Module,
+        HlTag::Constructor => TokenTypeIdx::Constructor,
     };
     (ty, mods)
 }

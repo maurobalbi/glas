@@ -10,7 +10,7 @@ use syntax::{
 use crate::{ty, DefDatabase, Diagnostic, FileId, InFile};
 
 use super::{
-    module::{Clause, Expr, ExprId, Pattern, PatternId, Statement},
+    module::{Clause, Expr, ExprId, Pattern, PatternId, Statement, self},
     FunctionId,
 };
 
@@ -26,9 +26,9 @@ pub struct Body {
     pub patterns: Arena<Pattern>,
     pub exprs: Arena<Expr>,
 
-    pub params: Vec<(PatternId, Option<ty::Ty>, Option<SmolStr>)>,
+    pub params: Vec<(PatternId, Option<module::TypeRef>, Option<SmolStr>)>,
 
-    pub return_: Option<ty::Ty>,
+    pub return_: Option<module::TypeRef>,
 
     pub body_expr: ExprId,
 }
@@ -141,7 +141,7 @@ pub(super) fn lower(db: &dyn DefDatabase, function_id: FunctionId) -> (Body, Bod
         for param in param_list.params() {
             if let Some(pattern) = param.pattern() {
                 let pat_id = ctx.lower_pattern(pattern);
-                let ty = ty::ty_from_ast_opt(param.ty());
+                let ty = module::typeref_from_ast_opt(param.ty());
                 ctx.body
                     .params
                     .push((pat_id, ty, param.label().and_then(|l| l.text()?.into())));
@@ -149,7 +149,7 @@ pub(super) fn lower(db: &dyn DefDatabase, function_id: FunctionId) -> (Body, Bod
         }
     }
 
-    let return_ = ast.return_type().map(ty::ty_from_ast);
+    let return_ = ast.return_type().map(module::typeref_from_ast);
     ctx.body.return_ = return_;
 
     let expr_id = ctx.lower_expr_opt(ast.body().map(ast::Expr::Block));

@@ -53,7 +53,6 @@ impl TestDB {
 
             change.change_file(file, text.to_owned().into());
         }
-        tracing::info!("{:#?}", file_set);
         change.set_roots(vec![SourceRoot::new(file_set, "/".into())]);
         let mut package_graph = PackageGraph::default();
         package_graph.add_package(SmolStr::from("test"), FileId(f.files.len() as u32 - 1));
