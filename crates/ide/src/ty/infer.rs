@@ -641,14 +641,22 @@ impl<'db> InferCtx<'db> {
                 let field_var = self.new_ty_var();
                 let base_ty = self.infer_expr(*container);
                 // ToDo: This is wrong, since it might also be a module_access
-                if let Ty::Adt { adt_id, .. } = self.table.get_mut(base_ty.0) {
-                    let adt = Adt { id: *adt_id };
+                let adt = self.table.get_mut(base_ty.0);
+                if let Ty::Adt { adt_id, generic_params } = adt.clone() {
+                    let adt = Adt { id: adt_id };
                     if let Some(field) = adt.common_fields(self.db.upcast()).get(label_name) {
                         let mut env = HashMap::new();
+                        let uninstantiated_params = adt.generic_params(self.db.upcast());
+                        for (uparam, inst) in uninstantiated_params.iter().zip(generic_params) {
+                            let ty = self.make_type(uparam.clone(), &mut env);
+                            self.unify_var(ty, inst);
+                        }
                         self.body_ctx
                             .field_resolution
                             .insert(tgt_expr, FieldResolution::Field(*field));
-                        return self.make_type(field.ty(self.db.upcast()), &mut env);
+                        let ty =  self.make_type(field.ty(self.db.upcast()), &mut env);
+                        self.body_ctx.expr_to_ty.insert(tgt_expr, ty);
+                        return ty
                     }
                 }
 

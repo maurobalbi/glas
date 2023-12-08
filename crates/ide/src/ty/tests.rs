@@ -375,13 +375,13 @@ fn tuple() {
 #[test]
 fn case_multiple_subjects() {
     check_fn(
-        "type Dog(a, a) { Dog(a, a) } fn subjects(a, b) {
+        "type Dog(a) { Dog(a, a) } fn subjects(a, b) {
         case a, b {
             #(1, more), Dog(2.5, d) -> Dog(more, d)
         }
     }
     ",
-        expect!["subjects: fn(#(Int, Float), Dog(Float, Float)) -> Dog(Float, Float)"],
+        expect!["subjects: fn(#(Int, Float), Dog(Float)) -> Dog(Float)"],
     )
 }
 
@@ -602,6 +602,21 @@ type Alias = Bobo(Nasty)
 
 fn test(a: String) -> Alias { $0 }"#,
         expect!["test: fn(String) -> Wobble(Nasty)"],
+    )
+}
+
+#[test]
+fn generic_field_access() {
+    check_fn(
+        r#"
+            type Bla(a) { Bla (name: a, age: Int) } 
+            fn access_name(b: Bla(Int)) { b.name }
+
+            fn access_name_2() { Bla(name: 1).name }
+        "#,
+        expect![r#"
+        access_name: fn(Bla(Int)) -> Int
+        access_name_2: fn() -> Int"#]
     )
 }
 
