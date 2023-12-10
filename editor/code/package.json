@@ -3,8 +3,8 @@
   "displayName": "glas: Gleam Language Server",
   "description": "Gleam language server for VSCode",
   "repository": "https://github.com/maurobalbi/glas",
-  "version": "0.0.7",
-  "icon": "icon.png",
+  "version": "0.0.8",
+  "icon": "images/icon.png",
   "publisher": "maurobalbi",
   "engines": {
     "vscode": "^1.76.0"
