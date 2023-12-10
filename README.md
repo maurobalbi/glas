@@ -45,6 +45,7 @@ Where this is particularly evident is in the parser. Instead of aborting at the 
 
 ### Non goals
 - Aiming for 100% diagnostics (at least short / midterm)
+- Code generation
 
 ## Acknowledgments
 
