@@ -8,7 +8,7 @@ A language server for the [Gleam](https://gleam.run/) programming language.
 
 ### MacOS (arm64, x86), Linux (x86), Windows (x86) 
 
-Insttall the extension from [VisualStudio Marketplace](https://marketplace.visualstudio.com/items?itemName=maurobalbi.glas-vscode)
+Install the extension from [VisualStudio Marketplace](https://marketplace.visualstudio.com/items?itemName=maurobalbi.glas-vscode)
 
 ### Others
 
@@ -28,4 +28,4 @@ For other platforms binaries have to be built from source.
 
 ## Acknowledgments
 
-This project is heavily inspired / outright copied from the exellent [Nix language server](https://github.com/oxalica/nil) and [rust-analyzer](https://github.com/rust-lang/rust-analyzer).
+This project is heavily inspired by the exellent [Nix language server](https://github.com/oxalica/nil) and [rust-analyzer](https://github.com/rust-lang/rust-analyzer).
