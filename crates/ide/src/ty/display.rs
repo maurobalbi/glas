@@ -130,7 +130,7 @@ impl TyDisplay for Ty {
             }
             Ty::Function { params, return_ } => {
                 write!(f, "fn(")?;
-                f.write_joined(params.as_ref().clone().into_iter(), ", ")?;
+                f.write_joined(params.as_ref().clone().into_iter().map(|p| p.1), ", ")?;
 
                 write!(f, ") -> ")?;
                 return_.ty_fmt(f)

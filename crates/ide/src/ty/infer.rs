@@ -1,5 +1,6 @@
-use std::{cmp::min, collections::HashMap, mem, ops::Deref, sync::Arc};
+use std::{cmp::min, collections::HashMap, mem::{self, swap}, ops::Deref, sync::Arc};
 
+use itertools::Itertools;
 use la_arena::ArenaMap;
 use smol_str::SmolStr;
 use syntax::ast::{BinaryOpKind, LiteralKind};
@@ -130,7 +131,7 @@ pub(crate) fn infer_function_group_query(
         fn_to_ctx.insert(*f, inferred_ctx);
     }
 
-    finish_infer(db, table, fn_to_ctx, fn_to_ty_var)
+    finish_infer(table, fn_to_ctx, fn_to_ty_var)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -272,8 +273,8 @@ impl<'db> InferCtx<'db> {
                                 env,
                             );
                             Ty::Result { ok, err }
-                        },
-                        _ => return self.new_ty_var()
+                        }
+                        _ => return self.new_ty_var(),
                     },
                 }
             }
@@ -292,7 +293,7 @@ impl<'db> InferCtx<'db> {
                         var
                     }
                 }
-            },
+            }
         };
         ty.intern(self)
     }
@@ -331,11 +332,11 @@ impl<'db> InferCtx<'db> {
             }
             super::Ty::Function { params, return_ } => {
                 let mut pars = Vec::new();
-                for param in params.deref().iter() {
+                for (label, param) in params.deref().iter() {
                     let par_var = self.new_ty_var();
                     let par_ty = self.make_type(param.clone(), env);
                     self.unify_var(par_var, par_ty);
-                    pars.push((None, par_var));
+                    pars.push((label.clone(), par_var));
                 }
                 let ret = self.new_ty_var();
                 let ret_ty = self.make_type(return_.deref().clone(), env);
@@ -621,12 +622,12 @@ impl<'db> InferCtx<'db> {
                 let ret_ty = self.new_ty_var();
                 let fun_ty = self.infer_expr(*func);
 
-                for (_, arg) in args {
+                for (label, arg) in args {
                     match self.body[*arg] {
                         Expr::Hole => {
                             let var = self.infer_expr(*arg);
                             hole = Some(var);
-                            arg_tys.push((None, var));
+                            arg_tys.push((label.clone(), var));
                         }
                         // ..object
                         Expr::Spread { expr } => {
@@ -634,7 +635,7 @@ impl<'db> InferCtx<'db> {
                             self.unify_var(ret_ty, expr);
                         }
                         _ => {
-                            arg_tys.push((None, self.infer_expr(*arg)));
+                            arg_tys.push((label.clone(), self.infer_expr(*arg)));
                         }
                     }
                 }
@@ -1056,11 +1057,20 @@ impl<'db> InferCtx<'db> {
                     return_: ret1,
                 },
                 Ty::Function {
-                    params: params2,
+                    params: mut params2,
                     return_: ret2,
                 },
             ) => {
                 // reorder
+                for (idx_first, (label, _)) in params1.iter().enumerate() {
+                    let idx = params2.iter().find_position(|p| *label == p.0 );
+                    if let Some((idx_second, _ )) = idx {
+                    //    let el = params2.remove(idx_second);
+                    //    params2.insert(idx_first, el);
+                    }
+                }
+
+                tracing::info!("PARAMS {:?} {:?}", params1, params2);
                 for (p1, p2) in params1.clone().into_iter().zip(params2.into_iter()) {
                     self.try_unify_var(p1.1, p2.1)?;
                 }
@@ -1089,12 +1099,11 @@ impl<'db> InferCtx<'db> {
 }
 
 fn finish_infer(
-    db: &dyn TyDatabase,
     mut table: UnionFind<Ty>,
     body_ctx: HashMap<FunctionId, BodyCtx>,
     fn_ty: HashMap<FunctionId, TyVar>,
 ) -> HashMap<FunctionId, InferenceResult> {
-    let mut i = Collector::new(db, &mut table);
+    let mut i = Collector::new(&mut table);
 
     let mut inference_map = HashMap::new();
 
@@ -1128,17 +1137,15 @@ fn finish_infer(
 struct Collector<'a> {
     cache: Vec<Option<super::Ty>>,
     table: &'a mut UnionFind<Ty>,
-    db: &'a dyn TyDatabase,
     env: HashMap<u32, SmolStr>,
     uid: u32,
 }
 
 impl<'a> Collector<'a> {
-    fn new(db: &'a dyn TyDatabase, table: &'a mut UnionFind<Ty>) -> Self {
+    fn new(table: &'a mut UnionFind<Ty>) -> Self {
         Self {
             cache: vec![None; table.len()],
             table,
-            db,
             env: HashMap::new(),
             uid: 0,
         }
@@ -1193,8 +1200,8 @@ impl<'a> Collector<'a> {
             }
             Ty::Function { params, return_ } => {
                 let mut super_params = Vec::new();
-                for param in params {
-                    super_params.push(self.collect(param.1));
+                for (label, param) in params {
+                    super_params.push((label.clone(), self.collect(param.clone())));
                 }
                 let super_return = self.collect(*return_);
                 super::Ty::Function {

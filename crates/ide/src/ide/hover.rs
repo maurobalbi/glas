@@ -43,7 +43,7 @@ pub(crate) fn hover(db: &dyn TyDatabase, FilePos { file_id, pos }: FilePos) -> O
                 ty::Ty::Function { params, return_ } => {
                     let params = params
                         .iter()
-                        .map(|ty| format!("{}", ty.display(db)))
+                        .map(|(_, ty)| format!("{}", ty.display(db)))
                         .collect::<Vec<_>>()
                         .join(", ");
                     Some(HoverResult {

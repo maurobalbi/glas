@@ -9,7 +9,6 @@ use std::{collections::HashMap, sync::Arc};
 
 pub use infer::{FieldResolution, InferenceResult};
 use smol_str::SmolStr;
-use syntax::ast;
 
 use crate::{def::hir_def::{FunctionId, AdtId}, ide::Upcast, DefDatabase};
 
@@ -44,7 +43,7 @@ pub enum Ty {
     },
     // ToDo: when making types for functions,
     Function {
-        params: Arc<Vec<Ty>>,
+        params: Arc<Vec<(Option<SmolStr>,Ty)>>,
         return_: Arc<Ty>,
     },
     Adt {

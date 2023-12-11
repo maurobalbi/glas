@@ -680,3 +680,20 @@ fn annotation_infer() {
         expect!["main: fn() -> Result(Int, Int)\n  b: Result(String, a)"],
     )
 }
+
+#[test]
+#[traced_test]
+fn labels_infer() {
+    check_fn(
+        r#"
+        fn main(name name: a, age age: b) -> Result(a, b) {
+            Ok(b)
+        }
+        
+        fn inst() {
+            main(age: 1, name: "Glas", 1)
+        }
+        "#,
+        expect!["main: fn(a, b) -> Result(a, b)\n  inst: fn() -> Result(String, Int)"],
+    )
+}
