@@ -28,7 +28,7 @@ For other platforms binaries have to be built from source.
 
 ### What is the motivation to develop this even though an LSP already exists integrated in the gleam compiler?
 
-Originally, this project was primarily motivated by my personal learning about how language servers, in general, and rust-analyzer, in particular, work. I wanted to create something that could potentially benefit others as well, so instead of inventing my own language I targeted one that's already somewhat established. Gleam caught my interest due to it's lovely and active community and the interesting niche (functional, static, simple) it's trying to fill. In the longterm, I believe there are advantages of a specialized language server over one that uses the traditional compiler pipeline.
+Originally, this project was primarily motivated by my personal learning about how language servers, in general, and rust-analyzer, in particular, work. I wanted to create something that could potentially benefit others as well, so instead of inventing my own language I targeted one that's already somewhat established. Gleam caught my interest due to it's lovely and active community and the interesting niche (functional, statically typed, simple) it's trying to fill. In the longterm, I believe there are advantages of a specialized language server over one that uses the traditional compiler pipeline.
 
 Since the code in an actual file during development is usually in a `broken` state, having a specialized IDE architecture, helps making sense of the code on a best-effort basis.
 
@@ -45,6 +45,7 @@ Where this is particularly evident is in the parser. Instead of aborting at the 
 
 ### Non goals
 - Aiming for 100% diagnostics (at least short / midterm)
+- Code generation
 
 ## Acknowledgments
 
