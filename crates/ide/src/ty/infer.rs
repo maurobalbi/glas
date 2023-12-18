@@ -1,4 +1,10 @@
-use std::{cmp::min, collections::HashMap, mem::{self, swap}, ops::Deref, sync::Arc};
+use std::{
+    cmp::min,
+    collections::HashMap,
+    mem,
+    ops::Deref,
+    sync::Arc,
+};
 
 use itertools::Itertools;
 use la_arena::ArenaMap;
@@ -1057,22 +1063,34 @@ impl<'db> InferCtx<'db> {
                     return_: ret1,
                 },
                 Ty::Function {
-                    params: mut params2,
+                    params: params2,
                     return_: ret2,
                 },
             ) => {
-                // reorder
-                for (idx_first, (label, _)) in params1.iter().enumerate() {
-                    let idx = params2.iter().find_position(|p| *label == p.0 );
-                    if let Some((idx_second, _ )) = idx {
-                    //    let el = params2.remove(idx_second);
-                    //    params2.insert(idx_first, el);
-                    }
-                }
+                let mut params2_mut = params2.clone();
 
-                tracing::info!("PARAMS {:?} {:?}", params1, params2);
-                for (p1, p2) in params1.clone().into_iter().zip(params2.into_iter()) {
-                    self.try_unify_var(p1.1, p2.1)?;
+                // reorder labels
+                let params1_removed: Vec<_> = params1
+                    .iter()
+                    .filter(|(label1, ty1)| {
+                        if let Some((idx_second, _)) = params2
+                            .iter()
+                            .find_position(|(label2, _)| *label1 == *label2)
+                        {
+                            let (_, ty2) = params2_mut.remove(idx_second);
+                            let _ = self.try_unify_var(*ty1, ty2);
+                            
+                            false
+                        } else {
+                            true
+                        }
+                    })
+                    .collect();
+
+                for (idx_first, (_, ty1)) in params1_removed.iter().enumerate() {
+                    if let Some((_, ty2)) = params2_mut.get(idx_first) {
+                        let _ = self.try_unify_var(*ty1, *ty2);
+                    }
                 }
                 self.try_unify_var(ret1, ret2)?;
                 Ty::Function {

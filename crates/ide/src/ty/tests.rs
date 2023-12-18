@@ -693,7 +693,19 @@ fn labels_infer() {
         fn inst() {
             main(age: 1, name: "Glas", 1)
         }
+
+        fn inst2() {
+            main("123", 1)
+        }
+
+        fn inst3() {
+            main(5, name: "123")
+        }
         "#,
-        expect!["main: fn(a, b) -> Result(a, b)\n  inst: fn() -> Result(String, Int)"],
+        expect![r#"
+        main: fn(a, b) -> Result(a, b)
+        inst: fn() -> Result(String, Int)
+        inst2: fn() -> Result(String, Int)
+        inst3: fn() -> Result(String, Int)"#],
     )
 }
