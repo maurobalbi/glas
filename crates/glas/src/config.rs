@@ -1,5 +1,3 @@
-use lsp_types::Url;
-use std::collections::HashSet;
 use std::path::PathBuf;
 
 pub const CONFIG_KEY: &str = "nil";

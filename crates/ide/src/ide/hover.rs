@@ -67,7 +67,7 @@ pub(crate) fn hover(db: &dyn TyDatabase, FilePos { file_id, pos }: FilePos) -> O
             let ty = it.ty(db.upcast());
             Some(HoverResult {
                 range: tok.text_range(),
-                markup: format!("```gleam\n{:?}\n```", ty),
+                markup: format!("```gleam\n{}\n```", ty),
             })
         }
         semantics::Definition::Local(it) => {
@@ -171,6 +171,21 @@ mod tests {
             expect![[r#"
                 ```gleam
                 Int
+                ```
+            "#]],
+        );
+    }
+
+    #[test]
+    fn adt_fields() {
+        check(
+            r#"type Bobo {
+                Bobo(age: Int, na$0me: String)
+            }"#,
+            "name",
+            expect![[r#"
+                ```gleam
+                String
                 ```
             "#]],
         );

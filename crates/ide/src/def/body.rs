@@ -389,8 +389,11 @@ impl BodyLowerCtx {
                 let mut fields = Vec::new();
                 if let Some(field_list) = pat.field_list() {
                     for field in field_list.fields() {
-                        if let Some(field) = field.field() {
-                            fields.push(self.lower_pattern(field));
+                        if let Some(field_pat) = field.field() {
+                            fields.push((
+                                field.label().and_then(|l| l.text()),
+                                self.lower_pattern(field_pat),
+                            ));
                         }
                     }
                 }

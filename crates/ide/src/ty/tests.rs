@@ -606,6 +606,7 @@ fn test(a: String) -> Alias { $0 }"#,
 }
 
 #[test]
+#[traced_test]
 fn generic_field_access() {
     check_fn(
         r#"
@@ -719,6 +720,50 @@ fn labels_infer() {
         inst2: fn() -> Result(String, Int)
         inst3: fn() -> Result(String, Int)
         inst4: fn() -> Result(String, Int)"#
+        ],
+    )
+}
+
+#[test]
+#[traced_test]
+fn labels_infer_pattern() {
+    check_fn(
+        r#"
+        pub type Bla(a) {
+            Bla(Int, name: a, age: Int)
+          }
+          
+        pub fn blob(abc) {
+            let Bla(1, 1, name: Bla(_, age: age, name: name)) = abc
+            name +. 1
+            age
+        }
+
+        type Bobo(a) {
+            Bobo(name: a, age: Int)
+        }
+
+        fn inst(bobo: Bobo(String)) {
+            let Bobo(name, age) = bobo
+            name
+        }
+        
+        fn inst1(bobo: Bobo(String)) {
+            let Bobo(name: name, age: age) = bobo
+            name
+        }
+
+        fn inst2(bobo: Bobo(String)) {
+            let Bobo(age: age, name: name) = bobo
+            name
+        }
+        "#,
+        expect![
+            r#"
+        blob: fn(Bla(Bla(Float))) -> Int
+        inst: fn(Bobo(String)) -> String
+        inst1: fn(Bobo(String)) -> String
+        inst2: fn(Bobo(String)) -> String"#
         ],
     )
 }

@@ -1,6 +1,6 @@
 //! Wrapper for `gleam`.
-use std::process::Stdio;
 use anyhow::{anyhow, Context, Result};
+use std::process::Stdio;
 use tokio::process::Command;
 
 pub async fn load_package_info() -> Result<()> {
@@ -23,4 +23,3 @@ pub async fn load_package_info() -> Result<()> {
     }
     Ok(())
 }
-

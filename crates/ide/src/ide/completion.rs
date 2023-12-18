@@ -282,7 +282,7 @@ fn complete_dot(acc: &mut Vec<CompletionItem>, ctx: CompletionContext<'_>) -> Op
                             replace: name,
                             kind: CompletionItemKind::Field,
                             relevance: CompletionRelevance::default(),
-                            signature: Some(format!("{:?}", field.ty(ctx.db.upcast()))),
+                            signature: Some(format!("{}", field.ty(ctx.db.upcast()))),
                             description: None,
                             documentation: None,
                             is_snippet: false,

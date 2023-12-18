@@ -1,4 +1,5 @@
 2..3: ExpectedIdentifier
+2..3: ExpectToken(L_PAREN)
 2..3: ExpectedStatement
 4..5: ExpectedStatement
 6..8: ExpectedAttribute

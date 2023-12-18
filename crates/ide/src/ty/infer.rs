@@ -870,7 +870,6 @@ impl<'db> InferCtx<'db> {
                         .resolver
                         .resolve_module(module)
                         .and_then(|file| {
-                            // ToDo: refactor to something nicer and more correct, e.g. FileId -> Moodule.exports().get(name)
                             let resolver = resolver_for_toplevel(self.db.upcast(), file);
                             resolver.resolve_name(name)
                         })
@@ -878,15 +877,36 @@ impl<'db> InferCtx<'db> {
                         .unwrap_or_else(|| (self.new_ty_var(), Vec::new())),
                 };
 
-                // Tried with reserve / fill_with, but that didnt seem to work
                 while field_tys.len() < fields.len() {
                     field_tys.push((None, self.new_ty_var()));
                 }
-                for (field, field_ty) in fields.iter().zip(field_tys.clone().iter()) {
-                    // Unify fields with patterns
+                // reorder labels,
+                // if something needs to be changed here, it's very likely that unify -> function should be updated aswell
+                let mut fields_tys_mut = field_tys.clone();
 
-                    self.infer_pattern(*field, field_ty.1);
+                let fields_removed: Vec<_> = fields
+                    .iter()
+                    .filter(|(label1, pat)| {
+                        if let Some((idx_second, _)) = fields_tys_mut
+                            .iter()
+                            .find_position(|(label2, _)| *label1 == *label2)
+                        {
+                            let (_, ty) = fields_tys_mut.remove(idx_second);
+                            self.infer_pattern(*pat, ty);
+
+                            false
+                        } else {
+                            true
+                        }
+                    })
+                    .collect();
+
+                for (idx_first, (_, pat)) in fields_removed.iter().enumerate() {
+                    if let Some((_, ty)) = fields_tys_mut.get(idx_first) {
+                        self.infer_pattern(*pat, *ty);
+                    }
                 }
+
                 self.unify_var(pat_ty, pat_var);
             }
             Pattern::AlternativePattern { patterns } => {
@@ -1063,7 +1083,8 @@ impl<'db> InferCtx<'db> {
             ) => {
                 let mut params2_mut = params2.clone();
 
-                // reorder labels
+                // Reorder labels
+                // if something needs to be changed here, it's very likely that infer_pattern -> VariantRef should be updated aswell
                 let params1_removed: Vec<_> = params1
                     .iter()
                     .filter(|(label1, ty1)| {

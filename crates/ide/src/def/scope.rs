@@ -460,7 +460,7 @@ impl ExprScopes {
                 module: _,
                 fields,
             } => {
-                for field in fields {
+                for (_, field) in fields {
                     self.add_bindings(body, scope, field);
                 }
             }

@@ -602,6 +602,7 @@ asts! {
         fields: [VariantRefField],
     },
     VARIANT_REF_FIELD = VariantRefField {
+        label: Label,
         field: Pattern,
     },
     PATTERN_TUPLE = PatternTuple {
@@ -701,7 +702,7 @@ mod tests {
 
     #[test]
     fn assert() {
-        let e = crate::parse_module("import module/bla.{adf}");
+        let e = crate::parse_module("fn pat(a) { let Pat(name: name, age: age) = a \n name }");
         for error in e.errors() {
             println!("{}", error);
         }
@@ -1079,6 +1080,20 @@ mod tests {
             .unwrap()
             .syntax()
             .should_eq("manager: Int");
+    }
+
+    #[test]
+    fn constructor_fiels() {
+        let e = parse::<VariantRef>("fn pat(a) { let Pat(name_ref: name, age: age) = a \n name }");
+        let mut fields = e.field_list().unwrap().fields().into_iter();
+
+        fields
+            .next()
+            .unwrap()
+            .label()
+            .unwrap()
+            .syntax()
+            .should_eq("name_ref");
     }
 
     #[test]

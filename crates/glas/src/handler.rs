@@ -1,18 +1,21 @@
 use std::{process, sync::Arc};
 
 use crate::{convert, lsp_ext::SyntaxTreeParams, StateSnapshot};
-use anyhow::{Result, ensure, Context};
+use anyhow::{ensure, Context, Result};
 use ide::{FileRange, GotoDefinitionResult};
 use lsp_types::{
-    CompletionParams, CompletionResponse, Diagnostic, DocumentHighlight, DocumentHighlightParams,
-    GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverParams, Location, ReferenceParams,
-    SemanticTokens, SemanticTokensParams, SemanticTokensRangeParams, SemanticTokensRangeResult,
-    SemanticTokensResult, Url, DocumentFormattingParams, TextEdit, Range, Position,
+    CompletionParams, CompletionResponse, Diagnostic, DocumentFormattingParams, DocumentHighlight,
+    DocumentHighlightParams, GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverParams,
+    Location, Position, Range, ReferenceParams, SemanticTokens, SemanticTokensParams,
+    SemanticTokensRangeParams, SemanticTokensRangeResult, SemanticTokensResult, TextEdit, Url,
 };
 
 const MAX_DIAGNOSTICS_CNT: usize = 128;
 
-pub(crate) fn formatting(snap: StateSnapshot, params: DocumentFormattingParams) -> Result<Option<Vec<TextEdit>>> {
+pub(crate) fn formatting(
+    snap: StateSnapshot,
+    params: DocumentFormattingParams,
+) -> Result<Option<Vec<TextEdit>>> {
     fn run_with_stdin(
         cmd: &[String],
         stdin_data: impl AsRef<[u8]> + Send + 'static,
@@ -38,7 +41,11 @@ pub(crate) fn formatting(snap: StateSnapshot, params: DocumentFormattingParams) 
         Ok(stdout)
     }
 
-    let cmd = vec![String::from("gleam"), String::from("format"), String::from("--stdin")];
+    let cmd = vec![
+        String::from("gleam"),
+        String::from("format"),
+        String::from("--stdin"),
+    ];
 
     let (file_content, line_map) = {
         let vfs = snap.vfs();

@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, fmt::Display, sync::Arc};
 
 use la_arena::{Idx, IdxRange};
 use smol_str::SmolStr;
@@ -198,7 +198,7 @@ pub enum Pattern {
     VariantRef {
         name: SmolStr,
         module: Option<SmolStr>,
-        fields: Vec<PatternId>,
+        fields: Vec<(Option<SmolStr>, PatternId)>,
     },
     AlternativePattern {
         patterns: Vec<PatternId>,
@@ -235,6 +235,52 @@ pub enum TypeRef {
     Tuple {
         fields: Arc<Vec<TypeRef>>,
     },
+}
+
+pub fn write_joined<T: Display>(
+    f: &mut std::fmt::Formatter<'_>,
+    iter: impl IntoIterator<Item = T>,
+    sep: &str,
+) -> std::fmt::Result {
+    let mut first = true;
+    for e in iter {
+        if !first {
+            write!(f, "{sep}")?;
+        }
+        first = false;
+
+        write!(f, "{}", e)?;
+    }
+    Ok(())
+}
+
+impl Display for TypeRef {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TypeRef::Hole => write!(f, "_"),
+            TypeRef::Unknown => write!(f, "?"),
+            TypeRef::Generic { name } => write!(f, "{}", name),
+            TypeRef::Function { params, return_ } => {
+                write!(f, "fn(")?;
+                write_joined(f, params.iter(), ", ")?;
+                write!(f, ") -> {}", return_)
+            }
+            TypeRef::Adt { name, params, .. } => {
+                write!(f, "{}", name)?;
+                if params.len() > 0 {
+                    write!(f, "(")?;
+                    write_joined(f, params.iter(), ", ")?;
+                    write!(f, ")")?;
+                }
+                Ok(())
+            }
+            TypeRef::Tuple { fields } => {
+                write!(f, "#(")?;
+                write_joined(f, fields.iter(), ", ")?;
+                write!(f, ")")
+            }
+        }
+    }
 }
 
 pub fn typeref_from_ast_opt(type_ast: Option<ast::TypeExpr>) -> Option<TypeRef> {

@@ -25,13 +25,13 @@ use lsp_types::{
     FileSystemWatcher, GlobPattern, InitializeParams, InitializeResult, InitializedParams,
     MessageType, NumberOrString, OneOf, ProgressParams, ProgressParamsValue,
     PublishDiagnosticsParams, Registration, RegistrationParams, RelativePattern, ServerInfo,
-    ShowMessageParams, TextDocumentContentChangeEvent, Url, VersionedTextDocumentIdentifier,
-    WindowClientCapabilities, WorkDoneProgress, WorkDoneProgressBegin,
-    WorkDoneProgressCreateParams, WorkDoneProgressEnd, WorkDoneProgressReport,
+    ShowMessageParams, TextDocumentContentChangeEvent, Url, WindowClientCapabilities,
+    WorkDoneProgress, WorkDoneProgressBegin, WorkDoneProgressCreateParams, WorkDoneProgressEnd,
+    WorkDoneProgressReport,
 };
 use smol_str::SmolStr;
 use tokio::io::AsyncWriteExt;
-use tokio::process::Command;
+
 use tokio::sync::oneshot;
 use tower::ServiceBuilder;
 
@@ -122,7 +122,9 @@ impl InteropClient {
     }
 
     fn on_publish_notification(&mut self, params: PublishDiagnosticsParams) -> NotifyResult {
-        let _ = self.client.emit::<CollectDiagnosticsEvent>(CollectDiagnosticsEvent::External(params));
+        let _ = self
+            .client
+            .emit::<CollectDiagnosticsEvent>(CollectDiagnosticsEvent::External(params));
         ControlFlow::Continue(())
     }
 }
@@ -423,7 +425,7 @@ impl Server {
         };
         let file_content = vfs.content_for_file(file);
 
-        let content_changes = vec![TextDocumentContentChangeEvent {
+        let _content_changes = vec![TextDocumentContentChangeEvent {
             range: None,
             range_length: None,
             text: file_content.to_string(),
