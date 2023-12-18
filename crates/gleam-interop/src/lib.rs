@@ -1,11 +1,6 @@
 //! Wrapper for `gleam`.
 use std::process::Stdio;
-use std::{collections::HashMap, str};
-
-use serde::Deserialize;
-
 use anyhow::{anyhow, Context, Result};
-use smol_str::SmolStr;
 use tokio::process::Command;
 
 pub async fn load_package_info() -> Result<()> {
@@ -29,9 +24,3 @@ pub async fn load_package_info() -> Result<()> {
     Ok(())
 }
 
-#[derive(Deserialize, Debug, PartialEq, Clone)]
-pub struct ManifestToml {
-    pub name: SmolStr,
-    pub target: SmolStr,
-    pub dependencies: HashMap<String, String>,
-}

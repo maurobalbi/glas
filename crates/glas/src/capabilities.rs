@@ -78,6 +78,9 @@ pub(crate) fn negotiate_capabilities(
             },
         )),
         document_highlight_provider: Some(OneOf::Left(true)),
+        document_formatting_provider: Some(OneOf::Left(true)),
+        document_range_formatting_provider: None,
+        document_on_type_formatting_provider: None,
         hover_provider: Some(HoverProviderCapability::Simple(true)),
         definition_provider: Some(OneOf::Left(true)),
         ..Default::default()

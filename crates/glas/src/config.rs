@@ -8,9 +8,6 @@ pub const CONFIG_KEY: &str = "nil";
 pub struct Config {
     pub root_path: PathBuf,
 
-    pub diagnostics_excluded_files: Vec<Url>,
-    pub diagnostics_ignored: HashSet<String>,
-    pub formatting_command: Option<Vec<String>>,
     pub gleam_binary: PathBuf,
 }
 
@@ -19,59 +16,13 @@ impl Config {
         assert!(root_path.is_absolute());
         Self {
             root_path,
-            diagnostics_excluded_files: Vec::new(),
-            diagnostics_ignored: HashSet::new(),
-            formatting_command: None,
             gleam_binary: "gleam".into(),
         }
     }
 
     // TODO: Simplify.
-    pub fn update(&mut self, mut value: serde_json::Value) -> (Vec<String>, bool) {
+    pub fn update(&mut self, mut value: serde_json::Value) -> Vec<String> {
         let mut errors = Vec::new();
-        let mut updated_diagnostics = false;
-
-        if let Some(v) = value.pointer_mut("/diagnostics/excludedFiles") {
-            match serde_json::from_value::<Vec<String>>(v.take()) {
-                Ok(v) => {
-                    self.diagnostics_excluded_files = v
-                        .into_iter()
-                        .map(|path| {
-                            Url::from_file_path(self.root_path.join(path))
-                                .expect("Root path is absolute")
-                        })
-                        .collect();
-                    updated_diagnostics = true;
-                }
-                Err(e) => {
-                    errors.push(format!("Invalid value of `diagnostics.excludedFiles`: {e}"));
-                }
-            }
-        }
-        if let Some(v) = value.pointer_mut("/diagnostics/ignored") {
-            match serde_json::from_value(v.take()) {
-                Ok(v) => {
-                    self.diagnostics_ignored = v;
-                    updated_diagnostics = true;
-                }
-                Err(e) => {
-                    errors.push(format!("Invalid value of `diagnostics.ignored`: {e}"));
-                }
-            }
-        }
-        if let Some(v) = value.pointer_mut("/formatting/command") {
-            match serde_json::from_value::<Option<Vec<String>>>(v.take()) {
-                Ok(Some(v)) if v.is_empty() => {
-                    errors.push("`formatting.command` must not be an empty list".into());
-                }
-                Ok(v) => {
-                    self.formatting_command = v;
-                }
-                Err(e) => {
-                    errors.push(format!("Invalid value of `formatting.command`: {e}"));
-                }
-            }
-        }
 
         if let Some(v) = value.pointer_mut("/gleam/binary") {
             match serde_json::from_value::<PathBuf>(v.take()) {
@@ -84,6 +35,6 @@ impl Config {
             }
         }
 
-        (errors, updated_diagnostics)
+        errors
     }
 }

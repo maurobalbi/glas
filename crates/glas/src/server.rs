@@ -30,6 +30,8 @@ use lsp_types::{
     WorkDoneProgressCreateParams, WorkDoneProgressEnd, WorkDoneProgressReport,
 };
 use smol_str::SmolStr;
+use tokio::io::AsyncWriteExt;
+use tokio::process::Command;
 use tokio::sync::oneshot;
 use tower::ServiceBuilder;
 
@@ -120,7 +122,7 @@ impl InteropClient {
     }
 
     fn on_publish_notification(&mut self, params: PublishDiagnosticsParams) -> NotifyResult {
-        let _ = self.client.notify::<PublishDiagnostics>(params);
+        let _ = self.client.emit::<CollectDiagnosticsEvent>(CollectDiagnosticsEvent::External(params));
         ControlFlow::Continue(())
     }
 }
@@ -151,6 +153,7 @@ impl Server {
             // Ref: https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspace_didChangeWatchedFiles
             .notification::<notif::DidChangeWatchedFiles>(Self::on_did_change_watched_files)
             //// Requests ////
+            .request_snap::<req::Formatting>(handler::formatting)
             .request_snap::<req::GotoDefinition>(handler::goto_definition)
             .request_snap::<req::Completion>(handler::completion)
             .request_snap::<req::HoverRequest>(handler::hover)
@@ -213,7 +216,7 @@ impl Server {
 
         let mut cfg = Config::new(root_path.clone());
         if let Some(options) = params.initialization_options {
-            let (errors, _updated_diagnostics) = cfg.update(options);
+            let errors = cfg.update(options);
             if !errors.is_empty() {
                 let msg = ["Failed to apply some settings:"]
                     .into_iter()
@@ -426,19 +429,7 @@ impl Server {
             text: file_content.to_string(),
         }];
 
-        let params = DidChangeTextDocumentParams {
-            text_document: VersionedTextDocumentIdentifier {
-                uri: params.text_document.uri,
-                version: 1,
-            },
-            content_changes,
-        };
-
-        let _ = self
-            .gleam_interop_client
-            .as_ref()
-            .unwrap()
-            .did_change(params);
+        let _ = self.gleam_interop_client.as_ref().unwrap().did_save(params);
         drop(vfs);
         ControlFlow::Continue(())
     }
@@ -712,7 +703,7 @@ impl Server {
 
     fn on_update_config(&mut self, value: UpdateConfigEvent) -> NotifyResult {
         let mut config = Config::clone(&self.config);
-        let (errors, updated_diagnostics) = config.update(value.0);
+        let errors = config.update(value.0);
         tracing::debug!("Updated config, errors: {errors:?}, config: {config:?}");
         self.config = Arc::new(config);
 
@@ -722,16 +713,6 @@ impl Server {
                 .chain(errors.iter().flat_map(|s| ["\n- ", s]))
                 .collect::<String>();
             self.client.show_message_ext(MessageType::ERROR, msg);
-        }
-
-        // Refresh all diagnostics since the filter may be changed.
-        if updated_diagnostics {
-            // Pre-collect to avoid mutability violation.
-            let uris = self.opened_files.keys().cloned().collect::<Vec<_>>();
-            for uri in uris {
-                tracing::trace!("Recalculate diagnostics of {uri}");
-                self.spawn_update_diagnostics(uri.clone());
-            }
         }
 
         ControlFlow::Continue(())
@@ -774,15 +755,11 @@ impl Server {
             let uri = uri.clone();
             move |snap| {
                 // Return empty diagnostics for ignored files.
-                (!snap.config.diagnostics_excluded_files.contains(&uri))
-                    .then(|| {
-                        with_catch_unwind("diagnostics", || handler::diagnostics(snap, &uri))
-                            .unwrap_or_else(|err| {
-                                tracing::error!("Failed to calculate diagnostics: {err}");
-                                Vec::new()
-                            })
+                with_catch_unwind("diagnostics", || handler::diagnostics(snap, &uri))
+                    .unwrap_or_else(|err| {
+                        tracing::error!("Failed to calculate diagnostics: {err}");
+                        Vec::new()
                     })
-                    .unwrap_or_default()
             }
         });
 
@@ -924,7 +901,7 @@ impl Server {
             prefix_components.push(prefix.path.components().collect::<Vec<_>>())
         }
 
-        //sorting by length matches the longest prefix first
+        // sorting by length matches the longest prefix first
         // e.g. /path/to/module is matched before /path
         prefix_components.sort_by_key(|b| std::cmp::Reverse(b.len()));
 
@@ -957,8 +934,7 @@ impl Server {
         }
         let source_roots = prefix_to_paths
             .into_iter()
-            .enumerate()
-            .map(|(_i, (path, set))| SourceRoot::new(set, path))
+            .map(|(path, set)| SourceRoot::new(set, path))
             .collect();
         source_roots
     }

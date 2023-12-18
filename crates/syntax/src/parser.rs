@@ -494,6 +494,8 @@ fn function(p: &mut Parser, m: MarkOpened, is_anon: bool) -> MarkClosed {
     }
     if p.at(T!["("]) {
         param_list(p, is_anon);
+    } else {
+        p.error(ErrorKind::ExpectToken(T!["("]));
     }
 
     // UX: when user is typing '-' error could be nicer
