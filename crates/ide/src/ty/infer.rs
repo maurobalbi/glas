@@ -1067,7 +1067,7 @@ impl<'db> InferCtx<'db> {
                 let params1_removed: Vec<_> = params1
                     .iter()
                     .filter(|(label1, ty1)| {
-                        if let Some((idx_second, _)) = params2
+                        if let Some((idx_second, _)) = params2_mut
                             .iter()
                             .find_position(|(label2, _)| *label1 == *label2)
                         {

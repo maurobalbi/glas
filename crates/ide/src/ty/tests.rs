@@ -684,7 +684,6 @@ fn annotation_infer() {
 }
 
 #[test]
-#[traced_test]
 fn labels_infer() {
     check_fn(
         r#"
@@ -693,6 +692,10 @@ fn labels_infer() {
         }
         
         fn inst() {
+            main(age: 1, name: "Glas")
+        }
+  
+        fn inst1() {
             main(age: 1, name: "Glas", 1)
         }
 
@@ -703,13 +706,19 @@ fn labels_infer() {
         fn inst3() {
             main(5, name: "123")
         }
+
+        fn inst4() {
+            main(name: "123", age: 1)
+        }
         "#,
         expect![
             r#"
         main: fn(a, b) -> Result(a, b)
         inst: fn() -> Result(String, Int)
+        inst1: fn() -> Result(String, Int)
         inst2: fn() -> Result(String, Int)
-        inst3: fn() -> Result(String, Int)"#
+        inst3: fn() -> Result(String, Int)
+        inst4: fn() -> Result(String, Int)"#
         ],
     )
 }
