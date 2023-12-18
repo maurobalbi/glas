@@ -6,8 +6,8 @@ use syntax::{
 };
 
 use crate::{
-    ty::{FieldResolution, InferenceResult, TyDatabase, Ty},
-    FileId, InFile, DefDatabase,
+    ty::{FieldResolution, InferenceResult, Ty, TyDatabase},
+    DefDatabase, FileId, InFile,
 };
 
 use super::{
@@ -65,11 +65,8 @@ impl SourceAnalyzer {
         let sm = self.body_source_map()?;
         sm.expr_for_node(src.as_ref())
     }
-    
-    pub(crate) fn type_of_expr(
-        &self,
-        expr: &ast::Expr,
-    ) -> Option<Ty> {
+
+    pub(crate) fn type_of_expr(&self, expr: &ast::Expr) -> Option<Ty> {
         let expr_id = self.expr_id(expr)?;
         let infer = self.infer.as_ref()?;
         Some(infer.ty_for_expr(expr_id))

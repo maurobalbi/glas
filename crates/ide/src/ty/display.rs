@@ -2,7 +2,7 @@ use std::fmt;
 
 use smol_str::SmolStr;
 
-use crate::def::{hir_def::ModuleDefId, hir::Adt};
+use crate::def::{hir::Adt, hir_def::ModuleDefId};
 
 use super::{Ty, TyDatabase};
 
@@ -161,10 +161,7 @@ impl TyDisplay for Ty {
                 f.write_joined(fields.as_ref().clone().into_iter(), ", ")?;
                 write!(f, ")")
             }
-            Ty::Adt {
-                adt_id, 
-                params,
-            } => {
+            Ty::Adt { adt_id, params } => {
                 // let adt = db.lookup_intern_adt(*adt_id);
                 // let adt = &db.module_items(adt.file_id)[adt.value];
                 // if params.len() > 0 {
@@ -175,7 +172,7 @@ impl TyDisplay for Ty {
                 // } else {
                 //     write!(f, "{}", adt.name)
                 // }
-                let adt = Adt {id: *adt_id};
+                let adt = Adt { id: *adt_id };
                 let name = adt.name(db.upcast());
                 if params.len() > 0 {
                     write!(f, "{}", name)?;

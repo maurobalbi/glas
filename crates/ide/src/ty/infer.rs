@@ -1,10 +1,4 @@
-use std::{
-    cmp::min,
-    collections::HashMap,
-    mem,
-    ops::Deref,
-    sync::Arc,
-};
+use std::{cmp::min, collections::HashMap, mem, ops::Deref, sync::Arc};
 
 use itertools::Itertools;
 use la_arena::ArenaMap;
@@ -1079,7 +1073,7 @@ impl<'db> InferCtx<'db> {
                         {
                             let (_, ty2) = params2_mut.remove(idx_second);
                             let _ = self.try_unify_var(*ty1, ty2);
-                            
+
                             false
                         } else {
                             true

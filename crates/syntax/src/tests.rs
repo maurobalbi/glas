@@ -3,8 +3,8 @@ use expect_test::expect_file;
 use itertools::Itertools;
 use rowan::ast::AstNode;
 use std::fmt::Write;
-use std::{fs, iter};
 use std::path::Path;
+use std::{fs, iter};
 
 #[track_caller]
 pub fn parse<N: AstNode<Language = GleamLanguage>>(src: &str) -> N {
@@ -48,7 +48,9 @@ fn run_test(dir: &Path, ok: bool) {
         let expect_path = path.with_extension("ast");
         expect_file![expect_path].assert_eq(&got);
 
-        let out = iter::successors(ast.syntax_node().first_token(), |t| t.next_token()).map(|t| t.to_string()).join("");
+        let out = iter::successors(ast.syntax_node().first_token(), |t| t.next_token())
+            .map(|t| t.to_string())
+            .join("");
         assert_eq!(src, out);
     }
 }

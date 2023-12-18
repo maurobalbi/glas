@@ -5,14 +5,15 @@ use syntax::ast::{self, AstNode, HasDocParts};
 
 use crate::{
     impl_from,
-    ty::{self, Ty, TyDatabase},
+    ty::{self, TyDatabase},
     DefDatabase, FileId, InFile, ModuleMap, SourceRootId,
 };
 
 use super::{
     hir_def::{AdtId, ImportId, LocalFieldId, LocalVariantId, TypeAliasId, VariantId},
     module::{
-        AdtData, FieldData, FunctionData, ImportData, Param, PatternId, TypeAliasData, VariantData, TypeRef,
+        AdtData, FieldData, FunctionData, ImportData, Param, PatternId, TypeAliasData, TypeRef,
+        VariantData,
     },
     resolver::resolver_for_toplevel,
     semantics::Definition,
@@ -394,7 +395,7 @@ pub enum BuiltIn {
     Ok,
     Error,
     True,
-    False
+    False,
 }
 
 impl BuiltIn {
@@ -404,7 +405,7 @@ impl BuiltIn {
             ("Ok".into(), BuiltIn::Ok),
             ("Error".into(), BuiltIn::Error),
             ("True".into(), BuiltIn::True),
-            ("False".into(), BuiltIn::False)
+            ("False".into(), BuiltIn::False),
         ]
         .into_iter()
         .collect()

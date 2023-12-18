@@ -3,7 +3,6 @@ use std::{collections::HashMap, ops::Index};
 use crate::Diagnostic;
 
 use super::{
-    hir_def::LocalFieldId,
     module::{
         self, AdtData, FieldData, FunctionData, ImportData, ModuleImport, Param, TypeAliasData,
         VariantData, Visibility,

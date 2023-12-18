@@ -10,12 +10,12 @@ use syntax::{
 use crate::{
     def::{
         find_container,
-        hir::{Module, Package, Adt},
-        hir_def::{ModuleDefId},
+        hir::{Adt, Module, Package},
+        hir_def::ModuleDefId,
         resolver::{resolver_for_toplevel, ResolveResult},
         resolver_for_expr, Semantics,
     },
-    ty::{display::TyDisplay, TyDatabase, Ty},
+    ty::{display::TyDisplay, Ty, TyDatabase},
     FilePos, InFile,
 };
 

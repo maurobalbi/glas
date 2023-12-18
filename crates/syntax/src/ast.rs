@@ -42,7 +42,7 @@ pub enum UnaryOpKind {
 pub enum LiteralKind {
     Int,
     Float,
-    String
+    String,
 }
 
 trait NodeWrapper {
@@ -1151,11 +1151,13 @@ mod tests {
     // https://github.com/maurobalbi/glas/issues/10
     #[test]
     fn allow_true_false_constructor() {
-        let _ = parse::<Adt>(r#"
+        let _ = parse::<Adt>(
+            r#"
         pub type Test {
             Foo
             True
             False
-        }"#);
+        }"#,
+        );
     }
 }

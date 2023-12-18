@@ -932,7 +932,7 @@ fn pattern(p: &mut Parser) {
             p.bump();
             p.finish_node(m, HOLE)
         }
-        s @ (INTEGER | FLOAT | STRING ) => {
+        s @ (INTEGER | FLOAT | STRING) => {
             let m = p.start_node();
             p.bump();
             let mut literal = p.finish_node(m, LITERAL);
@@ -1221,7 +1221,7 @@ fn as_type_name(p: &mut Parser) {
     if p.at(T!["as"]) {
         p.expect(T!["as"]);
         if p.at(U_IDENT) {
-            type_name(p); 
+            type_name(p);
         } else {
             p.error(ErrorKind::ExpectedType)
         }

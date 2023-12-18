@@ -41,7 +41,7 @@ impl SearchScope {
             let package_info = &db.package_graph()[package];
             let sid = db.file_source_root(package_info.gleam_toml);
             let source_root = db.source_root(sid);
-            for (file_id, path) in source_root.module_files() {
+            for (file_id, _path) in source_root.module_files() {
                 entries.insert(file_id, None);
             }
         }

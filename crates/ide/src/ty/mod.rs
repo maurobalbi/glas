@@ -10,7 +10,11 @@ use std::{collections::HashMap, sync::Arc};
 pub use infer::{FieldResolution, InferenceResult};
 use smol_str::SmolStr;
 
-use crate::{def::hir_def::{FunctionId, AdtId}, ide::Upcast, DefDatabase};
+use crate::{
+    def::hir_def::{AdtId, FunctionId},
+    ide::Upcast,
+    DefDatabase,
+};
 
 #[salsa::query_group(TyDatabaseStorage)]
 pub trait TyDatabase: DefDatabase + Upcast<dyn DefDatabase> {
@@ -43,17 +47,15 @@ pub enum Ty {
     },
     // ToDo: when making types for functions,
     Function {
-        params: Arc<Vec<(Option<SmolStr>,Ty)>>,
+        params: Arc<Vec<(Option<SmolStr>, Ty)>>,
         return_: Arc<Ty>,
     },
     Adt {
         // ToDo: refactor, since this is not quite accurate enough: other types might be qualified also
-        adt_id: AdtId, 
+        adt_id: AdtId,
         params: Arc<Vec<Ty>>,
     },
     Tuple {
         fields: Arc<Vec<Ty>>,
     },
 }
-
-

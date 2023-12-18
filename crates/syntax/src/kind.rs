@@ -225,7 +225,7 @@ def! {
 
     #[token("assert")]
     ASSERT_KW = ["assert"],
-    
+
     #[token("case")]
     CASE_KW = ["case"],
 

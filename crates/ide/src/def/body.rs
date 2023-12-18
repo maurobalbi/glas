@@ -7,10 +7,10 @@ use syntax::{
     AstPtr,
 };
 
-use crate::{ty, DefDatabase, Diagnostic, FileId, InFile};
+use crate::{DefDatabase, Diagnostic, FileId, InFile};
 
 use super::{
-    module::{Clause, Expr, ExprId, Pattern, PatternId, Statement, self},
+    module::{self, Clause, Expr, ExprId, Pattern, PatternId, Statement},
     FunctionId,
 };
 

@@ -1,14 +1,11 @@
 use std::{collections::HashMap, sync::Arc};
 
-use crate::ty;
 use la_arena::{Idx, IdxRange};
 use smol_str::SmolStr;
 use syntax::{
     ast::{self, BinaryOpKind, LiteralKind},
     AstPtr,
 };
-
-use super::hir_def::LocalFieldId;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct AdtData {
@@ -218,13 +215,12 @@ pub enum Pattern {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Label(pub SmolStr);
 
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypeRef {
     Hole,
     Unknown,
     Generic {
-        name: SmolStr
+        name: SmolStr,
     },
     Function {
         params: Arc<Vec<TypeRef>>,
@@ -254,7 +250,9 @@ pub fn typeref_from_ast(ast_expr: ast::TypeExpr) -> TypeRef {
                     fn_params.push(typeref_from_ast(ty));
                 }
             };
-            let ret = it.return_().map_or_else(|| TypeRef::Unknown, typeref_from_ast);
+            let ret = it
+                .return_()
+                .map_or_else(|| TypeRef::Unknown, typeref_from_ast);
             TypeRef::Function {
                 params: Arc::new(fn_params),
                 return_: Arc::new(ret),
@@ -293,7 +291,9 @@ pub fn typeref_from_ast(ast_expr: ast::TypeExpr) -> TypeRef {
                 .clone()
                 .and_then(|t| t.constructor_name())
                 .and_then(|c| c.text());
-            let Some(name) = name else { return TypeRef::Unknown };
+            let Some(name) = name else {
+                return TypeRef::Unknown;
+            };
 
             let mut arguments = Vec::new();
             if let Some(args) = ty.arg_list() {

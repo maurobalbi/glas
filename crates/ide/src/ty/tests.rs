@@ -614,9 +614,11 @@ fn generic_field_access() {
 
             fn access_name_2() { Bla(name: 1).name }
         "#,
-        expect![r#"
+        expect![
+            r#"
         access_name: fn(Bla(Int)) -> Int
-        access_name_2: fn() -> Int"#]
+        access_name_2: fn() -> Int"#
+        ],
     )
 }
 
@@ -702,10 +704,12 @@ fn labels_infer() {
             main(5, name: "123")
         }
         "#,
-        expect![r#"
+        expect![
+            r#"
         main: fn(a, b) -> Result(a, b)
         inst: fn() -> Result(String, Int)
         inst2: fn() -> Result(String, Int)
-        inst3: fn() -> Result(String, Int)"#],
+        inst3: fn() -> Result(String, Int)"#
+        ],
     )
 }
