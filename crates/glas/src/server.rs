@@ -1,7 +1,7 @@
 use crate::capabilities::{negotiate_capabilities, NegotiatedCapabilities};
 use crate::config::{Config, CONFIG_KEY};
 use crate::{convert, handler, lsp_ext, UrlExt, Vfs, MAX_FILE_LEN};
-use anyhow::{bail, Context, Result};
+use anyhow::{bail, ensure, Context, Result, Error};
 use async_lsp::concurrency::ConcurrencyLayer;
 use async_lsp::panic::CatchUnwindLayer;
 use async_lsp::router::Router;
@@ -21,13 +21,13 @@ use lsp_types::{
     notification as notif, ClientCapabilities, ConfigurationItem, ConfigurationParams,
     DidChangeConfigurationParams, DidChangeTextDocumentParams, DidChangeWatchedFilesParams,
     DidChangeWatchedFilesRegistrationOptions, DidCloseTextDocumentParams,
-    DidOpenTextDocumentParams, DidSaveTextDocumentParams, FileChangeType, FileEvent,
-    FileSystemWatcher, GlobPattern, InitializeParams, InitializeResult, InitializedParams,
-    MessageType, NumberOrString, OneOf, ProgressParams, ProgressParamsValue,
-    PublishDiagnosticsParams, Registration, RegistrationParams, RelativePattern, ServerInfo,
-    ShowMessageParams, TextDocumentContentChangeEvent, Url, WindowClientCapabilities,
-    WorkDoneProgress, WorkDoneProgressBegin, WorkDoneProgressCreateParams, WorkDoneProgressEnd,
-    WorkDoneProgressReport,
+    DidOpenTextDocumentParams, DidSaveTextDocumentParams, DocumentFormattingParams, FileChangeType,
+    FileEvent, FileSystemWatcher, GlobPattern, InitializeParams, InitializeResult,
+    InitializedParams, MessageType, NumberOrString, OneOf, Position, ProgressParams,
+    ProgressParamsValue, PublishDiagnosticsParams, Range, Registration, RegistrationParams,
+    RelativePattern, ServerInfo, ShowMessageParams, TextDocumentContentChangeEvent, TextEdit, Url,
+    WindowClientCapabilities, WorkDoneProgress, WorkDoneProgressBegin,
+    WorkDoneProgressCreateParams, WorkDoneProgressEnd, WorkDoneProgressReport,
 };
 use smol_str::SmolStr;
 use tokio::io::AsyncWriteExt;
@@ -46,7 +46,7 @@ use std::io::{ErrorKind, Read};
 use std::ops::ControlFlow;
 use std::panic::UnwindSafe;
 use std::path::{Path, PathBuf};
-use std::process::Stdio;
+use std::process::{self, Stdio};
 
 use std::sync::{Arc, Once, RwLock};
 use std::time::Duration;
@@ -143,6 +143,7 @@ impl Server {
             .request::<req::Initialize, _>(Self::on_initialize)
             .notification::<notif::Initialized>(Self::on_initialized)
             .request::<req::Shutdown, _>(|_, _| ready(Ok(())))
+            .request::<req::Formatting, _>(Self::formatting)
             .notification::<notif::Exit>(|_, _| ControlFlow::Break(Ok(())))
             //// Notifications ////
             .notification::<notif::DidOpenTextDocument>(Self::on_did_open)
@@ -155,7 +156,7 @@ impl Server {
             // Ref: https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspace_didChangeWatchedFiles
             .notification::<notif::DidChangeWatchedFiles>(Self::on_did_change_watched_files)
             //// Requests ////
-            .request_snap::<req::Formatting>(handler::formatting)
+            // .request_snap::<req::Formatting>(handler::formatting)
             .request_snap::<req::GotoDefinition>(handler::goto_definition)
             .request_snap::<req::Completion>(handler::completion)
             .request_snap::<req::HoverRequest>(handler::hover)
@@ -193,6 +194,86 @@ impl Server {
             client,
             init_messages,
             capabilities: NegotiatedCapabilities::default(),
+        }
+    }
+
+    fn formatting(
+        &mut self,
+        params: DocumentFormattingParams,
+    ) -> impl Future<Output = Result<Option<Vec<TextEdit>>, ResponseError>> {
+        fn run_with_stdin(
+            cmd: &[String],
+            stdin_data: impl AsRef<[u8]> + Send + 'static,
+        ) -> Result<String> {
+            let mut child = process::Command::new(&cmd[0])
+                .args(&cmd[1..])
+                .stdin(process::Stdio::piped())
+                .stdout(process::Stdio::piped())
+                .stderr(process::Stdio::piped())
+                .spawn()?;
+            let mut stdin = child.stdin.take().unwrap();
+            std::thread::spawn(move || {
+                let _ = std::io::copy(&mut stdin_data.as_ref(), &mut stdin);
+            });
+            let output = child.wait_with_output()?;
+
+            if !output.status.success() {
+                return Err(anyhow::Error::msg("Could not format"));
+            }
+            tracing::info!("ERR {:?}", String::from_utf8_lossy(&output.stderr));
+            ensure!(
+                output.status.success(),
+                "Formatter exited with {}, stderr: {}",
+                output.status,
+                String::from_utf8_lossy(&output.stderr),
+            );
+            let stdout = String::from_utf8(output.stdout)?;
+            Ok(stdout)
+        }
+
+        let cmd = vec![
+            String::from("gleam"),
+            String::from("format"),
+            String::from("--stdin"),
+        ];
+
+        let vfs = self.vfs.clone();
+
+        async move {
+            let (file_content, line_map) = {
+                let vfs = vfs.read().unwrap();
+                let Ok((file, line_map)) = convert::from_file(&vfs, &params.text_document) else {
+                    return Ok(None);
+                };
+                (vfs.content_for_file(file), line_map)
+            };
+
+            let new_content = match run_with_stdin(&cmd, <Arc<[u8]>>::from(file_content.clone())) {
+                Ok(result) => result,
+                Err(_) => {
+                    return Ok(None);
+                }
+            };
+
+            if new_content == *file_content {
+                return Ok(None);
+            }
+
+            // Replace the whole file.
+            let last_line = line_map.last_line();
+            Ok(Some(vec![TextEdit {
+                range: Range {
+                    start: Position {
+                        line: 0,
+                        character: 0,
+                    },
+                    end: Position {
+                        line: last_line,
+                        character: line_map.end_col_for_line(last_line),
+                    },
+                },
+                new_text: new_content,
+            }]))
         }
     }
 
@@ -419,20 +500,7 @@ impl Server {
 
     fn on_did_save(&mut self, params: DidSaveTextDocumentParams) -> NotifyResult {
         tracing::info!("Received save notification");
-        let vfs = self.vfs.write().unwrap();
-        let Ok(file) = vfs.file_for_uri(&params.text_document.uri) else {
-            return ControlFlow::Continue(());
-        };
-        let file_content = vfs.content_for_file(file);
-
-        let _content_changes = vec![TextDocumentContentChangeEvent {
-            range: None,
-            range_length: None,
-            text: file_content.to_string(),
-        }];
-
         let _ = self.gleam_interop_client.as_ref().unwrap().did_save(params);
-        drop(vfs);
         ControlFlow::Continue(())
     }
 

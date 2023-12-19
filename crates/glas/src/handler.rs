@@ -53,8 +53,9 @@ pub(crate) fn formatting(
         (vfs.content_for_file(file), line_map)
     };
 
-    let new_content = run_with_stdin(&cmd, <Arc<[u8]>>::from(file_content.clone()))
-        .with_context(|| format!("Failed to run formatter {cmd:?}"))?;
+    let Ok(new_content) = run_with_stdin(&cmd, <Arc<[u8]>>::from(file_content.clone())) else {    
+        return Ok(None);
+    };
 
     if new_content == *file_content {
         return Ok(None);
