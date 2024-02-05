@@ -289,4 +289,52 @@ pub type <Test>"#
             ],
         )
     }
+    
+    #[test]
+    fn resolve_qualified() {
+        check(
+            r#"
+#- test.gleam
+pub type Test {
+    Test
+}
+
+#- test2.gleam
+import test as t
+
+fn main() {
+    t.$0Test
+}
+"#,
+            expect![
+                r#"
+<Test>"#
+            ],
+        )
+    }
+
+    #[test]
+    fn resolve_qualified_pattern() {
+        check(
+            r#"
+#- test.gleam
+pub type Test {
+    Test
+}
+
+#- test2.gleam
+import test as t
+
+fn main() {
+    case a {
+        t.$0Test -> 1 
+    }
+}
+"#,
+            expect![
+                r#"
+<Test>"#
+            ],
+        )
+    }
 }

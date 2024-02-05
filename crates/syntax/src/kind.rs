@@ -64,6 +64,7 @@ macro_rules! to_str {
 }
 
 def! {
+    // Tokens must come first
     #[regex(r"([ \t\n])+")]
     WHITESPACE @WHITESPACE_FIRST,
 

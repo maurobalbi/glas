@@ -37,7 +37,9 @@ pub fn module_scope_with_map_query(
             continue;
         };
 
-        scope.modules.insert(imported_module.accessor.clone(), file);
+        let local_accessor = imported_module.as_name.clone().unwrap_or_else(|| imported_module.accessor.clone());
+
+        scope.modules.insert(local_accessor, file);
     }
 
     for (import_id, import) in module_data.unqualified_imports() {

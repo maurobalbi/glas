@@ -107,11 +107,11 @@ SOURCE_FILE@0..45079
         U_IDENT@820..823 "Map"
     R_BRACE@823..824 "}"
   WHITESPACE@824..826 "\n\n"
-  COMMENT_STATEMENT@826..883 "/// An error value re ..."
-  WHITESPACE@883..884 "\n"
-  COMMENT_STATEMENT@884..887 "///"
-  WHITESPACE@887..888 "\n"
-  ADT@888..932
+  ADT@826..932
+    COMMENT_STATEMENT@826..883 "/// An error value re ..."
+    WHITESPACE@883..884 "\n"
+    COMMENT_STATEMENT@884..887 "///"
+    WHITESPACE@887..888 "\n"
     PUB_KW@888..891 "pub"
     WHITESPACE@891..892 " "
     TYPE_KW@892..896 "type"

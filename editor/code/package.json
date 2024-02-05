@@ -50,8 +50,7 @@
     ]
   },
   "activationEvents": [
-    "workspaceContains:*/Cargo.toml",
-    "onLanguage:gleam"
+    "workspaceContains:*/gleam.toml"
   ],
   "main": "./dist/extension.js",
   "scripts": {

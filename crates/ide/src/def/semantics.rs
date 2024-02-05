@@ -213,6 +213,9 @@ fn classify_name(sema: &Semantics, name: &ast::Name) -> Option<Definition> {
 
                 return def
             },
+            ast::Variant(it) => {
+               return sema.to_def(&it).map(From::from)
+            },
             ast::UnqualifiedImport(it) => {
                 let src = sema
                     .find_file(it.syntax())
@@ -237,11 +240,13 @@ fn classify_name(sema: &Semantics, name: &ast::Name) -> Option<Definition> {
 fn classify_name_ref(sema: &Semantics, name_ref: &ast::NameRef) -> Option<Definition> {
     let parent = name_ref.syntax().parent()?;
 
+    // Handle pattern!
+
     if let Some(expr) = ast::FieldAccessExpr::cast(parent.clone()) {
         return sema.resolve_field(expr).map(Into::into);
     }
 
-    sema.resolve_name(name_ref.clone()).map(Into::into)
+    sema.resolve_nameref(name_ref.clone()).map(Into::into)
 }
 
 fn classify_type_name(sema: &Semantics, type_name: &ast::TypeName) -> Option<Definition> {
@@ -296,7 +301,7 @@ impl<'db> Semantics<'db> {
         self.analyze(expr.syntax())?.resolve_module(&expr)
     }
 
-    pub fn resolve_name(&self, name: ast::NameRef) -> Option<ResolveResult> {
+    pub fn resolve_nameref(&self, name: ast::NameRef) -> Option<ResolveResult> {
         let analyzer = self.analyze(name.syntax())?;
         if let Some(module) = name
             .syntax()
@@ -305,6 +310,20 @@ impl<'db> Semantics<'db> {
             .and_then(|expr| analyzer.resolve_module(&expr))
         {
             return Some(ResolveResult::Module(module.into()));
+        }
+
+        if let Some((module, name)) = name
+            .syntax()
+            .parent()
+            .and_then(ast::VariantRef::cast)
+            .and_then(|p| {
+                Some((analyzer
+                    .resolver
+                    .resolve_module(&p.module()?.name()?.text()?)?, p.variant()?.text()?))
+            })
+        {
+            let result = resolver_for_toplevel(self.db.upcast(), module).resolve_name(&name)?;
+            return Some(result);
         }
 
         analyzer.resolver.resolve_name(&(name.text()?))
@@ -394,6 +413,16 @@ impl ToDef for ast::UnqualifiedImport {
         let map = sema.db.module_source_map(src.file_id);
         let import_id = map.node_to_import(&src.value);
         import_id.map(From::from)
+    }
+}
+
+impl ToDef for ast::Variant {
+    type Def = Variant;
+
+    fn to_def(sema: &Semantics<'_>, src: InFile<Self>) -> Option<Self::Def> {
+        let map = sema.db.module_source_map(src.file_id);
+        let variant_id = map.node_to_variant(&src.value);
+        variant_id.map(From::from)
     }
 }
 

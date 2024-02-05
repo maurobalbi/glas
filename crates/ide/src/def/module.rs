@@ -64,6 +64,8 @@ pub struct ModuleImport {
     pub name: SmolStr,
     pub accessor: SmolStr,
 
+    pub as_name: Option<SmolStr>,
+
     pub ast_ptr: AstPtr<ast::Import>,
 }
 

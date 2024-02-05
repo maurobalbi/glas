@@ -296,28 +296,11 @@ fn complete_dot(acc: &mut Vec<CompletionItem>, ctx: CompletionContext<'_>) -> Op
 
                 for (def, _) in module_items.declarations().flatten() {
                     match def {
-                        // ToDo: Extract to function because it's also used in complete_expr
                         ModuleDefId::FunctionId(it) => {
                             acc.push(render::render_fn(&ctx, it));
                         }
-                        ModuleDefId::VariantId(_it) => {
-                            // let it = Variant { parent: it.parent, id: it.local_id };
-                            // let fields = it.fields(ctx.db.upcast());
-                            // let fields_str = fields
-                            //     .iter()
-                            //     .enumerate()
-                            //     .map(|(i, p)|
-                            //         format!("${{{}:{}}}", i + 1, p.label(ctx.db.upcast()).clone().unwrap_or("()".into()))
-                            //     )
-                            //     .collect::<Vec<_>>()
-                            //     .join(", ");
-                            // let name = it.name(ctx.db.upcast());
-                            // let label = if !fields.is_empty() {
-                            //     format!("{}(…)", name)
-                            // } else {
-                            //     format!("{}()", name)
-                            // };
-                            // (label, format!("{}({})", name, fields_str))
+                        ModuleDefId::VariantId(it) => {
+                           acc.push(render::render_variant(&ctx, it))
                         },
                         _ => { continue }
                     };
@@ -430,8 +413,10 @@ fn complete_expr(acc: &mut Vec<CompletionItem>, ctx: &CompletionContext<'_>) -> 
     let module_data = ctx.db.module_items(expr_ptr.file_id);
 
     for (_, import) in module_data.module_imports() {
-        let module = resolver.resolve_module(&import.accessor);
-        module.map(|id| acc.push(render::render_module(ctx, &id)));
+        let module =
+            resolver.resolve_module(&import.as_name.as_ref().unwrap_or_else(|| &import.accessor));
+
+        module.map(|id| acc.push(render::render_module(ctx, &id, import.as_name.clone())));
     }
 
     Some(())

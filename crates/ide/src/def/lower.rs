@@ -217,6 +217,7 @@ impl LowerCtx {
         let module_id = self.alloc_module_import(ModuleImport {
             name: module_name,
             accessor: accessor.into(),
+            as_name: i.as_name().and_then(|n| n.text()),
             ast_ptr,
         });
 
