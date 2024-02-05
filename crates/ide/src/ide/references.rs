@@ -35,3 +35,55 @@ pub(crate) fn references(db: &dyn TyDatabase, fpos: FilePos) -> Option<Vec<FileR
 
     Some(res.into_iter().unique().collect())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::base::SourceDatabase;
+    use crate::tests::TestDB;
+    use expect_test::{expect, Expect};
+
+    fn check(fixture: &str, expect: Expect) {
+        let (db, f) = TestDB::from_fixture(fixture).unwrap();
+        assert_eq!(f.markers().len(), 1, "Missing markers");
+        let refs = references(&db, f[0]).expect("No definition");
+
+        let mut actual = String::new();
+        for refs in refs {
+            actual += "\n\n";
+
+            let src = db.file_content(refs.file_id);
+            let full = src[refs.range].to_owned();
+
+            let file = format!("{:?} {:?} ", refs.file_id, refs.range);
+            actual += &full;
+            actual += &file;
+        }
+        expect.assert_eq(actual.trim_start())
+    }
+
+    
+    #[test]
+    fn module_field_access() {
+        check(
+            r#"
+#- test.gleam
+fn $0print() {
+    1
+}
+
+#- test2.gleam
+import test
+
+fn test() { test.print }
+fn test2() { test.print }"#,
+            expect![
+                r#"
+fn <print>() {
+    1
+}
+"#
+            ],
+        );
+    }
+}
