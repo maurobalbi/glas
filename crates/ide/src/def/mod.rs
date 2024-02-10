@@ -22,7 +22,7 @@ pub use syntax::ast::{AstNode, BinaryOpKind as BinaryOp, Expr, UnaryOpKind as Un
 
 use self::body::{Body, BodySourceMap};
 use self::hir_def::{
-    AdtId, AdtLoc, FunctionId, FunctionLoc, ImportId, ImportLoc, TypeAliasId, TypeAliasLoc,
+    AdtId, AdtLoc, FunctionId, FunctionLoc, ImportId, ImportLoc, TypeAliasId, TypeAliasLoc, ConstLoc, ConstId,
 };
 use self::lower::lower_module;
 pub use self::lower::ModuleItemData;
@@ -39,6 +39,9 @@ pub trait InternDatabase: SourceDatabase {
 
     #[salsa::interned]
     fn intern_import(&self, loc: ImportLoc) -> ImportId;
+
+    #[salsa::interned]
+    fn intern_const(&self, loc: ConstLoc) -> ConstId;
 
     #[salsa::interned]
     fn intern_adt(&self, loc: AdtLoc) -> AdtId;
@@ -68,8 +71,6 @@ pub trait DefDatabase: SourceDatabase + InternDatabase {
     fn module_scope(&self, file_id: FileId) -> Arc<ModuleScope>;
 
     fn module_source_map(&self, file_id: FileId) -> Arc<ModuleSourceMap>;
-    // #[salsa::invoke(LocalNameResolution::name_resolution_query)]
-    // fn name_resolution(&self, file_id: FileId) -> Arc<LocalNameResolution>;
 
     #[salsa::invoke(dependency_order_query)]
     fn dependency_order(&self, file_id: FileId) -> Vec<Vec<FunctionId>>;

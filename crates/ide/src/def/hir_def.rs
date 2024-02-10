@@ -4,7 +4,7 @@ use crate::{impl_from, impl_intern, FileId, InFile};
 
 use super::{
     hir::{Adt, Field, Function, Import, Module, TypeAlias, Variant},
-    module::{AdtData, FieldData, FunctionData, ImportData, TypeAliasData, VariantData},
+    module::{AdtData, FieldData, FunctionData, ImportData, TypeAliasData, VariantData, ConstData},
     DefDatabase,
 };
 use crate::impl_intern_key;
@@ -58,6 +58,16 @@ impl_intern!(
     FunctionLoc,
     intern_function,
     lookup_intern_function
+);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ConstId(pub salsa::InternId);
+pub type ConstLoc = InFile<Idx<ConstData>>;
+impl_intern!(
+    ConstId,
+    ConstLoc,
+    intern_const,
+    lookup_intern_const
 );
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

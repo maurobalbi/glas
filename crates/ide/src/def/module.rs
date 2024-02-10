@@ -60,6 +60,14 @@ pub struct FunctionData {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub struct ConstData {
+    pub name: SmolStr,
+    pub params: Vec<Param>,
+    pub visibility: Visibility,
+    pub ast_ptr: AstPtr<ast::ModuleConstant>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ModuleImport {
     pub name: SmolStr,
     pub accessor: SmolStr,
