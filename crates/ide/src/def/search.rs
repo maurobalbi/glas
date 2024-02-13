@@ -201,15 +201,15 @@ impl<'a> FindUsages<'a> {
     // This is currently handled by the last step in highlight related
     fn found_name(
         &self,
-        _name_ref: &ast::Name,
-        _sink: &mut dyn FnMut(FileId, TextRange) -> bool,
+        name: &ast::Name,
+        sink: &mut dyn FnMut(FileId, TextRange) -> bool,
     ) -> bool {
-        // if let Some(def) = classify_node(self.sema, name_ref.syntax()) {
-        //     if self.def == def {
-        //         let file_id = self.sema.find_file(name_ref.syntax()).file_id;
-        //         return sink(file_id, name_ref.syntax().text_range())
-        //     }
-        // }
+        if let Some(def) = classify_node(self.sema, name.syntax()) {
+            if self.def == def {
+                let file_id = self.sema.find_file(name.syntax()).file_id;
+                return sink(file_id, name.syntax().text_range())
+            }
+        }
         false
     }
 }

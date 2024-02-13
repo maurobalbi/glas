@@ -4,10 +4,7 @@ use crate::{convert, lsp_ext::SyntaxTreeParams, StateSnapshot};
 use anyhow::{ensure, Context, Result};
 use ide::{FileRange, GotoDefinitionResult};
 use lsp_types::{
-    CompletionParams, CompletionResponse, Diagnostic, DocumentFormattingParams, DocumentHighlight,
-    DocumentHighlightParams, GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverParams,
-    Location, Position, Range, ReferenceParams, SemanticTokens, SemanticTokensParams,
-    SemanticTokensRangeParams, SemanticTokensRangeResult, SemanticTokensResult, TextEdit, Url,
+    CompletionParams, CompletionResponse, Diagnostic, DocumentFormattingParams, DocumentHighlight, DocumentHighlightParams, GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverParams, Location, Position, PrepareRenameResponse, Range, ReferenceParams, RenameParams, SemanticTokens, SemanticTokensParams, SemanticTokensRangeParams, SemanticTokensRangeResult, SemanticTokensResult, TextDocumentPositionParams, TextEdit, Url, WorkspaceEdit
 };
 
 const MAX_DIAGNOSTICS_CNT: usize = 128;
@@ -163,6 +160,29 @@ pub(crate) fn references(
         .map(|frange| convert::to_location(&vfs, frange))
         .collect::<Vec<_>>();
     Ok(Some(locs))
+}
+
+pub(crate) fn prepare_rename(
+    snap: StateSnapshot,
+    params: TextDocumentPositionParams,
+) -> Result<Option<PrepareRenameResponse>> {
+    let (fpos, line_map) = convert::from_file_pos(&snap.vfs(), &params)?;
+    let (range, text) = snap
+        .analysis
+        .prepare_rename(fpos)?
+        .map_err(convert::to_rename_error)?;
+    let resp = convert::to_prepare_rename_response(&line_map, range, text.into());
+    Ok(Some(resp))
+}
+
+pub(crate) fn rename(snap: StateSnapshot, params: RenameParams) -> Result<Option<WorkspaceEdit>> {
+    let (fpos, _) = convert::from_file_pos(&snap.vfs(), &params.text_document_position)?;
+    let ws_edit = snap
+        .analysis
+        .rename(fpos, &params.new_name)?
+        .map_err(convert::to_rename_error)?;
+    let resp = convert::to_workspace_edit(&snap.vfs(), ws_edit);
+    Ok(Some(resp))
 }
 
 pub(crate) fn syntax_tree(snap: StateSnapshot, params: SyntaxTreeParams) -> Result<String> {

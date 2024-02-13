@@ -341,7 +341,8 @@ impl Import {
     pub fn import_from_module_name(self, db: &dyn DefDatabase) -> SmolStr {
         let import = db.lookup_intern_import(self.id);
         let module_idx = self.data(db).module;
-        db.module_items(import.file_id)[module_idx].accessor.clone()
+        let module = &db.module_items(import.file_id)[module_idx];
+        module.as_name.clone().unwrap_or_else(|| module.accessor.clone())
     }
 
     pub fn imported_from_module(self, db: &dyn DefDatabase) -> Option<FileId> {

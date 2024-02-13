@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.1.0
+
+### New Features
+
+- Renaming
+
+### Improved
+
+- Improve Reference for Variants, add better tests
+- Render Documentation for Custom Types
+
+
 ## v0.0.9
 
 ### Added

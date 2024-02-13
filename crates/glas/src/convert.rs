@@ -1,11 +1,10 @@
 use crate::{semantic_tokens, LineMap, Result, Vfs};
+use async_lsp::{ErrorCode, ResponseError};
 use ide::{
-    CompletionItem, CompletionItemKind, CompletionRelevance, Diagnostic, DiagnosticKind, FileId,
-    FilePos, FileRange, HlRange, HlRelated, HoverResult, Severity,
+    CompletionItem, CompletionItemKind, CompletionRelevance, Diagnostic, DiagnosticKind, FileId, FilePos, FileRange, HlRange, HlRelated, HoverResult, Severity, TextEdit, WorkspaceEdit
 };
 use lsp::{
-    DiagnosticTag, DocumentHighlight, DocumentHighlightKind, Documentation, Hover, MarkupContent,
-    MarkupKind, SemanticToken,
+    DiagnosticTag, DocumentHighlight, DocumentHighlightKind, Documentation, Hover, MarkupContent, MarkupKind, PrepareRenameResponse, SemanticToken
 };
 use lsp_types::{
     self as lsp, DiagnosticRelatedInformation, DiagnosticSeverity, Location, NumberOrString,
@@ -196,6 +195,22 @@ pub(crate) fn to_diagnostics(
     ret
 }
 
+pub(crate) fn to_rename_error(message: String) -> ResponseError {
+    ResponseError::new(ErrorCode::REQUEST_FAILED, message)
+}
+
+pub(crate) fn to_prepare_rename_response(
+    line_map: &LineMap,
+    range: TextRange,
+    text: String,
+) -> PrepareRenameResponse {
+    let range = to_range(line_map, range);
+    PrepareRenameResponse::RangeWithPlaceholder {
+        range,
+        placeholder: text,
+    }
+}
+
 pub(crate) fn to_document_highlight(
     line_map: &LineMap,
     hls: &[HlRelated],
@@ -210,6 +225,36 @@ pub(crate) fn to_document_highlight(
             }),
         })
         .collect()
+}
+
+pub(crate) fn to_workspace_edit(vfs: &Vfs, ws_edit: WorkspaceEdit) -> lsp::WorkspaceEdit {
+    let content_edits = ws_edit
+        .content_edits
+        .into_iter()
+        .map(|(file, edits)| {
+            let uri = vfs.uri_for_file(file);
+            let edits = edits
+                .into_iter()
+                .map(|edit| {
+                    let line_map = vfs.line_map_for_file(file);
+                    to_text_edit(&line_map, edit)
+                })
+                .collect();
+            (uri, edits)
+        })
+        .collect();
+    lsp::WorkspaceEdit {
+        changes: Some(content_edits),
+        document_changes: None,
+        change_annotations: None,
+    }
+}
+
+pub(crate) fn to_text_edit(line_map: &LineMap, edit: TextEdit) -> lsp::TextEdit {
+    lsp::TextEdit {
+        range: to_range(line_map, edit.delete),
+        new_text: edit.insert.into(),
+    }
 }
 
 pub(crate) fn to_semantic_tokens(line_map: &LineMap, hls: &[HlRange]) -> Vec<SemanticToken> {

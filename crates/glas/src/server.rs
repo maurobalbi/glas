@@ -162,6 +162,8 @@ impl Server {
             .request_snap::<req::HoverRequest>(handler::hover)
             .request_snap::<req::DocumentHighlightRequest>(handler::document_highlight)
             .request_snap::<req::References>(handler::references)
+            .request_snap::<req::PrepareRenameRequest>(handler::prepare_rename)
+            .request_snap::<req::Rename>(handler::rename)
             .request_snap::<lsp_ext::SyntaxTree>(handler::syntax_tree)
             .request_snap::<req::SemanticTokensFullRequest>(handler::semantic_token_full)
             .request_snap::<req::SemanticTokensRangeRequest>(handler::semantic_token_range)

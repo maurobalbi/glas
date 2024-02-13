@@ -289,6 +289,23 @@ pub type <Test>"#
             ],
         )
     }
+
+    #[test]
+    fn import_aliased_module() {
+        check(
+            r#"
+#- test.gleam
+pub type Test
+
+#- test2.gleam
+import test.{type $0Test} as t
+"#,
+            expect![
+                r#"
+pub type <Test>"#
+            ],
+        )
+    } 
     
     #[test]
     fn resolve_qualified() {
@@ -334,6 +351,23 @@ fn main() {
             expect![
                 r#"
 <Test>"#
+            ],
+        )
+    }
+
+    #[test]
+    fn resolve_imported_fn() {
+        check(
+            r#"
+#- test.gleam
+pub fn testfn() {}
+
+#- test2.gleam
+import test.{$0testfn}
+"#,
+            expect![
+                r#"
+                pub fn <testfn>() {}"#
             ],
         )
     }
