@@ -219,4 +219,70 @@ fn test(a: t.Bobele) { Bobobo }
             ],
         );
     }
+
+    #[test]
+    fn rename_alias() {
+        check(
+            r#"
+#- test.gleam
+type Bobo {
+    Bobobo
+}
+
+type $0Alias = Bobo
+
+fn main(a: Alias) {
+    Bobobo
+}
+"#,
+            "Bobele",
+            expect![
+                r#"--- FileId(0)
+
+type Bobo {
+    Bobobo
+}
+
+type Bobele = Bobo
+
+fn main(a: Bobele) {
+    Bobobo
+}
+"#
+            ],
+        );
+    }
+
+    #[test]
+    fn rename_type_wo_alias() {
+        check(
+            r#"
+#- test.gleam
+type $0Bobo {
+    Bobobo
+}
+
+type Alias = Bobo
+
+fn main(a: Alias) {
+    Bobobo
+}
+"#,
+            "Bobele",
+            expect![
+                r#"--- FileId(0)
+
+type Bobele {
+    Bobobo
+}
+
+type Alias = Bobele
+
+fn main(a: Alias) {
+    Bobobo
+}
+"#
+            ],
+        );
+    }
 }
