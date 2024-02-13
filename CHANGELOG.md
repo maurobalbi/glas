@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.1
+
+### Improved
+
+- Restrict nonsensical renames
+
 ## v0.1.0
 
 ### New Features
