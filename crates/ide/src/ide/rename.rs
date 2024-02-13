@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use itertools::Either;
 use smol_str::SmolStr;
-use syntax::{ast::AstNode, best_token_at_offset, TextRange};
+use syntax::{ast::AstNode, best_token_at_offset, lexer::GleamLexer, TextRange};
 
 use crate::{
     def::{
@@ -22,10 +22,11 @@ pub(crate) fn prepare_rename(
 ) -> RenameResult<(TextRange, SmolStr)> {
     let sema = Semantics::new(db);
 
-    let (range, def) = match find_def(&sema, fpos).ok_or_else(|| "No references found".to_owned())?{
-        Either::Left(val) => val,
-        Either::Right(str) => return Err(str),
-    };
+    let (range, def) =
+        match find_def(&sema, fpos).ok_or_else(|| "No references found".to_owned())? {
+            Either::Left(val) => val,
+            Either::Right(str) => return Err(str),
+        };
 
     let name = match def {
         Definition::Module(_) | Definition::BuiltIn(_) => {
@@ -33,7 +34,6 @@ pub(crate) fn prepare_rename(
         }
         _ => def.name(db.upcast()).ok_or_else(|| "No references found")?,
     };
-
 
     Ok((range, name))
 }
@@ -44,16 +44,32 @@ pub(crate) fn rename(
     new_name: &str,
 ) -> RenameResult<WorkspaceEdit> {
     let sema = Semantics::new(db);
-    let (range, def) = match find_def(&sema, fpos).ok_or_else(|| "No references found".to_owned())?{
-        Either::Left(val) => val,
-        Either::Right(str) => return Err(str),
-    };
+    let (range, def) =
+        match find_def(&sema, fpos).ok_or_else(|| "No references found".to_owned())? {
+            Either::Left(val) => val,
+            Either::Right(str) => return Err(str),
+        };
+
+    let new_token = GleamLexer::new(new_name)
+        .next()
+        .ok_or_else(|| "No valid identifier")?
+        .kind;
 
     match def {
         Definition::Module(_) | Definition::BuiltIn(_) => {
             return Err(String::from("No references found"))
         }
-        _ => def.name(db.upcast()).ok_or_else(|| "No references found")?,
+        Definition::Adt(_) | Definition::Variant(_) | Definition::TypeAlias(_)
+            if new_token != syntax::SyntaxKind::U_IDENT =>
+        {
+            return Err(String::from("Expected an uppercase identifier"))
+        }
+        Definition::Function(_) | Definition::Field(_) | Definition::Local(_)
+            if new_token != syntax::SyntaxKind::IDENT =>
+        {
+            return Err(String::from("Expected a lowercase identifier"))
+        }
+        _ => {}
     };
 
     let mut edits: HashMap<FileId, HashSet<TextEdit>> = HashMap::new();
@@ -94,13 +110,11 @@ fn find_def(
 
     let def = semantics::classify_node(&sema, &tok.parent()?)?;
 
-
     if SmolStr::from(tok.text()) != SmolStr::from(def.name(sema.db.upcast())?) {
         return Some(Either::Right(String::from("Can't rename aliased names")));
     }
     Some(Either::Left((tok.text_range(), def)))
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -116,8 +130,14 @@ mod tests {
         let edits = rename(&db, f[0], new_name).expect("No definition");
 
         let mut actual = String::new();
-        for (id, ranges) in edits.content_edits.into_iter().sorted_by(|a,b| a.0.cmp(&b.0)) {
-            let iter = ranges.into_iter().sorted_by(|a, b| b.delete.start().cmp(&a.delete.start()));
+        for (id, ranges) in edits
+            .content_edits
+            .into_iter()
+            .sorted_by(|a, b| a.0.cmp(&b.0))
+        {
+            let iter = ranges
+                .into_iter()
+                .sorted_by(|a, b| b.delete.start().cmp(&a.delete.start()));
             let mut content = db.file_content(id).to_string();
             for edit in iter {
                 let start: usize = edit.delete.start().into();
@@ -151,7 +171,7 @@ import test.{print as print2}
 fn test() { test.print }
 fn test2() { test.print2 }
 "#,
-"print_again",
+            "print_again",
             expect![
                 r#"--- FileId(0)
 
@@ -183,7 +203,7 @@ import test as t
 
 fn test(a: t.Bobo) { Bobobo }
 "#,
-"Bobele",
+            "Bobele",
             expect![
                 r#"--- FileId(0)
 
@@ -199,5 +219,4 @@ fn test(a: t.Bobele) { Bobobo }
             ],
         );
     }
-
 }
