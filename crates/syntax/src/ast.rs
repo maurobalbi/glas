@@ -1163,6 +1163,26 @@ mod tests {
         alias.type_().unwrap().syntax().should_eq("String");
     }
 
+    #[test]
+    fn allow_discard_argument() {
+        let _ = parse::<Function>(
+            r#"
+            fn main(asdf _: a, age age: b) -> Result(a, b) {
+                accepted()
+            }"#,
+        );
+    }
+
+    #[test]
+    fn panic_as() {
+        let _ = parse::<Function>(
+            r#"
+            fn main(b) -> Result(a, b) {
+                panic as { "abc" <> "123" }
+            }"#,
+        );
+    }
+
     // https://github.com/maurobalbi/glas/issues/10
     #[test]
     fn allow_true_false_constructor() {
@@ -1175,4 +1195,6 @@ mod tests {
         }"#,
         );
     }
+
+ 
 }
