@@ -15,6 +15,8 @@ pub(crate) fn references(db: &dyn TyDatabase, fpos: FilePos) -> Option<Vec<FileR
     let mut res = HashSet::new();
 
     let def = semantics::classify_node(&sema, &tok.parent()?)?;
+
+    tracing::info!("DEFINITION {:?} {:?}",def,  def.name(sema.db.upcast()));
     def.clone()
         .usages(&sema)
         .in_scope(&SearchScope::package_graph(db.upcast()))

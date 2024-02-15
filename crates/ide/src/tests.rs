@@ -171,6 +171,7 @@ impl Fixture {
             .map(|(i, p)| p.with_context(|| format!("Discontinuous marker: {}", i)))
             .collect::<Result<Vec<_>>>()?;
 
+            tracing::info!("{:?}", this);
         Ok(this)
     }
 

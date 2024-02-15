@@ -229,6 +229,7 @@ enums! {
         Name,
         TypeName,
         NameRef,
+        Label,
     },
 }
 
@@ -256,6 +257,7 @@ impl TypeNameOrName {
             TypeNameOrName::Name(name) => name.token(),
             TypeNameOrName::TypeName(type_name) => type_name.token(),
             TypeNameOrName::NameRef(it) => it.token(),
+            TypeNameOrName::Label(it) => it.token(),
         }
     }
 

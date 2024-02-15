@@ -123,6 +123,7 @@ mod tests {
     use crate::{base::SourceDatabase, FileId};
     use expect_test::{expect, Expect};
     use itertools::Itertools;
+    use tracing_test::traced_test;
 
     fn check(fixture: &str, new_name: &str, expect: Expect) {
         let (db, f) = TestDB::from_fixture(fixture).unwrap();
@@ -231,7 +232,10 @@ type Bobo {
 
 type $0Alias = Bobo
 
-fn main(a: Alias) {
+#- test2.gleam
+import test
+
+fn main(a: test.Alias) {
     Bobobo
 }
 "#,
@@ -244,8 +248,11 @@ type Bobo {
 }
 
 type Bobele = Bobo
+--- FileId(1)
 
-fn main(a: Bobele) {
+import test
+
+fn main(a: test.Bobele) {
     Bobobo
 }
 "#
@@ -280,6 +287,99 @@ type Alias = Bobele
 
 fn main(a: Alias) {
     Bobobo
+}
+"#
+            ],
+        );
+    }
+
+    #[test]
+    fn rename_field() {
+        check(
+            r#"
+#- test.gleam
+type Bobele {
+    Bobobo(name: String)
+    Second(name: String)
+    Dudu(name: String)
+}
+
+fn name(a: Bobele) {
+    a.$0name
+}
+
+#- test2.gleam
+import test.{type Bobele, Dudu, Bobobo} as t
+
+fn name(a: Bobele) {
+    case a {
+        Bobobo(name: a) -> a
+        t.Second(name: b) -> b
+        Dudu(name) -> name
+    }
+}
+"#,
+            "new_name",
+            expect![
+                r#"--- FileId(0)
+
+type Bobele {
+    Bobobo(new_name: String)
+    Second(new_name: String)
+    Dudu(new_name: String)
+}
+
+fn name(a: Bobele) {
+    a.new_name
+}
+--- FileId(1)
+
+import test.{type Bobele, Dudu, Bobobo} as t
+
+fn name(a: Bobele) {
+    case a {
+        Bobobo(new_name: a) -> a
+        t.Second(new_name: b) -> b
+        Dudu(name) -> name
+    }
+}
+"#
+            ],
+        );
+    }
+
+    #[test]
+    fn rename_bound_pat() {
+        check(
+            r#"
+#- test.gleam
+type Bobele {
+    Bobobo(name: String)
+    Dudu(name: String)
+}
+
+fn name(a: Bobele) {
+    case a {
+        Bobobo(name: a) -> a
+        Dudu($0name) -> name
+    }
+}
+
+"#,
+            "new_name",
+            expect![
+                r#"--- FileId(0)
+
+type Bobele {
+    Bobobo(name: String)
+    Dudu(name: String)
+}
+
+fn name(a: Bobele) {
+    case a {
+        Bobobo(name: a) -> a
+        Dudu(new_name) -> new_name
+    }
 }
 "#
             ],
