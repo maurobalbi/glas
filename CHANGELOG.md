@@ -1,10 +1,11 @@
 # Changelog
 
-## v0.1.2
+## v0.1.3
 
 ### Fixed
 
 - Properly parse panic as expressions and labelled discard parameters
+- Correctly reference labels
 
 ## v0.1.1
 
