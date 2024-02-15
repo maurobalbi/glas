@@ -195,6 +195,7 @@ pub fn classify_node(sema: &Semantics, node: &SyntaxNode) -> Option<Definition> 
             ast::NameRef(name_ref) => classify_name_ref(sema, &name_ref),
             ast::Name(name) => classify_name(sema, &name),
             ast::TypeName(type_name) => classify_type_name(sema, &type_name),
+            ast::Label(label) => classify_label(sema, &label),
             // ast::PatternVariable(type_name) => classify_pattern_variable(sema, &type_name),
             _ => None,
         }
@@ -274,6 +275,38 @@ fn classify_type_name(sema: &Semantics, type_name: &ast::TypeName) -> Option<Def
         .map(Into::into)
 }
 
+fn classify_label(sema: &Semantics, label: &ast::Label) -> Option<Definition> {
+    let label_text = SmolStr::from(label.text()?);
+
+    let parent = label.syntax().parent()?;
+
+    let ref_field = ast::VariantRefField::cast(parent.clone())?;
+    let field_list = ast::VariantRefFieldList::cast(ref_field.syntax().parent()?)?;
+    let variant_ref = ast::VariantRef::cast(field_list.syntax().parent()?)?;
+    let variant_name = variant_ref.variant()?;
+
+    let variant = match classify_name_ref(sema, &variant_name)? {
+        Definition::Variant(variant) => variant,
+        _ => return None,
+    };
+
+    let adt = variant.parent();
+
+
+    // This is a bit of a hack to get renaming to work with common fields and pattern matching!
+    if let Some(field) = adt.common_fields(sema.db.upcast()).get(&label_text) {
+        return Some(Definition::Field(*field));
+    }
+
+    for field in variant.fields(sema.db.upcast()).iter() {
+        if field.label(sema.db.upcast())? == label_text {
+            return Some(Definition::Field(*field));
+        }
+    }
+
+    None
+}
+
 pub struct Semantics<'db> {
     pub db: &'db dyn TyDatabase,
     cache: RefCell<HashMap<SyntaxNode, FileId>>,
@@ -317,9 +350,12 @@ impl<'db> Semantics<'db> {
             .parent()
             .and_then(ast::VariantRef::cast)
             .and_then(|p| {
-                Some((analyzer
-                    .resolver
-                    .resolve_module(&p.module()?.name()?.text()?)?, p.variant()?.text()?))
+                Some((
+                    analyzer
+                        .resolver
+                        .resolve_module(&p.module()?.name()?.text()?)?,
+                    p.variant()?.text()?,
+                ))
             })
         {
             let result = resolver_for_toplevel(self.db.upcast(), module).resolve_name(&name)?;

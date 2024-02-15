@@ -371,4 +371,31 @@ import test.{$0testfn}
             ],
         )
     }
+
+    #[test]
+    fn resolve_pattern_label() {
+        check(
+            r#"
+#- test.gleam
+type Sheep {
+    Dolly(age: Int)
+    Dodo(age: Int)
+}
+
+#- test2.gleam
+import test.{Dolly, Dodo}
+
+fn get_age(d: Dolly) {
+    case a {
+        Dolly(age: a) -> a
+        Dodo($0age: a) -> a
+    }
+}
+"#,
+            expect![
+                r#"
+                Dolly(<age: Int>)"#
+            ],
+        )
+    }
 }
