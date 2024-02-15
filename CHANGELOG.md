@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.2
+
+### Fixed
+
+- Properly parse panic as expressions and labelled discard parameters
+
 ## v0.1.1
 
 ### Improved
