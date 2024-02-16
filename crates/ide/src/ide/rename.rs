@@ -61,11 +61,13 @@ pub(crate) fn rename(
             Either::Right(str) => return Err(str),
         };
 
-    let new_token = GleamLexer::new(new_name)
-        .next()
-        .ok_or_else(|| "No valid identifier")?
-        .kind;
-
+    let mut lexer = GleamLexer::new(new_name);
+    
+    let new_token = lexer.next().ok_or_else(|| "Not a valid identifier")?.kind;
+    if !lexer.next().is_none() {
+        return Err("Not a valid identifier".to_owned());
+    }
+        
     match def {
         Definition::Module(_) | Definition::BuiltIn(_) => {
             return Err(String::from("No references found"))
@@ -166,6 +168,16 @@ mod tests {
         }
 
         expect.assert_eq(actual.trim_start())
+    }
+
+    fn check_fail(fixture: &str, new_name: &str, expect: Expect) {
+        let (db, f) = TestDB::from_fixture(fixture).unwrap();
+        assert_eq!(f.markers().len(), 1, "Missing markers");
+        let Err(e) = rename(&db, f[0], new_name) else {
+            return expect.assert_eq("Expected no rename results")
+        };
+        expect.assert_eq(e.trim_start())
+
     }
 
     #[test]
@@ -395,5 +407,19 @@ fn name(a: Bobele) {
 "#
             ],
         );
+    }
+
+    #[test]
+    fn check_rename() {
+        check_fail(r#"
+            fn $0function() {}
+        "#, "new_Name", expect!["Expected a lowercase identifier"]);
+    }
+
+    #[test]
+    fn check_rename2() {
+        check_fail(r#"
+            fn $0function() {}
+        "#, "ne Name", expect!["Not a valid identifier"]);
     }
 }

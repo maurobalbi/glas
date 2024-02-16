@@ -80,11 +80,17 @@ def! {
     #[regex("[a-z][_a-z0-9]*")]
     IDENT,
 
+    #[regex["[a-z][a-zA-Z0-9_]+", priority=0]]
+    BAD_IDENT,
+
     #[regex("_[_a-z0-9]*")]
     DISCARD_IDENT,
 
     #[regex("[A-Z][0-9a-zA-Z]*")]
-    U_IDENT ,
+    U_IDENT,
+
+    #[regex("[A-Z][0-9a-zA-Z_]+", priority=0)]
+    BAD_U_IDENT,
 
     #[regex(r"([0-9][0-9_]*(\.[0-9_]+)([eE][+-]?[0-9_]+)?)")]
     FLOAT,
