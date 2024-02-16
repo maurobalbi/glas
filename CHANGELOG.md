@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.1.4
+
+- Restrict renaming to local definitions
+
 ## v0.1.3
 
 ### Fixed
