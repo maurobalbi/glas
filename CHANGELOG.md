@@ -1,25 +1,12 @@
 # Changelog
 
-## v0.1.5
-
-- Fix some smaller rename bugs
-
-## v0.1.4
-
-- Restrict renaming to local definitions
-
-## v0.1.3
+## v0.1.6
 
 ### Fixed
-
+- Restrict renaming to local definitions
 - Properly parse panic as expressions and labelled discard parameters
 - Correctly reference labels
-
-## v0.1.1
-
-### Improved
-
-- Restrict nonsensical renames
+- Restrict nonsensical  renames
 
 ## v0.1.0
 
@@ -29,7 +16,7 @@
 
 ### Improved
 
-- Improve Reference for Variants, add better tests
+- Improve Reference for Variants, add better and more tests
 - Render Documentation for Custom Types
 
 ## v0.0.9
