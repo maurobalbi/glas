@@ -410,6 +410,49 @@ fn name(a: Bobele) {
     }
 
     #[test]
+    fn rename_variant_field() {
+        check(
+            r#"
+#- test.gleam
+type Bobele {
+    Bobobo(name: String)
+    Second($0dodo: String)
+}
+
+#- test2.gleam
+import test as t
+
+fn name(a: Bobele) {
+    case a {
+        Bobobo(name: name) -> name
+        t.Second(dodo: name) -> name
+    }
+}
+"#,
+            "new_name",
+            expect![
+                r#"--- FileId(0)
+
+type Bobele {
+    Bobobo(name: String)
+    Second(new_name: String)
+}
+--- FileId(1)
+
+import test as t
+
+fn name(a: Bobele) {
+    case a {
+        Bobobo(name: name) -> name
+        t.Second(new_name: name) -> name
+    }
+}
+"#
+            ],
+        );
+    }
+
+    #[test]
     fn check_rename() {
         check_fail(r#"
             fn $0function() {}

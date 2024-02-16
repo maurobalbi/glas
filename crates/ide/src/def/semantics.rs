@@ -292,7 +292,6 @@ fn classify_label(sema: &Semantics, label: &ast::Label) -> Option<Definition> {
 
     let adt = variant.parent();
 
-
     // This is a bit of a hack to get renaming to work with common fields and pattern matching!
     if let Some(field) = adt.common_fields(sema.db.upcast()).get(&label_text) {
         return Some(Definition::Field(*field));
@@ -469,13 +468,23 @@ impl ToDef for ast::VariantField {
         let syntax = src.value.syntax();
         let container = find_container(sema.db.upcast(), src.with_value(syntax))?;
 
-        if let ModuleDefId::AdtId(it) = container {
+        if let ModuleDefId::VariantId(it) = container {
             let text = src.value.label()?.text()?;
-            return Adt { id: it }
-                .common_fields(sema.db.upcast())
-                .get(&text)
-                .cloned();
+
+            let variant = Variant { id: it.local_id, parent: it.parent };
+            let adt = variant.parent();
+
+            if let Some(field) = adt.common_fields(sema.db.upcast()).get(&text) {
+                return Some(*field)
+            }
+
+            for field in variant.fields(sema.db.upcast()) {
+                if field.label(sema.db.upcast())? == text {
+                    return Some(field)
+                }
+            }
         }
+
         None
     }
 }
@@ -510,9 +519,14 @@ pub fn find_container(db: &dyn DefDatabase, node: InFile<&SyntaxNode>) -> Option
             return fn_id.map(From::from);
         }
 
-        if let Some(it) = ast::Adt::cast(node.value) {
+        if let Some(it) = ast::Adt::cast(node.value.clone()) {
             let adt_id = map.node_to_adt(&it);
             return adt_id.map(From::from);
+        }
+
+        if let Some(it) = ast::Variant::cast(node.value) {
+            let variant_id = map.node_to_variant(&it);
+            return variant_id.map(From::from);
         }
     }
     None
