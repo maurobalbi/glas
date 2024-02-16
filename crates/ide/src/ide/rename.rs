@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
+use anyhow::Context;
 use itertools::Either;
 use smol_str::SmolStr;
 use syntax::{ast::AstNode, best_token_at_offset, lexer::GleamLexer, TextRange};
@@ -27,6 +28,16 @@ pub(crate) fn prepare_rename(
             Either::Left(val) => val,
             Either::Right(str) => return Err(str),
         };
+
+    let is_local = def
+        .module(sema.db.upcast())
+        .ok_or_else(|| "No references found".to_owned())?
+        .package(sema.db.upcast())
+        .is_local(sema.db.upcast());
+        
+    if !is_local {
+        return Err("Cannot rename a definition from a dependency".to_owned())
+    }
 
     let name = match def {
         Definition::Module(_) | Definition::BuiltIn(_) => {

@@ -245,11 +245,12 @@ impl PackageGraph {
         self.target = target;
     }
 
-    pub fn add_package(&mut self, display_name: SmolStr, gleam_toml: FileId) -> PackageId {
+    pub fn add_package(&mut self, display_name: SmolStr, gleam_toml: FileId, is_local: bool) -> PackageId {
         let info = PackageInfo {
             gleam_toml,
             display_name,
             dependencies: Vec::new(),
+            is_local,
         };
         self.arena.alloc(info)
     }
@@ -278,6 +279,7 @@ pub struct PackageInfo {
     // pub version: Option<String>,
     pub display_name: SmolStr,
     pub dependencies: Vec<Dependency>,
+    pub is_local: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]

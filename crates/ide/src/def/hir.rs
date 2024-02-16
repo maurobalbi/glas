@@ -27,6 +27,13 @@ pub struct Package {
 }
 
 impl Package {
+    pub fn is_local(self, db: &dyn DefDatabase) -> bool {
+        let package_id = db.source_root_package(self.id);
+        let graph = db.package_graph();
+        let package = graph[*package_id].clone();
+        package.is_local
+    }
+
     pub fn dependencies(self, db: &dyn DefDatabase) -> Vec<Package> {
         let package_id = db.source_root_package(self.id);
         let graph = db.package_graph();
