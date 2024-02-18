@@ -540,7 +540,7 @@ fn param(p: &mut Parser, is_anon: bool) {
             let h = p.start_node();
             p.bump();
             p.finish_node(h, HOLE);
-        },
+        }
         IDENT => {
             if p.nth(1) == IDENT || p.nth(1) == DISCARD_IDENT {
                 if is_anon {
@@ -557,16 +557,16 @@ fn param(p: &mut Parser, is_anon: bool) {
                     let pat = p.start_node();
                     name(p);
                     p.finish_node(pat, PATTERN_VARIABLE);
-                },
+                }
                 DISCARD_IDENT => {
                     let pat = p.start_node();
                     p.bump();
-                    p.finish_node(pat, HOLE); 
+                    p.finish_node(pat, HOLE);
                 }
-                _ => p.error(ErrorKind::ExpectedIdentifier)
+                _ => p.error(ErrorKind::ExpectedIdentifier),
             }
-        },
-        _ => p.error(ErrorKind::ExpectedIdentifier)
+        }
+        _ => p.error(ErrorKind::ExpectedIdentifier),
     }
     if p.eat(T![":"]) {
         type_expr(p);

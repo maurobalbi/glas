@@ -184,7 +184,7 @@ impl Analysis {
     pub fn references(&self, pos: FilePos) -> Cancellable<Option<Vec<FileRange>>> {
         self.with_db(|db| references::references(db, pos))
     }
-    
+
     pub fn prepare_rename(&self, fpos: FilePos) -> Cancellable<RenameResult<(TextRange, SmolStr)>> {
         self.with_db(|db| rename::prepare_rename(db, fpos))
     }
@@ -196,7 +196,7 @@ impl Analysis {
     ) -> Cancellable<RenameResult<WorkspaceEdit>> {
         self.with_db(|db| rename::rename(db, fpos, new_name))
     }
-    
+
     pub fn syntax_tree(&self, file_id: FileId) -> Cancellable<String> {
         self.with_db(|db| syntax_tree::syntax_tree(db, file_id))
     }

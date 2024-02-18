@@ -245,7 +245,12 @@ impl PackageGraph {
         self.target = target;
     }
 
-    pub fn add_package(&mut self, display_name: SmolStr, gleam_toml: FileId, is_local: bool) -> PackageId {
+    pub fn add_package(
+        &mut self,
+        display_name: SmolStr,
+        gleam_toml: FileId,
+        is_local: bool,
+    ) -> PackageId {
         let info = PackageInfo {
             gleam_toml,
             display_name,

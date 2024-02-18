@@ -55,7 +55,11 @@ impl TestDB {
         }
         change.set_roots(vec![SourceRoot::new(file_set, "/".into())]);
         let mut package_graph = PackageGraph::default();
-        package_graph.add_package(SmolStr::from("test"), FileId(f.files.len() as u32 - 1), true);
+        package_graph.add_package(
+            SmolStr::from("test"),
+            FileId(f.files.len() as u32 - 1),
+            true,
+        );
 
         change.set_package_graph(package_graph);
         change.apply(&mut db);
@@ -172,7 +176,7 @@ impl Fixture {
             .map(|(i, p)| p.with_context(|| format!("Discontinuous marker: {}", i)))
             .collect::<Result<Vec<_>>>()?;
 
-            tracing::info!("{:?}", this);
+        tracing::info!("{:?}", this);
         Ok(this)
     }
 

@@ -53,10 +53,10 @@ mod tests {
                     src.push(refs.range);
                 })
                 .or_insert_with(|| vec![refs.range]);
-        };
+        }
 
         let mut actual = String::new();
-        for (id, mut ranges) in file_set.into_iter().sorted_by(|a,b| a.0.cmp(&b.0)) {
+        for (id, mut ranges) in file_set.into_iter().sorted_by(|a, b| a.0.cmp(&b.0)) {
             ranges.sort_by(|a, b| b.start().cmp(&a.start()));
             let mut content = db.file_content(id).to_string();
             for range in ranges {

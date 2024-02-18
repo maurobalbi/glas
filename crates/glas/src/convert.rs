@@ -1,10 +1,12 @@
 use crate::{semantic_tokens, LineMap, Result, Vfs};
 use async_lsp::{ErrorCode, ResponseError};
 use ide::{
-    CompletionItem, CompletionItemKind, CompletionRelevance, Diagnostic, DiagnosticKind, FileId, FilePos, FileRange, HlRange, HlRelated, HoverResult, Severity, TextEdit, WorkspaceEdit
+    CompletionItem, CompletionItemKind, CompletionRelevance, Diagnostic, DiagnosticKind, FileId,
+    FilePos, FileRange, HlRange, HlRelated, HoverResult, Severity, TextEdit, WorkspaceEdit,
 };
 use lsp::{
-    DiagnosticTag, DocumentHighlight, DocumentHighlightKind, Documentation, Hover, MarkupContent, MarkupKind, PrepareRenameResponse, SemanticToken
+    DiagnosticTag, DocumentHighlight, DocumentHighlightKind, Documentation, Hover, MarkupContent,
+    MarkupKind, PrepareRenameResponse, SemanticToken,
 };
 use lsp_types::{
     self as lsp, DiagnosticRelatedInformation, DiagnosticSeverity, Location, NumberOrString,

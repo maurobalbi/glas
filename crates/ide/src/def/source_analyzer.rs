@@ -7,7 +7,7 @@ use syntax::{
 
 use crate::{
     ty::{FieldResolution, InferenceResult, Ty, TyDatabase},
-    DefDatabase, FileId, InFile,
+    FileId, InFile,
 };
 
 use super::{

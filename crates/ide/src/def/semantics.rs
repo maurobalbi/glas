@@ -2,7 +2,7 @@ use std::{cell::RefCell, collections::HashMap};
 
 use smol_str::SmolStr;
 use syntax::{
-    ast::{self, AstNode, VariantRefField},
+    ast::{self, AstNode},
     match_ast, GleamLanguage, SyntaxNode, TextRange,
 };
 

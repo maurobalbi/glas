@@ -305,8 +305,8 @@ import test.{type $0Test} as t
 pub type <Test>"#
             ],
         )
-    } 
-    
+    }
+
     #[test]
     fn resolve_qualified() {
         check(
@@ -399,9 +399,10 @@ fn get_age(d: Dolly) {
         )
     }
 
-#[test]
-fn resovle_constr_field() {
-    check(r#"
+    #[test]
+    fn resovle_constr_field() {
+        check(
+            r#"
     type Reader =
   fn(Int) -> Result(Read, Nil)
 
@@ -412,6 +413,8 @@ type Read {
 
 fn bla(a: read, b: next) {
   Chunk($0next: b, a: a)
-}"#, expect!["Chunk(a: Int, <next: Reader>)"])
-}
+}"#,
+            expect!["Chunk(a: Int, <next: Reader>)"],
+        )
+    }
 }

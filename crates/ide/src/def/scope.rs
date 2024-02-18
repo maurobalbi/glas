@@ -37,7 +37,10 @@ pub fn module_scope_with_map_query(
             continue;
         };
 
-        let local_accessor = imported_module.as_name.clone().unwrap_or_else(|| imported_module.accessor.clone());
+        let local_accessor = imported_module
+            .as_name
+            .clone()
+            .unwrap_or_else(|| imported_module.accessor.clone());
 
         scope.modules.insert(local_accessor, file);
     }
@@ -350,7 +353,7 @@ impl ExprScopes {
             }
             Expr::TupleIndex {
                 base: container,
-                index: _, 
+                index: _,
                 base_string: _,
             } => {
                 self.traverse_expr(body, *container, scope);

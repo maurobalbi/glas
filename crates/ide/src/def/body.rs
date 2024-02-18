@@ -261,9 +261,7 @@ impl BodyLowerCtx {
             ast::Expr::Literal(lit) => {
                 self.alloc_expr(lit.kind().map_or(Expr::Missing, Expr::Literal), ptr)
             }
-            ast::Expr::BitArray(_) => {
-                self.alloc_expr(Expr::BitArray, ptr)
-            }
+            ast::Expr::BitArray(_) => self.alloc_expr(Expr::BitArray, ptr),
             ast::Expr::Case(case) => {
                 let subjects = case.subjects().map(|s| self.lower_expr(s)).collect();
 

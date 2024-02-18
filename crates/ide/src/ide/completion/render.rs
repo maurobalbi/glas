@@ -57,7 +57,7 @@ pub fn render_variant(ctx: &CompletionContext<'_>, id: &VariantId) -> Completion
         id: id.local_id,
     };
     let fields = it.fields(ctx.db.upcast());
-    let fields_str = fields
+    let _fields_str = fields
         .iter()
         .enumerate()
         .map(|(i, p)| {
@@ -81,7 +81,7 @@ pub fn render_variant(ctx: &CompletionContext<'_>, id: &VariantId) -> Completion
         source_range: ctx.source_range,
         replace: name.into(),
         kind: CompletionItemKind::Function,
-        signature: Some(Adt{id: it.parent}.name(ctx.db.upcast()).into()),
+        signature: Some(Adt { id: it.parent }.name(ctx.db.upcast()).into()),
         relevance: CompletionRelevance::default(),
         description: None,
         documentation: None,
@@ -109,7 +109,11 @@ pub fn render_adt(ctx: &CompletionContext<'_>, id: &AdtId) -> CompletionItem {
     }
 }
 
-pub fn render_module(ctx: &CompletionContext<'_>, id: &FileId, as_name: Option<SmolStr>) -> CompletionItem {
+pub fn render_module(
+    ctx: &CompletionContext<'_>,
+    id: &FileId,
+    as_name: Option<SmolStr>,
+) -> CompletionItem {
     let it = Module { id: *id };
     let label = as_name.unwrap_or_else(|| it.import_accessor(ctx.db.upcast()));
 

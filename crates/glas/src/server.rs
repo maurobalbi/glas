@@ -1,7 +1,7 @@
 use crate::capabilities::{negotiate_capabilities, NegotiatedCapabilities};
 use crate::config::{Config, CONFIG_KEY};
 use crate::{convert, handler, lsp_ext, UrlExt, Vfs, MAX_FILE_LEN};
-use anyhow::{bail, ensure, Context, Result, Error};
+use anyhow::{bail, ensure, Context, Result};
 use async_lsp::concurrency::ConcurrencyLayer;
 use async_lsp::panic::CatchUnwindLayer;
 use async_lsp::router::Router;
@@ -25,12 +25,11 @@ use lsp_types::{
     FileEvent, FileSystemWatcher, GlobPattern, InitializeParams, InitializeResult,
     InitializedParams, MessageType, NumberOrString, OneOf, Position, ProgressParams,
     ProgressParamsValue, PublishDiagnosticsParams, Range, Registration, RegistrationParams,
-    RelativePattern, ServerInfo, ShowMessageParams, TextDocumentContentChangeEvent, TextEdit, Url,
-    WindowClientCapabilities, WorkDoneProgress, WorkDoneProgressBegin,
-    WorkDoneProgressCreateParams, WorkDoneProgressEnd, WorkDoneProgressReport,
+    RelativePattern, ServerInfo, ShowMessageParams, TextEdit, Url, WindowClientCapabilities,
+    WorkDoneProgress, WorkDoneProgressBegin, WorkDoneProgressCreateParams, WorkDoneProgressEnd,
+    WorkDoneProgressReport,
 };
 use smol_str::SmolStr;
-use tokio::io::AsyncWriteExt;
 
 use tokio::sync::oneshot;
 use tower::ServiceBuilder;
@@ -81,8 +80,6 @@ pub const MANIFEST_TOML: &str = "manifest.toml";
 const LOAD_WORKSPACE_PROGRESS_TOKEN: &str = "glas/loadWorkspaceProgress";
 
 const LOAD_GLEAM_WORKSPACE_DEBOUNCE_DURATION: Duration = Duration::from_millis(100);
-
-struct ClientState {}
 
 pub struct Server {
     // States.
@@ -637,10 +634,11 @@ impl Server {
                 let grand_parent = parent.and_then(|p| p.parent());
 
                 tracing::info!("GPARENT PATH {:?}", grand_parent);
-                let is_grand_parent_build = grand_parent.map(|p| p.ends_with("build")).unwrap_or(false);
+                let is_grand_parent_build =
+                    grand_parent.map(|p| p.ends_with("build")).unwrap_or(false);
                 let is_not_local = is_parent_packages && is_grand_parent_build;
-                graph.add_package(name.clone(), gleam_file, !is_not_local )
-            },
+                graph.add_package(name.clone(), gleam_file, !is_not_local)
+            }
         };
 
         seen.insert(name, package);

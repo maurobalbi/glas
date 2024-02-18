@@ -1,5 +1,8 @@
 use lsp_types::{
-    CompletionOptions, HoverProviderCapability, InitializeParams, OneOf, RenameOptions, SemanticTokensLegend, SemanticTokensOptions, SemanticTokensServerCapabilities, ServerCapabilities, TextDocumentSyncCapability, TextDocumentSyncKind, TextDocumentSyncOptions, WorkDoneProgressOptions
+    CompletionOptions, HoverProviderCapability, InitializeParams, OneOf, RenameOptions,
+    SemanticTokensLegend, SemanticTokensOptions, SemanticTokensServerCapabilities,
+    ServerCapabilities, TextDocumentSyncCapability, TextDocumentSyncKind, TextDocumentSyncOptions,
+    WorkDoneProgressOptions,
 };
 
 use crate::semantic_tokens::{SEMANTIC_TOKEN_MODIFIERS, SEMANTIC_TOKEN_TYPES};

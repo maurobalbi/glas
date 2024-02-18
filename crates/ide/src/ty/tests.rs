@@ -152,8 +152,10 @@ fn melt() {
     $0snow.Snow
 }
         "#,
-        expect![r#"
-        melt: fn() -> fn(Int) -> WaterKind"#],
+        expect![
+            r#"
+        melt: fn() -> fn(Int) -> WaterKind"#
+        ],
     )
 }
 

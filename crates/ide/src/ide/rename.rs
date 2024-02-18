@@ -1,6 +1,5 @@
 use std::collections::{HashMap, HashSet};
 
-use anyhow::Context;
 use itertools::Either;
 use smol_str::SmolStr;
 use syntax::{ast::AstNode, best_token_at_offset, lexer::GleamLexer, TextRange};
@@ -12,7 +11,7 @@ use crate::{
     },
     text_edit::WorkspaceEdit,
     ty::TyDatabase,
-    DefDatabase, FileId, FilePos, FileRange, TextEdit,
+    FileId, FilePos, TextEdit,
 };
 
 pub type RenameResult<T> = Result<T, String>;
@@ -34,9 +33,9 @@ pub(crate) fn prepare_rename(
         .ok_or_else(|| "No references found".to_owned())?
         .package(sema.db.upcast())
         .is_local(sema.db.upcast());
-        
+
     if !is_local {
-        return Err("Cannot rename a definition from an external dependency".to_owned())
+        return Err("Cannot rename a definition from an external dependency".to_owned());
     }
 
     let name = match def {
@@ -55,19 +54,19 @@ pub(crate) fn rename(
     new_name: &str,
 ) -> RenameResult<WorkspaceEdit> {
     let sema = Semantics::new(db);
-    let (range, def) =
+    let (_range, def) =
         match find_def(&sema, fpos).ok_or_else(|| "No references found".to_owned())? {
             Either::Left(val) => val,
             Either::Right(str) => return Err(str),
         };
 
     let mut lexer = GleamLexer::new(new_name);
-    
+
     let new_token = lexer.next().ok_or_else(|| "Not a valid identifier")?.kind;
     if !lexer.next().is_none() {
         return Err("Not a valid identifier".to_owned());
     }
-        
+
     match def {
         Definition::Module(_) | Definition::BuiltIn(_) => {
             return Err(String::from("No references found"))
@@ -132,11 +131,10 @@ fn find_def(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::base::SourceDatabase;
     use crate::tests::TestDB;
-    use crate::{base::SourceDatabase, FileId};
     use expect_test::{expect, Expect};
     use itertools::Itertools;
-    use tracing_test::traced_test;
 
     fn check(fixture: &str, new_name: &str, expect: Expect) {
         let (db, f) = TestDB::from_fixture(fixture).unwrap();
@@ -174,10 +172,9 @@ mod tests {
         let (db, f) = TestDB::from_fixture(fixture).unwrap();
         assert_eq!(f.markers().len(), 1, "Missing markers");
         let Err(e) = rename(&db, f[0], new_name) else {
-            return expect.assert_eq("Expected no rename results")
+            return expect.assert_eq("Expected no rename results");
         };
         expect.assert_eq(e.trim_start())
-
     }
 
     #[test]
@@ -566,15 +563,23 @@ reader: Read,
 
     #[test]
     fn check_rename() {
-        check_fail(r#"
+        check_fail(
+            r#"
             fn $0function() {}
-        "#, "new_Name", expect!["Expected a lowercase identifier"]);
+        "#,
+            "new_Name",
+            expect!["Expected a lowercase identifier"],
+        );
     }
 
     #[test]
     fn check_rename2() {
-        check_fail(r#"
+        check_fail(
+            r#"
             fn $0function() {}
-        "#, "ne Name", expect!["Not a valid identifier"]);
+        "#,
+            "ne Name",
+            expect!["Not a valid identifier"],
+        );
     }
 }

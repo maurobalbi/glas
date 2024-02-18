@@ -162,9 +162,7 @@ impl<'a> FindUsages<'a> {
                         ast::TypeNameOrName::NameRef(name_ref) => {
                             self.found_name_ref(&name_ref, sink)
                         }
-                        ast::TypeNameOrName::Label(label) => {
-                            self.found_label(&label, sink)
-                        }
+                        ast::TypeNameOrName::Label(label) => self.found_label(&label, sink),
                     } {
                         return;
                     }
@@ -210,7 +208,7 @@ impl<'a> FindUsages<'a> {
         if let Some(def) = classify_node(self.sema, name.syntax()) {
             if self.def == def {
                 let file_id = self.sema.find_file(name.syntax()).file_id;
-                return sink(file_id, name.syntax().text_range())
+                return sink(file_id, name.syntax().text_range());
             }
         }
         false
@@ -221,10 +219,10 @@ impl<'a> FindUsages<'a> {
         label: &ast::Label,
         sink: &mut dyn FnMut(FileId, TextRange) -> bool,
     ) -> bool {
-         if let Some(def) = classify_node(self.sema, label.syntax()) {
+        if let Some(def) = classify_node(self.sema, label.syntax()) {
             if self.def == def {
                 let file_id = self.sema.find_file(label.syntax()).file_id;
-                return sink(file_id, label.syntax().text_range())
+                return sink(file_id, label.syntax().text_range());
             }
         }
         false

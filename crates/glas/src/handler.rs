@@ -1,79 +1,17 @@
 use std::{process, sync::Arc};
 
 use crate::{convert, lsp_ext::SyntaxTreeParams, StateSnapshot};
-use anyhow::{ensure, Context, Result};
+use anyhow::{ensure, Result};
 use ide::{FileRange, GotoDefinitionResult};
 use lsp_types::{
-    CompletionParams, CompletionResponse, Diagnostic, DocumentFormattingParams, DocumentHighlight, DocumentHighlightParams, GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverParams, Location, Position, PrepareRenameResponse, Range, ReferenceParams, RenameParams, SemanticTokens, SemanticTokensParams, SemanticTokensRangeParams, SemanticTokensRangeResult, SemanticTokensResult, TextDocumentPositionParams, TextEdit, Url, WorkspaceEdit
+    CompletionParams, CompletionResponse, Diagnostic, DocumentFormattingParams, DocumentHighlight,
+    DocumentHighlightParams, GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverParams,
+    Location, Position, PrepareRenameResponse, Range, ReferenceParams, RenameParams,
+    SemanticTokens, SemanticTokensParams, SemanticTokensRangeParams, SemanticTokensRangeResult,
+    SemanticTokensResult, TextDocumentPositionParams, TextEdit, Url, WorkspaceEdit,
 };
 
 const MAX_DIAGNOSTICS_CNT: usize = 128;
-
-pub(crate) fn formatting(
-    snap: StateSnapshot,
-    params: DocumentFormattingParams,
-) -> Result<Option<Vec<TextEdit>>> {
-    fn run_with_stdin(
-        cmd: &[String],
-        stdin_data: impl AsRef<[u8]> + Send + 'static,
-    ) -> Result<String> {
-        let mut child = process::Command::new(&cmd[0])
-            .args(&cmd[1..])
-            .stdin(process::Stdio::piped())
-            .stdout(process::Stdio::piped())
-            .stderr(process::Stdio::piped())
-            .spawn()?;
-        let mut stdin = child.stdin.take().unwrap();
-        std::thread::spawn(move || {
-            let _ = std::io::copy(&mut stdin_data.as_ref(), &mut stdin);
-        });
-        let output = child.wait_with_output()?;
-        ensure!(
-            output.status.success(),
-            "Formatter exited with {}, stderr: {}",
-            output.status,
-            String::from_utf8_lossy(&output.stderr),
-        );
-        let stdout = String::from_utf8(output.stdout)?;
-        Ok(stdout)
-    }
-
-    let cmd = vec![
-        String::from("gleam"),
-        String::from("format"),
-        String::from("--stdin"),
-    ];
-
-    let (file_content, line_map) = {
-        let vfs = snap.vfs();
-        let (file, line_map) = convert::from_file(&vfs, &params.text_document)?;
-        (vfs.content_for_file(file), line_map)
-    };
-
-    let Ok(new_content) = run_with_stdin(&cmd, <Arc<[u8]>>::from(file_content.clone())) else {    
-        return Ok(None);
-    };
-
-    if new_content == *file_content {
-        return Ok(None);
-    }
-
-    // Replace the whole file.
-    let last_line = line_map.last_line();
-    Ok(Some(vec![TextEdit {
-        range: Range {
-            start: Position {
-                line: 0,
-                character: 0,
-            },
-            end: Position {
-                line: last_line,
-                character: line_map.end_col_for_line(last_line),
-            },
-        },
-        new_text: new_content,
-    }]))
-}
 
 pub(crate) fn hover(snap: StateSnapshot, params: HoverParams) -> Result<Option<Hover>> {
     let (fpos, line_map) =

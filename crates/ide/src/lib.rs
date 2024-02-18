@@ -2,8 +2,8 @@ mod base;
 mod def;
 mod diagnostic;
 mod ide;
-mod ty;
 mod text_edit;
+mod ty;
 
 #[cfg(test)]
 mod tests;

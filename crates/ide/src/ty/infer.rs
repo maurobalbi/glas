@@ -800,7 +800,7 @@ impl<'db> InferCtx<'db> {
             }
             Expr::TupleIndex {
                 base: container,
-                base_string,
+                base_string: _,
                 index,
             } => {
                 let base_ty = self.infer_expr(*container);
