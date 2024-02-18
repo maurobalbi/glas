@@ -398,4 +398,20 @@ fn get_age(d: Dolly) {
             ],
         )
     }
+
+#[test]
+fn resovle_constr_field() {
+    check(r#"
+    type Reader =
+  fn(Int) -> Result(Read, Nil)
+
+type Read {
+  Chunk(a: Int, next: Reader)
+  ReadingFinished
+}
+
+fn bla(a: read, b: next) {
+  Chunk($0next: b, a: a)
+}"#, expect!["Chunk(a: Int, <next: Reader>)"])
+}
 }

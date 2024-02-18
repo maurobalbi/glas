@@ -348,6 +348,7 @@ impl LowerCtx {
         let start = self.next_field_idx();
         if let Some(fields) = constructor.field_list() {
             for field in fields.fields() {
+                tracing::info!("FIELD {:#?}", field);
                 if let Some(type_ref) = module::typeref_from_ast_opt(field.type_()) {
                     let label = field.label().and_then(|t| t.text());
                     self.alloc_field(FieldData {

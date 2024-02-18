@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.7
+
+
+### Fixed
+- Fix labelled field resolution
+
 ## v0.1.6
 
 ### Fixed

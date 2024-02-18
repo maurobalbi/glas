@@ -377,7 +377,7 @@ fn name(a: Bobele) {
             r#"
 #- test.gleam
 type Bobele {
-    Bobobo(name: String)
+    Bobobo(alpha: Int, name: String)
     Dudu(name: String)
 }
 
@@ -394,7 +394,7 @@ fn name(a: Bobele) {
                 r#"--- FileId(0)
 
 type Bobele {
-    Bobobo(name: String)
+    Bobobo(alpha: Int, name: String)
     Dudu(name: String)
 }
 
@@ -416,7 +416,7 @@ fn name(a: Bobele) {
 #- test.gleam
 type Bobele {
     Bobobo(name: String)
-    Second($0dodo: String)
+    Second(alpha: Int, $0dodo: String)
 }
 
 #- test2.gleam
@@ -425,7 +425,7 @@ import test as t
 fn name(a: Bobele) {
     case a {
         Bobobo(name: name) -> name
-        t.Second(dodo: name) -> name
+        t.Second(alpha: Int, dodo: name) -> name
     }
 }
 "#,
@@ -435,7 +435,7 @@ fn name(a: Bobele) {
 
 type Bobele {
     Bobobo(name: String)
-    Second(new_name: String)
+    Second(alpha: Int, new_name: String)
 }
 --- FileId(1)
 
@@ -444,8 +444,120 @@ import test as t
 fn name(a: Bobele) {
     case a {
         Bobobo(name: name) -> name
-        t.Second(new_name: name) -> name
+        t.Second(alpha: Int, new_name: name) -> name
     }
+}
+"#
+            ],
+        );
+    }
+
+    #[test]
+    fn rename_variant_label() {
+        check(
+            r#"
+type Read {
+    Chunk(a: BitArray, $0next: Reader)
+    ReadingFinished
+}
+
+fn read_body_loop(
+reader: Read,
+) -> BitArray {
+    case reader {
+        ReadingFinished -> <<1>>
+        Chunk(chunk, next: asb) -> {
+            chunk
+        }
+    }   
+}
+"#,
+            "new_name",
+            expect![
+                r#"--- FileId(0)
+
+type Read {
+    Chunk(a: BitArray, new_name: Reader)
+    ReadingFinished
+}
+
+fn read_body_loop(
+reader: Read,
+) -> BitArray {
+    case reader {
+        ReadingFinished -> <<1>>
+        Chunk(chunk, new_name: asb) -> {
+            chunk
+        }
+    }   
+}
+"#
+            ],
+        );
+    }
+
+    #[test]
+    fn rename_variant_constructor_field() {
+        check(
+            r#"
+type Read {
+    Chunk(a: BitArray, $0next: Reader)
+    ReadingFinished
+}
+
+fn read_body_loop(
+reader: Read,
+) -> Read {
+    Chunk(chunk, next: asb) 
+}
+"#,
+            "new_name",
+            expect![
+                r#"--- FileId(0)
+
+type Read {
+    Chunk(a: BitArray, new_name: Reader)
+    ReadingFinished
+}
+
+fn read_body_loop(
+reader: Read,
+) -> Read {
+    Chunk(chunk, new_name: asb) 
+}
+"#
+            ],
+        );
+    }
+
+    #[test]
+    fn rename_variant_constructor_field_no_label() {
+        check(
+            r#"
+type Read {
+    Chunk(BitArray, $0next: Read)
+    ReadingFinished
+}
+
+fn read_body_loop(
+reader: Read,
+) -> Read {
+    Chunk(chunk, next: Read) 
+}
+"#,
+            "new_name",
+            expect![
+                r#"--- FileId(0)
+
+type Read {
+    Chunk(BitArray, new_name: Read)
+    ReadingFinished
+}
+
+fn read_body_loop(
+reader: Read,
+) -> Read {
+    Chunk(chunk, new_name: Read) 
 }
 "#
             ],

@@ -2,7 +2,7 @@ use std::{cell::RefCell, collections::HashMap};
 
 use smol_str::SmolStr;
 use syntax::{
-    ast::{self, AstNode},
+    ast::{self, AstNode, VariantRefField},
     match_ast, GleamLanguage, SyntaxNode, TextRange,
 };
 
@@ -280,14 +280,19 @@ fn classify_label(sema: &Semantics, label: &ast::Label) -> Option<Definition> {
 
     let parent = label.syntax().parent()?;
 
-    let ref_field = ast::VariantRefField::cast(parent.clone())?;
-    let field_list = ast::VariantRefFieldList::cast(ref_field.syntax().parent()?)?;
-    let variant_ref = ast::VariantRef::cast(field_list.syntax().parent()?)?;
-    let variant_name = variant_ref.variant()?;
-
-    let variant = match classify_name_ref(sema, &variant_name)? {
-        Definition::Variant(variant) => variant,
-        _ => return None,
+    let Definition::Variant(variant) = match_ast! {
+        match parent {
+            ast::VariantRefField(ref_field) => {
+                classify_ref_field(sema, &ref_field)
+            },
+            ast::Arg(arg) => {
+                classify_arg(sema, &arg)
+            },
+            _ => return None
+        }
+    }?
+    else {
+        return None;
     };
 
     let adt = variant.parent();
@@ -298,10 +303,34 @@ fn classify_label(sema: &Semantics, label: &ast::Label) -> Option<Definition> {
     }
 
     for field in variant.fields(sema.db.upcast()).iter() {
-        if field.label(sema.db.upcast())? == label_text {
-            return Some(Definition::Field(*field));
+        if let Some(field_label) = field.label(sema.db.upcast()) {
+            if field_label == *label_text {
+                return Some(Definition::Field(*field));
+            }
         }
     }
+
+    None
+}
+
+fn classify_ref_field(sema: &Semantics, ref_field: &ast::VariantRefField) -> Option<Definition> {
+    let field_list = ast::VariantRefFieldList::cast(ref_field.syntax().parent()?)?;
+    let variant_ref = ast::VariantRef::cast(field_list.syntax().parent()?)?;
+    let variant_name = variant_ref.variant()?;
+
+    classify_name_ref(sema, &variant_name)
+}
+
+fn classify_arg(sema: &Semantics, arg: &ast::Arg) -> Option<Definition> {
+    let arg_list = ast::ArgList::cast(arg.syntax().parent()?)?;
+    let constructor = arg_list.syntax().prev_sibling()?;
+    if let Some(constr) = ast::VariantConstructor::cast(constructor.clone()) {
+        return classify_name_ref(sema, &constr.name()?);
+    };
+
+    if let Some(constr) = ast::FieldAccessExpr::cast(constructor) {
+        return classify_name_ref(sema, &constr.label()?);
+    };
 
     None
 }
@@ -471,16 +500,21 @@ impl ToDef for ast::VariantField {
         if let ModuleDefId::VariantId(it) = container {
             let text = src.value.label()?.text()?;
 
-            let variant = Variant { id: it.local_id, parent: it.parent };
+            let variant = Variant {
+                id: it.local_id,
+                parent: it.parent,
+            };
             let adt = variant.parent();
 
             if let Some(field) = adt.common_fields(sema.db.upcast()).get(&text) {
-                return Some(*field)
+                return Some(*field);
             }
 
             for field in variant.fields(sema.db.upcast()) {
-                if field.label(sema.db.upcast())? == text {
-                    return Some(field)
+                if let Some(label) = field.label(sema.db.upcast()) {
+                    if label == text {
+                        return Some(field);
+                    }
                 }
             }
         }
