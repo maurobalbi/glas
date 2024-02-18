@@ -139,6 +139,25 @@ fn unsaturated_constructor() {
 }
 
 #[test]
+fn unsaturated_constructor_qualified() {
+    check_fix(
+        r#"
+#- snow.gleam
+pub type WaterKind { Snow(Int) }
+
+#- ice.gleam
+import snow
+
+fn melt() {
+    $0snow.Snow
+}
+        "#,
+        expect![r#"
+        melt: fn() -> fn(Int) -> WaterKind"#],
+    )
+}
+
+#[test]
 fn let_infer() {
     check_fn(
         "type Biboop {Biboop(Int)} fn biboob(a) { let b = a b }",
@@ -724,7 +743,6 @@ fn labels_infer() {
 }
 
 #[test]
-#[traced_test]
 fn labels_infer_pattern() {
     check_fn(
         r#"
