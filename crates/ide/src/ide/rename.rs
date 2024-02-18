@@ -36,7 +36,7 @@ pub(crate) fn prepare_rename(
         .is_local(sema.db.upcast());
         
     if !is_local {
-        return Err("Cannot rename a definition from a dependency".to_owned())
+        return Err("Cannot rename a definition from an external dependency".to_owned())
     }
 
     let name = match def {

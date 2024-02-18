@@ -16,7 +16,6 @@ pub(crate) fn references(db: &dyn TyDatabase, fpos: FilePos) -> Option<Vec<FileR
 
     let def = semantics::classify_node(&sema, &tok.parent()?)?;
 
-    tracing::info!("DEFINITION {:?} {:?}",def,  def.name(sema.db.upcast()));
     def.clone()
         .usages(&sema)
         .in_scope(&SearchScope::package_graph(db.upcast()))
@@ -47,7 +46,6 @@ mod tests {
 
         let mut file_set: IndexMap<FileId, Vec<TextRange>> = IndexMap::new();
 
-        tracing::info!("Refs {:?}", refs);
         for refs in refs.into_iter() {
             file_set
                 .entry(refs.file_id)

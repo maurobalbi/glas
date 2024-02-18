@@ -304,7 +304,6 @@ impl BodyLowerCtx {
             }
             ast::Expr::TupleIndex(tup) => {
                 let container = self.lower_expr_opt(tup.base());
-                tracing::info!("TUP {:#?} {:#?}", tup, tup.index());
                 let Some(index) = tup
                     .index()
                     .and_then(|i| i.text())
