@@ -348,6 +348,13 @@ impl ExprScopes {
             } => {
                 self.traverse_expr(body, *container, scope);
             }
+            Expr::TupleIndex {
+                base: container,
+                index: _, 
+                base_string: _,
+            } => {
+                self.traverse_expr(body, *container, scope);
+            }
             Expr::Case { subjects, clauses } => {
                 for s in subjects.iter() {
                     self.traverse_expr(body, *s, scope);

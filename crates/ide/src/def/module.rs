@@ -130,6 +130,7 @@ pub enum Expr {
     Missing,
     Hole,
     Literal(LiteralKind),
+    BitArray,
     Block {
         stmts: Vec<Statement>,
     },
@@ -140,6 +141,11 @@ pub enum Expr {
     },
     Tuple {
         fields: Vec<ExprId>,
+    },
+    TupleIndex {
+        base: ExprId,
+        base_string: SmolStr,
+        index: usize,
     },
     FieldAccess {
         base_string: SmolStr,

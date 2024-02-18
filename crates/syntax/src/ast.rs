@@ -337,6 +337,10 @@ asts! {
             self.0.children_with_tokens().find_map(NodeOrToken::into_token)
         }
 
+        pub fn text(&self) -> Option<SmolStr>{
+            self.token().map(|t| t.text().into())
+        }
+
         pub fn kind(&self) -> Option<LiteralKind> {
             Some(match self.token()?.kind() {
                 INTEGER => LiteralKind::Int,
@@ -411,8 +415,8 @@ asts! {
         fields: [Expr],
     },
     TUPLE_INDEX = TupleIndex {
-        index: Literal,
         base: Expr,
+        index: Literal,
     },
     IMPORT = Import {
         module_path: ModulePath,

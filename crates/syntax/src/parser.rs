@@ -699,7 +699,9 @@ fn expr_bp(p: &mut Parser, min_bp: u8) {
                     }
                     INTEGER => {
                         let m = p.start_node_before(lhs);
+                        let lit = p.start_node();
                         p.bump();
+                        p.finish_node(lit, LITERAL);
                         lhs = p.finish_node(m, TUPLE_INDEX);
                     }
                     _ => {

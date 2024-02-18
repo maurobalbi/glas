@@ -261,6 +261,9 @@ impl BodyLowerCtx {
             ast::Expr::Literal(lit) => {
                 self.alloc_expr(lit.kind().map_or(Expr::Missing, Expr::Literal), ptr)
             }
+            ast::Expr::BitArray(_) => {
+                self.alloc_expr(Expr::BitArray, ptr)
+            }
             ast::Expr::Case(case) => {
                 let subjects = case.subjects().map(|s| self.lower_expr(s)).collect();
 
@@ -295,6 +298,27 @@ impl BodyLowerCtx {
                             .label()
                             .and_then(|t| t.text())
                             .unwrap_or_else(Name::missing),
+                    },
+                    ptr,
+                )
+            }
+            ast::Expr::TupleIndex(tup) => {
+                let container = self.lower_expr_opt(tup.base());
+                tracing::info!("TUP {:#?} {:#?}", tup, tup.index());
+                let Some(index) = tup
+                    .index()
+                    .and_then(|i| i.text())
+                    .and_then(|t| t.to_string().parse::<usize>().ok())
+                else {
+                    return self.alloc_expr(Expr::Missing, ptr);
+                };
+                self.alloc_expr(
+                    Expr::TupleIndex {
+                        base_string: tup
+                            .base()
+                            .map_or_else(Name::missing, |b| b.syntax().to_string().into()),
+                        base: container,
+                        index,
                     },
                     ptr,
                 )

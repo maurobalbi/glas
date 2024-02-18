@@ -492,6 +492,7 @@ impl<'db> InferCtx<'db> {
                 LiteralKind::String => Ty::String,
             }
             .intern(self),
+            Expr::BitArray => Ty::BitArray.intern(self),
             Expr::Block { stmts } => {
                 let old_resolver = mem::replace(
                     &mut self.resolver,
@@ -721,8 +722,9 @@ impl<'db> InferCtx<'db> {
             } => {
                 let field_var = self.new_ty_var();
                 let base_ty = self.infer_expr(*container);
-                // ToDo: This is wrong, since it might also be a module_access
+
                 let adt = self.table.get_mut(base_ty.0);
+                tracing::info!("TUP {:?}", adt);
                 if let Ty::Adt {
                     adt_id,
                     generic_params,
@@ -794,6 +796,23 @@ impl<'db> InferCtx<'db> {
                     }
                 }
                 field_var
+            }
+            Expr::TupleIndex {
+                base: container,
+                base_string,
+                index,
+            } => {
+                let base_ty = self.infer_expr(*container);
+                let tuple = self.table.get_mut(base_ty.0);
+
+                tracing::info!("TUP {:?}", tuple);
+                if let Ty::Tuple { fields } = tuple.clone() {
+                    let Some(indexed) = fields.get(*index) else {
+                        return self.new_ty_var();
+                    };
+                    return *indexed;
+                }
+                return self.new_ty_var();
             }
             Expr::VariantLiteral { name } => {
                 let (ty, params) = self.resolve_variant(name);

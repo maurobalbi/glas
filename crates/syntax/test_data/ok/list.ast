@@ -19874,7 +19874,8 @@ SOURCE_FILE@0..45079
                             NAME_REF@44298..44307
                               IDENT@44298..44307 "elem_pair"
                           DOT@44307..44308 "."
-                          INTEGER@44308..44309 "1"
+                          LITERAL@44308..44309
+                            INTEGER@44308..44309 "1"
                         COMMA@44309..44310 ","
                         WHITESPACE@44310..44311 " "
                         EXPR_SPREAD@44311..44316
@@ -20040,7 +20041,8 @@ SOURCE_FILE@0..45079
                               NAME_REF@44531..44537
                                 IDENT@44531..44537 "a_pair"
                             DOT@44537..44538 "."
-                            INTEGER@44538..44539 "0"
+                            LITERAL@44538..44539
+                              INTEGER@44538..44539 "0"
                           COMMA@44539..44540 ","
                         WHITESPACE@44540..44541 " "
                         ARG@44541..44549
@@ -20049,7 +20051,8 @@ SOURCE_FILE@0..45079
                               NAME_REF@44541..44547
                                 IDENT@44541..44547 "b_pair"
                             DOT@44547..44548 "."
-                            INTEGER@44548..44549 "0"
+                            LITERAL@44548..44549
+                              INTEGER@44548..44549 "0"
                         R_PAREN@44549..44550 ")"
                   WHITESPACE@44550..44555 "\n    "
                   R_BRACE@44555..44556 "}"

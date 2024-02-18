@@ -606,7 +606,6 @@ fn test(a: String) -> Alias { $0 }"#,
 }
 
 #[test]
-#[traced_test]
 fn generic_field_access() {
     check_fn(
         r#"
@@ -766,8 +765,6 @@ fn labels_infer_pattern() {
         inst2: fn(Bobo(String)) -> String"#
         ],
     )
-
-
 }
 
 #[test]
@@ -781,11 +778,38 @@ type Read(a) {
   
   fn read_body_loop(reader: Read(a)) {
     case reader {
-      ReadingFinished -> <<1>>
+      ReadingFinished -> 1
       Chunk(chunk, next: p) -> {
         p + 1
       }
     }
   }
-  "#, expect!["read_body_loop: fn(Read(Int)) -> Int"])
+  "#,
+        expect!["read_body_loop: fn(Read(Int)) -> Int"],
+    )
+}
+
+#[test]
+fn tuple_index() {
+    check_fn(
+        r#"
+fn index() {
+    let b = #(1, "abc")
+    b.1
+}
+  "#,
+        expect!["index: fn() -> String"],
+    )
+}
+
+#[test]
+fn bit_array() {
+    check_fn(
+        r#"
+fn index() {
+    <<1>>
+}
+  "#,
+        expect!["index: fn() -> BitArray"],
+    )
 }
