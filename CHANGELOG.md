@@ -1,8 +1,9 @@
 # Changelog
 
-## v0.1.8
+## v0.1.9
 
 ### Fixed
+- Fix qualified imported Constructors inference
 - Fix labelled field resolution
 - Add tuple indexing inference
 
