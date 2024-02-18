@@ -724,7 +724,6 @@ impl<'db> InferCtx<'db> {
                 let base_ty = self.infer_expr(*container);
 
                 let adt = self.table.get_mut(base_ty.0);
-                tracing::info!("TUP {:?}", adt);
                 if let Ty::Adt {
                     adt_id,
                     generic_params,
