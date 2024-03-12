@@ -1,14 +1,12 @@
-use std::{process, sync::Arc};
-
 use crate::{convert, lsp_ext::SyntaxTreeParams, StateSnapshot};
-use anyhow::{ensure, Result};
+use anyhow::Result;
 use ide::{FileRange, GotoDefinitionResult};
 use lsp_types::{
-    CompletionParams, CompletionResponse, Diagnostic, DocumentFormattingParams, DocumentHighlight,
-    DocumentHighlightParams, GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverParams,
-    Location, Position, PrepareRenameResponse, Range, ReferenceParams, RenameParams,
-    SemanticTokens, SemanticTokensParams, SemanticTokensRangeParams, SemanticTokensRangeResult,
-    SemanticTokensResult, TextDocumentPositionParams, TextEdit, Url, WorkspaceEdit,
+    CompletionParams, CompletionResponse, Diagnostic, DocumentHighlight, DocumentHighlightParams,
+    GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverParams, Location,
+    PrepareRenameResponse, ReferenceParams, RenameParams, SemanticTokens, SemanticTokensParams,
+    SemanticTokensRangeParams, SemanticTokensRangeResult, SemanticTokensResult,
+    TextDocumentPositionParams, Url, WorkspaceEdit,
 };
 
 const MAX_DIAGNOSTICS_CNT: usize = 128;

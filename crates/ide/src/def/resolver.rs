@@ -98,9 +98,10 @@ impl Resolver {
                 super::hir_def::ModuleDefId::VariantId(it) => {
                     map.add(name, ResolveResult::Variant(Variant::from(*it)))
                 }
-                super::hir_def::ModuleDefId::ModuleConstant(it) => {
-                    map.add(name, ResolveResult::ModuleConstant(ModuleConstant::from(*it)))
-                }
+                super::hir_def::ModuleDefId::ModuleConstant(it) => map.add(
+                    name,
+                    ResolveResult::ModuleConstant(ModuleConstant::from(*it)),
+                ),
                 super::hir_def::ModuleDefId::AdtId(_)
                 | super::hir_def::ModuleDefId::TypeAliasId(_) => {}
             }

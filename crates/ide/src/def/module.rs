@@ -7,8 +7,6 @@ use syntax::{
     AstPtr,
 };
 
-use super::body::Body;
-
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct AdtData {
     pub name: SmolStr,

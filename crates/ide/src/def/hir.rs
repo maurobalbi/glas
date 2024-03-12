@@ -12,7 +12,8 @@ use crate::{
 use super::{
     hir_def::{AdtId, ConstId, ImportId, LocalFieldId, LocalVariantId, TypeAliasId, VariantId},
     module::{
-        AdtData, ConstData, FieldData, FunctionData, ImportData, Param, PatternId, TypeAliasData, TypeRef, VariantData
+        AdtData, ConstData, FieldData, FunctionData, ImportData, Param, PatternId, TypeAliasData,
+        TypeRef, VariantData,
     },
     resolver::resolver_for_toplevel,
     semantics::Definition,

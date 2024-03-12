@@ -97,8 +97,11 @@ pub(crate) fn negotiate_capabilities(
 pub(crate) struct NegotiatedCapabilities {
     #[allow(dead_code)]
     pub client_show_message_request: bool,
+    #[allow(unused)]
     pub server_initiated_progress: bool,
+    #[allow(unused)]
     pub watch_files: bool,
+    #[allow(unused)]
     pub watch_files_relative_pattern: bool,
     pub workspace_configuration: bool,
 }

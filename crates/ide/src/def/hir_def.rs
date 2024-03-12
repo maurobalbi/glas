@@ -64,12 +64,7 @@ impl_intern!(
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ConstId(pub salsa::InternId);
 pub type ConstLoc = InFile<Idx<ConstData>>;
-impl_intern!(
-    ConstId,
-    ConstLoc,
-    intern_const,
-    lookup_intern_const
-);
+impl_intern!(ConstId, ConstLoc, intern_const, lookup_intern_const);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ImportId(pub salsa::InternId);

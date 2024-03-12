@@ -3,7 +3,7 @@ use smol_str::SmolStr;
 use crate::{
     def::{
         hir::{Adt, Function, Module, Variant},
-        hir_def::{AdtId, FunctionId, VariantId},
+        hir_def::{ FunctionId, VariantId},
     },
     ty::display::TyDisplay,
     CompletionItem, CompletionItemKind, CompletionRelevance, FileId,
@@ -84,26 +84,6 @@ pub fn render_variant(ctx: &CompletionContext<'_>, id: &VariantId) -> Completion
         kind: CompletionItemKind::Function,
         signature: Some(Adt { id: it.parent }.name(ctx.db.upcast()).into()),
         relevance: CompletionRelevance::default(),
-        description: None,
-        documentation: Some(docs),
-        is_snippet: false,
-    }
-}
-
-pub fn render_adt(ctx: &CompletionContext<'_>, id: &AdtId) -> CompletionItem {
-    let it = Adt { id: *id };
-    let name = it.name(ctx.db.upcast());
-    let label = format!("{}(…)", name);
-
-    let docs = it.docs(ctx.db.upcast());
-
-    CompletionItem {
-        label: label.clone().into(),
-        source_range: ctx.source_range,
-        replace: label.into(),
-        kind: CompletionItemKind::Function,
-        relevance: CompletionRelevance::default(),
-        signature: None,
         description: None,
         documentation: Some(docs),
         is_snippet: false,

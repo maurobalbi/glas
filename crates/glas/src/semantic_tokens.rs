@@ -25,8 +25,6 @@ def_index! {
 
 def_index! {
     SemanticTokenModifier, SEMANTIC_TOKEN_MODIFIERS, TokenModIdx;
-
-    Public => SemanticTokenModifier::new("public"),
 }
 
 impl TokenModIdx {
@@ -39,6 +37,7 @@ impl TokenModIdx {
 pub struct TokenModSet(pub u32);
 
 impl TokenModSet {
+    #[allow(dead_code)]
     pub fn insert(&mut self, i: TokenModIdx) {
         self.0 |= i.to_bit();
     }

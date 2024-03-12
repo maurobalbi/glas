@@ -4,7 +4,8 @@ use crate::Diagnostic;
 
 use super::{
     module::{
-        self, AdtData, ConstData, FieldData, FunctionData, ImportData, ModuleImport, Param, TypeAliasData, VariantData, Visibility
+        self, AdtData, ConstData, FieldData, FunctionData, ImportData, ModuleImport, Param,
+        TypeAliasData, VariantData, Visibility,
     },
     AstPtr,
 };
@@ -180,10 +181,6 @@ impl LowerCtx {
         self.module_items.module_imports.alloc(import)
     }
 
-    fn diagnostic(&mut self, diag: Diagnostic) {
-        self.module_items.diagnostics.push(diag);
-    }
-
     fn lower_module(&mut self, module: ast::SourceFile) {
         for stmt in module.statements() {
             self.lower_module_statement(&stmt)
@@ -208,7 +205,6 @@ impl LowerCtx {
             ast::ModuleStatement::ModuleConstant(it) => {
                 self.lower_module_const(it);
             }
-            _ => (),
         }
     }
     /// Here were resolving the imports
@@ -338,11 +334,11 @@ impl LowerCtx {
         } else {
             Visibility::Private
         };
- 
+
         Some(self.alloc_const(ConstData {
             name,
             visibility,
-            ast_ptr
+            ast_ptr,
         }))
     }
 
@@ -432,5 +428,4 @@ impl LowerCtx {
     fn next_field_idx(&self) -> Idx<FieldData> {
         Idx::from_raw(RawIdx::from(self.module_items.fields.len() as u32))
     }
-
 }

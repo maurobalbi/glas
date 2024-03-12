@@ -77,8 +77,11 @@ struct DiagnosticCollector {
 const LSP_SERVER_NAME: &str = "glas";
 pub const GLEAM_TOML: &str = "gleam.toml";
 pub const MANIFEST_TOML: &str = "manifest.toml";
+
+#[allow(dead_code)]
 const LOAD_WORKSPACE_PROGRESS_TOKEN: &str = "glas/loadWorkspaceProgress";
 
+#[allow(dead_code)]
 const LOAD_GLEAM_WORKSPACE_DEBOUNCE_DURATION: Duration = Duration::from_millis(100);
 
 pub struct Server {
@@ -383,6 +386,7 @@ impl Server {
         ControlFlow::Continue(())
     }
 
+    #[allow(unused)]
     async fn register_watched_files(
         config: &Config,
         caps: &NegotiatedCapabilities,
@@ -1096,6 +1100,7 @@ struct Progress {
 }
 
 impl Progress {
+    #[allow(dead_code)]
     async fn new(
         client: &ClientSocket,
         caps: &NegotiatedCapabilities,
@@ -1142,6 +1147,7 @@ impl Progress {
         }));
     }
 
+    #[allow(dead_code)]
     fn done(mut self, message: Option<String>) {
         self.notify(WorkDoneProgress::End(WorkDoneProgressEnd { message }));
         // Don't drop again.
@@ -1208,6 +1214,7 @@ fn error_to_response(err: anyhow::Error) -> ResponseError {
 pub struct StateSnapshot {
     pub(crate) analysis: Analysis,
     vfs: Arc<RwLock<Vfs>>,
+    #[allow(unused)]
     pub(crate) config: Arc<Config>,
 }
 

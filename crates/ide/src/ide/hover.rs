@@ -29,7 +29,9 @@ pub(crate) fn hover(db: &dyn TyDatabase, FilePos { file_id, pos }: FilePos) -> O
                     crate::def::hir::ModuleDef::Function(it) => {
                         return render_function(db, tok, it)
                     }
-                    crate::def::hir::ModuleDef::ModuleConstant(it) => return render_constant(db, tok, it),
+                    crate::def::hir::ModuleDef::ModuleConstant(it) => {
+                        return render_constant(db, tok, it)
+                    }
                     crate::def::hir::ModuleDef::Variant(it) => return render_variant(db, tok, it),
                     crate::def::hir::ModuleDef::Adt(it) => return render_adt(db, tok, it),
                     crate::def::hir::ModuleDef::TypeAlias(it) => {

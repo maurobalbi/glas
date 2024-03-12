@@ -14,7 +14,9 @@ use crate::{
 };
 
 use super::{
-    hir::{Adt, BuiltIn, Field, Function, Import, Local, Module, TypeAlias, Variant, ModuleConstant},
+    hir::{
+        Adt, BuiltIn, Field, Function, Import, Local, Module, ModuleConstant, TypeAlias, Variant,
+    },
     hir_def::ModuleDefId,
     resolver::{resolver_for_toplevel, ResolveResult},
     source::HasSource,

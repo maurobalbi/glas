@@ -21,7 +21,8 @@ pub use semantics::{classify_node, find_container, Semantics};
 
 use self::body::{Body, BodySourceMap};
 use self::hir_def::{
-    AdtId, AdtLoc, FunctionId, FunctionLoc, ImportId, ImportLoc, TypeAliasId, TypeAliasLoc, ConstLoc, ConstId,
+    AdtId, AdtLoc, ConstId, ConstLoc, FunctionId, FunctionLoc, ImportId, ImportLoc, TypeAliasId,
+    TypeAliasLoc,
 };
 use self::lower::lower_module;
 pub use self::lower::ModuleItemData;

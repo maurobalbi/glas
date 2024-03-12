@@ -13,7 +13,8 @@ use super::{
     body::Body,
     hir::Module,
     hir_def::{
-        AdtId, AdtLoc, ConstId, ConstLoc, FunctionLoc, ImportId, ImportLoc, ModuleDefId, TypeAliasId, TypeAliasLoc, VariantId
+        AdtId, AdtLoc, ConstId, ConstLoc, FunctionLoc, ImportId, ImportLoc, ModuleDefId,
+        TypeAliasId, TypeAliasLoc, VariantId,
     },
     module::{Clause, Expr, ExprId, ImportData, Pattern, PatternId, Statement, Visibility},
     resolver::ResolveResult,
