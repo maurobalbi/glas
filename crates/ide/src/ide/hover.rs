@@ -29,6 +29,7 @@ pub(crate) fn hover(db: &dyn TyDatabase, FilePos { file_id, pos }: FilePos) -> O
                     crate::def::hir::ModuleDef::Function(it) => {
                         return render_function(db, tok, it)
                     }
+                    crate::def::hir::ModuleDef::ModuleConstant(it) => return render_constant(db, tok, it),
                     crate::def::hir::ModuleDef::Variant(it) => return render_variant(db, tok, it),
                     crate::def::hir::ModuleDef::Adt(it) => return render_adt(db, tok, it),
                     crate::def::hir::ModuleDef::TypeAlias(it) => {
@@ -48,6 +49,7 @@ pub(crate) fn hover(db: &dyn TyDatabase, FilePos { file_id, pos }: FilePos) -> O
         semantics::Definition::Adt(it) => return render_adt(db, tok, it),
         semantics::Definition::Function(it) => return render_function(db, tok, it),
         semantics::Definition::Variant(it) => return render_variant(db, tok, it),
+        semantics::Definition::ModuleConstant(it) => render_constant(db, tok, it),
         semantics::Definition::Field(it) => {
             let ty = it.ty(db.upcast());
             Some(HoverResult {
@@ -89,6 +91,18 @@ fn render_adt(
     Some(HoverResult {
         range: tok.text_range(),
         markup: format!("```gleam\ntype {}\n```\n___\n{docs}", it.name(db.upcast())),
+    })
+}
+
+fn render_constant(
+    db: &dyn TyDatabase,
+    tok: syntax::rowan::SyntaxToken<syntax::GleamLanguage>,
+    it: crate::def::hir::ModuleConstant,
+) -> Option<HoverResult> {
+    let docs = it.docs(db.upcast());
+    Some(HoverResult {
+        range: tok.text_range(),
+        markup: format!("```gleam\nconst {}\n```\n___\n{docs}", it.name(db.upcast())),
     })
 }
 
@@ -194,6 +208,21 @@ mod tests {
                 ```gleam
                 String
                 ```
+            "#]],
+        );
+    }
+
+    #[test]
+    fn module_constant() {
+        check(
+            "///Very large constant\nconst big = 1\nfn main() { $0big }",
+            "big",
+            expect![[r#"
+            ```gleam
+            const big
+            ```
+            ___
+            Very large constant
             "#]],
         );
     }

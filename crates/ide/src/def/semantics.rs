@@ -14,7 +14,7 @@ use crate::{
 };
 
 use super::{
-    hir::{Adt, BuiltIn, Field, Function, Import, Local, Module, TypeAlias, Variant},
+    hir::{Adt, BuiltIn, Field, Function, Import, Local, Module, TypeAlias, Variant, ModuleConstant},
     hir_def::ModuleDefId,
     resolver::{resolver_for_toplevel, ResolveResult},
     source::HasSource,
@@ -31,10 +31,11 @@ pub enum Definition {
     Module(Module),
     BuiltIn(BuiltIn),
     TypeAlias(TypeAlias),
+    ModuleConstant(ModuleConstant),
 }
 
 impl_from!(
-    Adt, Local, Function, Field, Variant, Module, BuiltIn, TypeAlias
+    Adt, Local, Function, Field, Variant, Module, BuiltIn, TypeAlias, ModuleConstant
     for Definition
 );
 
@@ -43,6 +44,7 @@ impl Definition {
         let module = match self {
             Definition::Adt(it) => it.module(db),
             Definition::Function(it) => it.module(db),
+            Definition::ModuleConstant(it) => it.module(db),
             Definition::Variant(it) => Adt::from(it.parent).module(db),
             Definition::Field(it) => Variant::from(it.parent).module(db),
             Definition::Local(it) => Function::from(it.parent).module(db),
@@ -57,6 +59,7 @@ impl Definition {
         let name = match self {
             Definition::Adt(it) => it.name(db),
             Definition::Function(it) => it.name(db),
+            Definition::ModuleConstant(it) => it.name(db),
             Definition::Variant(it) => it.name(db),
             // ToDo: Fixme
             Definition::Field(it) => return it.label(db),
@@ -86,6 +89,20 @@ impl Definition {
                 })
             }
             Definition::Function(it) => {
+                let src = it.source(db.upcast())?;
+                let full_range = src.value.syntax().text_range();
+                let focus_range = src
+                    .value
+                    .name()
+                    .map(|n| n.syntax().text_range())
+                    .unwrap_or_else(|| full_range);
+                Some(NavigationTarget {
+                    file_id: src.file_id,
+                    focus_range,
+                    full_range,
+                })
+            }
+            Definition::ModuleConstant(it) => {
                 let src = it.source(db.upcast())?;
                 let full_range = src.value.syntax().text_range();
                 let focus_range = src
@@ -170,6 +187,7 @@ impl From<FieldResolution> for Definition {
                 super::hir::ModuleDef::Variant(it) => it.into(),
                 super::hir::ModuleDef::Adt(it) => it.into(),
                 super::hir::ModuleDef::TypeAlias(it) => it.into(),
+                super::hir::ModuleDef::ModuleConstant(it) => it.into(),
             },
         }
     }
@@ -185,6 +203,7 @@ impl From<ResolveResult> for Definition {
             ResolveResult::BuiltIn(it) => it.into(),
             ResolveResult::Adt(it) => it.into(),
             ResolveResult::TypeAlias(it) => it.into(),
+            ResolveResult::ModuleConstant(it) => it.into(),
         }
     }
 }
@@ -208,6 +227,7 @@ fn classify_name(sema: &Semantics, name: &ast::Name) -> Option<Definition> {
     match_ast! {
         match parent {
             ast::Function(it) => return sema.to_def(&it).map(From::from),
+            ast::ModuleConstant(it) => return sema.to_def(&it).map(From::from),
             ast::PatternVariable(it) => {
                 let pattern = ast::Pattern::cast(it.syntax().clone())?;
                 let def = sema.to_def(&pattern).map(From::from);
@@ -467,6 +487,16 @@ impl ToDef for ast::Function {
         let map = sema.db.module_source_map(src.file_id);
         let fn_id = map.node_to_function(&src.value);
         fn_id.map(From::from)
+    }
+}
+
+impl ToDef for ast::ModuleConstant {
+    type Def = ModuleConstant;
+
+    fn to_def(sema: &Semantics<'_>, src: InFile<Self>) -> Option<Self::Def> {
+        let map = sema.db.module_source_map(src.file_id);
+        let cosnt_id = map.node_to_constant(&src.value);
+        cosnt_id.map(From::from)
     }
 }
 

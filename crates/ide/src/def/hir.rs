@@ -10,10 +10,9 @@ use crate::{
 };
 
 use super::{
-    hir_def::{AdtId, ImportId, LocalFieldId, LocalVariantId, TypeAliasId, VariantId},
+    hir_def::{AdtId, ConstId, ImportId, LocalFieldId, LocalVariantId, TypeAliasId, VariantId},
     module::{
-        AdtData, FieldData, FunctionData, ImportData, Param, PatternId, TypeAliasData, TypeRef,
-        VariantData,
+        AdtData, ConstData, FieldData, FunctionData, ImportData, Param, PatternId, TypeAliasData, TypeRef, VariantData
     },
     resolver::resolver_for_toplevel,
     semantics::Definition,
@@ -116,6 +115,7 @@ pub enum ModuleDef {
     Variant(Variant),
     Adt(Adt),
     TypeAlias(TypeAlias),
+    ModuleConstant(ModuleConstant),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -317,6 +317,38 @@ impl Function {
 
 impl_from!(
     Function
+    for ModuleDef
+);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ModuleConstant {
+    pub(crate) id: ConstId,
+}
+
+impl ModuleConstant {
+    pub fn name(self, db: &dyn DefDatabase) -> SmolStr {
+        self.data(db).name.clone()
+    }
+
+    fn data(self, db: &dyn DefDatabase) -> ConstData {
+        let func = db.lookup_intern_const(self.id);
+        db.module_items(func.file_id)[func.value].clone()
+    }
+
+    pub fn module(&self, db: &dyn DefDatabase) -> Module {
+        db.lookup_intern_const(self.id).file_id.into()
+    }
+
+    pub fn docs(&self, db: &dyn DefDatabase) -> String {
+        self.source(db)
+            .expect("This should not happen")
+            .value
+            .doc_text()
+    }
+}
+
+impl_from!(
+    ModuleConstant
     for ModuleDef
 );
 

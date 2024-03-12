@@ -7,6 +7,8 @@ use syntax::{
     AstPtr,
 };
 
+use super::body::Body;
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct AdtData {
     pub name: SmolStr,
@@ -62,7 +64,6 @@ pub struct FunctionData {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ConstData {
     pub name: SmolStr,
-    pub params: Vec<Param>,
     pub visibility: Visibility,
     pub ast_ptr: AstPtr<ast::ModuleConstant>,
 }

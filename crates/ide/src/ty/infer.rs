@@ -793,6 +793,7 @@ impl<'db> InferCtx<'db> {
                             ResolveResult::Module(_) => {}
                             ResolveResult::Adt(_) => {}
                             ResolveResult::TypeAlias(_) => {}
+                            ResolveResult::ModuleConstant(_) => {}
                         }
                     }
                 }

@@ -368,6 +368,7 @@ fn complete_expr(acc: &mut Vec<CompletionItem>, ctx: &CompletionContext<'_>) -> 
     for (name, def) in resolver.values_names_in_scope() {
         let kind = match def {
             ResolveResult::Module(_) => CompletionItemKind::Module,
+            ResolveResult::ModuleConstant(_) => CompletionItemKind::Function,
             ResolveResult::Local(_) => CompletionItemKind::Param,
             ResolveResult::Function(_) => CompletionItemKind::Function,
             ResolveResult::Variant(_) => CompletionItemKind::Variant,

@@ -4,8 +4,7 @@ use crate::Diagnostic;
 
 use super::{
     module::{
-        self, AdtData, FieldData, FunctionData, ImportData, ModuleImport, Param, TypeAliasData,
-        VariantData, Visibility,
+        self, AdtData, ConstData, FieldData, FunctionData, ImportData, ModuleImport, Param, TypeAliasData, VariantData, Visibility
     },
     AstPtr,
 };
@@ -22,6 +21,7 @@ pub struct ModuleItemData {
     unqualified_imports: Arena<ImportData>,
     adts: Arena<AdtData>,
     type_alias: Arena<TypeAliasData>,
+    constants: Arena<ConstData>,
 
     module_imports: Arena<ModuleImport>,
 
@@ -53,6 +53,12 @@ impl ModuleItemData {
         self.variants.iter()
     }
 
+    pub fn constants(
+        &self,
+    ) -> impl Iterator<Item = (Idx<ConstData>, &ConstData)> + ExactSizeIterator + '_ {
+        self.constants.iter()
+    }
+
     pub fn functions(
         &self,
     ) -> impl Iterator<Item = (Idx<FunctionData>, &FunctionData)> + ExactSizeIterator + '_ {
@@ -71,6 +77,14 @@ impl Index<Idx<AdtData>> for ModuleItemData {
 
     fn index(&self, index: Idx<AdtData>) -> &Self::Output {
         &self.adts[index]
+    }
+}
+
+impl Index<Idx<ConstData>> for ModuleItemData {
+    type Output = ConstData;
+
+    fn index(&self, index: Idx<ConstData>) -> &Self::Output {
+        &self.constants[index]
     }
 }
 
@@ -146,6 +160,10 @@ impl LowerCtx {
         self.module_items.type_alias.alloc(custom_type)
     }
 
+    fn alloc_const(&mut self, constant: ConstData) -> Idx<ConstData> {
+        self.module_items.constants.alloc(constant)
+    }
+
     fn alloc_variant(&mut self, constructor: VariantData) -> Idx<VariantData> {
         self.module_items.variants.alloc(constructor)
     }
@@ -186,6 +204,9 @@ impl LowerCtx {
             }
             ast::ModuleStatement::TypeAlias(it) => {
                 self.lower_type_alias(it);
+            }
+            ast::ModuleStatement::ModuleConstant(it) => {
+                self.lower_module_const(it);
             }
             _ => (),
         }
@@ -308,6 +329,23 @@ impl LowerCtx {
         }))
     }
 
+    fn lower_module_const(&mut self, it: &ast::ModuleConstant) -> Option<Idx<module::ConstData>> {
+        let ast_ptr = AstPtr::new(it);
+        let name = it.name()?.text()?;
+
+        let visibility = if it.is_public() {
+            Visibility::Public
+        } else {
+            Visibility::Private
+        };
+ 
+        Some(self.alloc_const(ConstData {
+            name,
+            visibility,
+            ast_ptr
+        }))
+    }
+
     fn lower_type_alias(&mut self, alias: &ast::TypeAlias) -> Option<Idx<TypeAliasData>> {
         let ast_ptr = AstPtr::new(alias);
         let name = alias.name()?.text()?;
@@ -394,4 +432,5 @@ impl LowerCtx {
     fn next_field_idx(&self) -> Idx<FieldData> {
         Idx::from_raw(RawIdx::from(self.module_items.fields.len() as u32))
     }
+
 }

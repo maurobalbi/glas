@@ -21,6 +21,7 @@ fn check_fn(src: &str, expect: Expect) {
                 output.push(format!("{}: {}", func.name, infer.fn_ty.display(&db)));
             }
             crate::def::hir_def::ModuleDefId::AdtId(_) => {}
+            crate::def::hir_def::ModuleDefId::ModuleConstant(_) => {}
             crate::def::hir_def::ModuleDefId::VariantId(_) => {}
             crate::def::hir_def::ModuleDefId::TypeAliasId(_) => {}
         }
@@ -57,6 +58,7 @@ fn check_all(src: &str, expect: Expect) {
                 }
             }
             crate::def::hir_def::ModuleDefId::AdtId(_) => {}
+            crate::def::hir_def::ModuleDefId::ModuleConstant(_) => {}
             crate::def::hir_def::ModuleDefId::VariantId(_) => {}
             crate::def::hir_def::ModuleDefId::TypeAliasId(_) => {}
         }
@@ -80,6 +82,7 @@ fn check_fix(src: &str, expect: Expect) {
                 output.push(format!("{}: {}", func.name, infer.fn_ty.display(&db)));
             }
             crate::def::hir_def::ModuleDefId::AdtId(_) => {}
+            crate::def::hir_def::ModuleDefId::ModuleConstant(_) => {}
             crate::def::hir_def::ModuleDefId::VariantId(_) => {}
             crate::def::hir_def::ModuleDefId::TypeAliasId(_) => {}
         }

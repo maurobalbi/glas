@@ -127,4 +127,23 @@ import test.{<testfn>}
             ],
         );
     }
+
+    #[test]
+    fn module_constsf() {
+        check(
+            r#"
+#- test.gleam
+pub const $0test = 1
+
+fn rename_test() { test }"#,
+            expect![
+                r#"--- FileId(0)
+
+pub const <test> = 1
+
+fn rename_test() { <test> }
+"#
+            ],
+        );
+    }
 }

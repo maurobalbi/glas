@@ -6,7 +6,7 @@ use smol_str::SmolStr;
 use crate::{DefDatabase, FileId};
 
 use super::{
-    hir::{Adt, BuiltIn, Function, Local, Module, TypeAlias, Variant},
+    hir::{Adt, BuiltIn, Function, Local, Module, ModuleConstant, TypeAlias, Variant},
     hir_def::ModuleDefId,
     module::ExprId,
     scope::{ModuleScope, ScopeId},
@@ -57,6 +57,7 @@ impl ScopeNames {
 pub enum ResolveResult {
     Local(Local),
     Function(Function),
+    ModuleConstant(ModuleConstant),
     Variant(Variant),
     Module(Module),
     Adt(Adt),
@@ -96,6 +97,9 @@ impl Resolver {
                 }
                 super::hir_def::ModuleDefId::VariantId(it) => {
                     map.add(name, ResolveResult::Variant(Variant::from(*it)))
+                }
+                super::hir_def::ModuleDefId::ModuleConstant(it) => {
+                    map.add(name, ResolveResult::ModuleConstant(ModuleConstant::from(*it)))
                 }
                 super::hir_def::ModuleDefId::AdtId(_)
                 | super::hir_def::ModuleDefId::TypeAliasId(_) => {}
@@ -145,6 +149,9 @@ impl Resolver {
                 }
                 super::hir_def::ModuleDefId::VariantId(it) => {
                     return Some(ResolveResult::Variant(Variant::from(it)))
+                }
+                super::hir_def::ModuleDefId::ModuleConstant(it) => {
+                    return Some(ResolveResult::ModuleConstant(ModuleConstant::from(it)))
                 }
                 super::hir_def::ModuleDefId::AdtId(_)
                 | super::hir_def::ModuleDefId::TypeAliasId(_) => {}

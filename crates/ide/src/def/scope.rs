@@ -13,8 +13,7 @@ use super::{
     body::Body,
     hir::Module,
     hir_def::{
-        AdtId, AdtLoc, FunctionLoc, ImportId, ImportLoc, ModuleDefId, TypeAliasId, TypeAliasLoc,
-        VariantId,
+        AdtId, AdtLoc, ConstId, ConstLoc, FunctionLoc, ImportId, ImportLoc, ModuleDefId, TypeAliasId, TypeAliasLoc, VariantId
     },
     module::{Clause, Expr, ExprId, ImportData, Pattern, PatternId, Statement, Visibility},
     resolver::ResolveResult,
@@ -106,6 +105,26 @@ pub fn module_scope_with_map_query(
             .push((def, alias.visibility.clone()));
     }
 
+    for (constant_id, constant) in module_data.constants() {
+        let name = &constant.name;
+        let const_loc = db.intern_const(ConstLoc {
+            file_id,
+            value: constant_id,
+        });
+        let def = ModuleDefId::ModuleConstant(const_loc);
+
+        module_source_map
+            .const_map
+            .insert(constant.ast_ptr.clone(), const_loc);
+
+        scope.values.insert(name.clone(), def.clone());
+        scope
+            .declarations
+            .entry(name.clone())
+            .or_default()
+            .push((def, constant.visibility.clone()));
+    }
+
     for (adt_id, adt) in module_data.adts() {
         let name = &adt.name;
         let adt_loc = db.intern_adt(AdtLoc {
@@ -158,12 +177,18 @@ pub struct ModuleSourceMap {
     variant_map: HashMap<AstPtr<ast::Variant>, VariantId>,
     type_alias_map: HashMap<AstPtr<ast::TypeAlias>, TypeAliasId>,
     import_map: HashMap<AstPtr<ast::UnqualifiedImport>, ImportId>,
+    const_map: HashMap<AstPtr<ast::ModuleConstant>, ConstId>,
 }
 
 impl ModuleSourceMap {
     pub fn node_to_function(&self, node: &ast::Function) -> Option<FunctionId> {
         let src = AstPtr::new(node);
         self.function_map.get(&src).copied()
+    }
+
+    pub fn node_to_constant(&self, node: &ast::ModuleConstant) -> Option<ConstId> {
+        let src = AstPtr::new(node);
+        self.const_map.get(&src).copied()
     }
 
     pub fn node_to_import(&self, node: &ast::UnqualifiedImport) -> Option<ImportId> {

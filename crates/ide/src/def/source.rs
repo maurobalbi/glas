@@ -1,8 +1,8 @@
-use syntax::ast;
+use syntax::ast::{self};
 
 use crate::{DefDatabase, InFile};
 
-use super::hir::{Adt, Field, Function, Module, TypeAlias, Variant};
+use super::hir::{Adt, Field, Function, Module, TypeAlias, Variant, ModuleConstant};
 
 pub trait HasSource {
     type Ast;
@@ -27,6 +27,16 @@ impl HasSource for Function {
     type Ast = ast::Function;
     fn source(self, db: &dyn DefDatabase) -> Option<InFile<Self::Ast>> {
         let loc = db.lookup_intern_function(self.id);
+        let fn_data = &db.module_items(loc.file_id)[loc.value];
+        let root = db.parse(loc.file_id);
+        Some(loc.map(|_| fn_data.ast_ptr.to_node(&root.syntax_node())))
+    }
+}
+
+impl HasSource for ModuleConstant {
+    type Ast = ast::ModuleConstant;
+    fn source(self, db: &dyn DefDatabase) -> Option<InFile<Self::Ast>> {
+        let loc = db.lookup_intern_const(self.id);
         let fn_data = &db.module_items(loc.file_id)[loc.value];
         let root = db.parse(loc.file_id);
         Some(loc.map(|_| fn_data.ast_ptr.to_node(&root.syntax_node())))
