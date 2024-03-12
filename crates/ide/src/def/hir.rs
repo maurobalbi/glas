@@ -27,6 +27,13 @@ pub struct Package {
 }
 
 impl Package {
+    pub fn is_local(self, db: &dyn DefDatabase) -> bool {
+        let package_id = db.source_root_package(self.id);
+        let graph = db.package_graph();
+        let package = graph[*package_id].clone();
+        package.is_local
+    }
+
     pub fn dependencies(self, db: &dyn DefDatabase) -> Vec<Package> {
         let package_id = db.source_root_package(self.id);
         let graph = db.package_graph();
@@ -234,6 +241,13 @@ impl Variant {
         Module { id: loc.file_id }
     }
 
+    pub fn docs(&self, db: &dyn DefDatabase) -> String {
+        self.source(db)
+            .expect("This should not happen")
+            .value
+            .doc_text()
+    }
+
     fn data(&self, db: &dyn DefDatabase) -> VariantData {
         let adt = db.lookup_intern_adt(self.parent);
         let module_items = db.module_items(adt.file_id);
@@ -341,7 +355,11 @@ impl Import {
     pub fn import_from_module_name(self, db: &dyn DefDatabase) -> SmolStr {
         let import = db.lookup_intern_import(self.id);
         let module_idx = self.data(db).module;
-        db.module_items(import.file_id)[module_idx].accessor.clone()
+        let module = &db.module_items(import.file_id)[module_idx];
+        module
+            .as_name
+            .clone()
+            .unwrap_or_else(|| module.accessor.clone())
     }
 
     pub fn imported_from_module(self, db: &dyn DefDatabase) -> Option<FileId> {

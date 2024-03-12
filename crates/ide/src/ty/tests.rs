@@ -139,6 +139,27 @@ fn unsaturated_constructor() {
 }
 
 #[test]
+fn unsaturated_constructor_qualified() {
+    check_fix(
+        r#"
+#- snow.gleam
+pub type WaterKind { Snow(Int) }
+
+#- ice.gleam
+import snow
+
+fn melt() {
+    $0snow.Snow
+}
+        "#,
+        expect![
+            r#"
+        melt: fn() -> fn(Int) -> WaterKind"#
+        ],
+    )
+}
+
+#[test]
 fn let_infer() {
     check_fn(
         "type Biboop {Biboop(Int)} fn biboob(a) { let b = a b }",
@@ -606,7 +627,6 @@ fn test(a: String) -> Alias { $0 }"#,
 }
 
 #[test]
-#[traced_test]
 fn generic_field_access() {
     check_fn(
         r#"
@@ -725,7 +745,6 @@ fn labels_infer() {
 }
 
 #[test]
-#[traced_test]
 fn labels_infer_pattern() {
     check_fn(
         r#"
@@ -765,5 +784,52 @@ fn labels_infer_pattern() {
         inst1: fn(Bobo(String)) -> String
         inst2: fn(Bobo(String)) -> String"#
         ],
+    )
+}
+
+#[test]
+fn labels_variant() {
+    check_fn(
+        r#"
+type Read(a) {
+    Chunk(BitArray, next: a)
+    ReadingFinished
+  }
+  
+  fn read_body_loop(reader: Read(a)) {
+    case reader {
+      ReadingFinished -> 1
+      Chunk(chunk, next: p) -> {
+        p + 1
+      }
+    }
+  }
+  "#,
+        expect!["read_body_loop: fn(Read(Int)) -> Int"],
+    )
+}
+
+#[test]
+fn tuple_index() {
+    check_fn(
+        r#"
+fn index() {
+    let b = #(1, "abc")
+    b.1
+}
+  "#,
+        expect!["index: fn() -> String"],
+    )
+}
+
+#[test]
+fn bit_array() {
+    check_fn(
+        r#"
+fn index() {
+    <<1>>
+}
+  "#,
+        expect!["index: fn() -> BitArray"],
     )
 }

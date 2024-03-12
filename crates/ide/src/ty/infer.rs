@@ -492,6 +492,7 @@ impl<'db> InferCtx<'db> {
                 LiteralKind::String => Ty::String,
             }
             .intern(self),
+            Expr::BitArray => Ty::BitArray.intern(self),
             Expr::Block { stmts } => {
                 let old_resolver = mem::replace(
                     &mut self.resolver,
@@ -721,7 +722,7 @@ impl<'db> InferCtx<'db> {
             } => {
                 let field_var = self.new_ty_var();
                 let base_ty = self.infer_expr(*container);
-                // ToDo: This is wrong, since it might also be a module_access
+
                 let adt = self.table.get_mut(base_ty.0);
                 if let Ty::Adt {
                     adt_id,
@@ -772,14 +773,16 @@ impl<'db> InferCtx<'db> {
                             }
                             // ToDo: Add type to adt in hir and fix this.
                             ResolveResult::Variant(it) => {
-                                let var = self.new_ty_var();
-                                self.unify_var_ty(
-                                    var,
-                                    Ty::Adt {
-                                        generic_params: Vec::new(),
-                                        adt_id: it.parent,
-                                    },
-                                );
+                                let (ty, params) = self.type_from_variant(it);
+                                let var = if !params.is_empty() {
+                                    Ty::Function {
+                                        params,
+                                        return_: ty,
+                                    }
+                                    .intern(self)
+                                } else {
+                                    ty
+                                };
                                 self.body_ctx.field_resolution.insert(
                                     tgt_expr,
                                     FieldResolution::ModuleDef(ModuleDef::Variant(it)),
@@ -794,6 +797,22 @@ impl<'db> InferCtx<'db> {
                     }
                 }
                 field_var
+            }
+            Expr::TupleIndex {
+                base: container,
+                base_string: _,
+                index,
+            } => {
+                let base_ty = self.infer_expr(*container);
+                let tuple = self.table.get_mut(base_ty.0);
+
+                if let Ty::Tuple { fields } = tuple.clone() {
+                    let Some(indexed) = fields.get(*index) else {
+                        return self.new_ty_var();
+                    };
+                    return *indexed;
+                }
+                return self.new_ty_var();
             }
             Expr::VariantLiteral { name } => {
                 let (ty, params) = self.resolve_variant(name);
@@ -978,32 +997,7 @@ impl<'db> InferCtx<'db> {
         result: ResolveResult,
     ) -> (TyVar, Vec<(Option<SmolStr>, TyVar)>) {
         match result {
-            ResolveResult::Variant(variant) => {
-                let mut ty_env = HashMap::new();
-                let params = variant
-                    .fields(self.db.upcast())
-                    .into_iter()
-                    .map(|field| {
-                        (
-                            field.label(self.db.upcast()),
-                            self.make_ty_from_typeref(field.ty(self.db.upcast()), &mut ty_env),
-                        )
-                    })
-                    .collect();
-
-                let adt_data = Adt::from(variant.parent).data(self.db.upcast());
-                let mut generic_params = Vec::new();
-                for param in adt_data.params.iter() {
-                    generic_params.push(self.make_ty_from_typeref(param.clone(), &mut ty_env));
-                }
-
-                let ty = Ty::Adt {
-                    adt_id: variant.parent,
-                    generic_params,
-                }
-                .intern(self);
-                (ty, params)
-            }
+            ResolveResult::Variant(variant) => self.type_from_variant(variant),
             ResolveResult::BuiltIn(it) => match it {
                 hir::BuiltIn::Nil => (Ty::Nil.intern(self), Vec::new()),
                 hir::BuiltIn::Ok => {
@@ -1032,6 +1026,36 @@ impl<'db> InferCtx<'db> {
             },
             _ => (self.new_ty_var(), Vec::new()),
         }
+    }
+
+    fn type_from_variant(
+        &mut self,
+        variant: hir::Variant,
+    ) -> (TyVar, Vec<(Option<SmolStr>, TyVar)>) {
+        let mut ty_env = HashMap::new();
+        let params = variant
+            .fields(self.db.upcast())
+            .into_iter()
+            .map(|field| {
+                (
+                    field.label(self.db.upcast()),
+                    self.make_ty_from_typeref(field.ty(self.db.upcast()), &mut ty_env),
+                )
+            })
+            .collect();
+
+        let adt_data = Adt::from(variant.parent).data(self.db.upcast());
+        let mut generic_params = Vec::new();
+        for param in adt_data.params.iter() {
+            generic_params.push(self.make_ty_from_typeref(param.clone(), &mut ty_env));
+        }
+
+        let ty = Ty::Adt {
+            adt_id: variant.parent,
+            generic_params,
+        }
+        .intern(self);
+        (ty, params)
     }
 
     fn unify(&mut self, lhs: Ty, rhs: Ty) -> Result<Ty, ()> {

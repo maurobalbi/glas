@@ -167,7 +167,7 @@ impl<'i> Parser<'i> {
                         let n_ws = n_tokens!(is_module_doc);
                         eat_token(n_ws, &mut builder, &mut pos);
                     }
-                    FUNCTION | MODULE_CONSTANT | ADT => {
+                    FUNCTION | MODULE_CONSTANT | ADT | VARIANT => {
                         let n_ws = n_tokens!(is_whitespace);
                         eat_token(n_ws, &mut builder, &mut pos);
 
@@ -535,28 +535,38 @@ fn param_list(p: &mut Parser, is_anon: bool) {
 fn param(p: &mut Parser, is_anon: bool) {
     assert!(p.at_any(TokenSet::new(&[IDENT, DISCARD_IDENT])));
     let m = p.start_node();
-    if p.nth(1) == IDENT {
-        if is_anon {
-            p.error(ErrorKind::UnexpectedLabel);
-        }
-        if p.at(IDENT) {
-            let n = p.start_node();
+    match p.nth(0) {
+        DISCARD_IDENT => {
+            let h = p.start_node();
             p.bump();
-            p.finish_node(n, LABEL);
-        } else {
-            p.error(ErrorKind::ExpectedIdentifier)
+            p.finish_node(h, HOLE);
         }
-    }
-    if p.at(IDENT) {
-        let pat = p.start_node();
-        name(p);
-        p.finish_node(pat, PATTERN_VARIABLE);
-    } else if p.at(DISCARD_IDENT) {
-        let pat = p.start_node();
-        p.bump();
-        p.finish_node(pat, HOLE);
-    } else {
-        p.error(ErrorKind::ExpectedIdentifier);
+        IDENT => {
+            if p.nth(1) == IDENT || p.nth(1) == DISCARD_IDENT {
+                if is_anon {
+                    p.error(ErrorKind::UnexpectedLabel);
+                } else {
+                    let l = p.start_node();
+                    p.bump();
+                    p.finish_node(l, LABEL);
+                }
+            };
+
+            match p.nth(0) {
+                IDENT => {
+                    let pat = p.start_node();
+                    name(p);
+                    p.finish_node(pat, PATTERN_VARIABLE);
+                }
+                DISCARD_IDENT => {
+                    let pat = p.start_node();
+                    p.bump();
+                    p.finish_node(pat, HOLE);
+                }
+                _ => p.error(ErrorKind::ExpectedIdentifier),
+            }
+        }
+        _ => p.error(ErrorKind::ExpectedIdentifier),
     }
     if p.eat(T![":"]) {
         type_expr(p);
@@ -689,7 +699,9 @@ fn expr_bp(p: &mut Parser, min_bp: u8) {
                     }
                     INTEGER => {
                         let m = p.start_node_before(lhs);
+                        let lit = p.start_node();
                         p.bump();
+                        p.finish_node(lit, LITERAL);
                         lhs = p.finish_node(m, TUPLE_INDEX);
                     }
                     _ => {
@@ -767,7 +779,7 @@ fn expr_unit(p: &mut Parser) -> Option<MarkClosed> {
             let m = p.start_node();
             p.bump();
             if p.eat(T!["as"]) {
-                p.expect(STRING);
+                expr(p);
             }
             p.finish_node(m, MISSING)
         }

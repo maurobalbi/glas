@@ -289,7 +289,24 @@ pub type <Test>"#
             ],
         )
     }
-    
+
+    #[test]
+    fn import_aliased_module() {
+        check(
+            r#"
+#- test.gleam
+pub type Test
+
+#- test2.gleam
+import test.{type $0Test} as t
+"#,
+            expect![
+                r#"
+pub type <Test>"#
+            ],
+        )
+    }
+
     #[test]
     fn resolve_qualified() {
         check(
@@ -335,6 +352,69 @@ fn main() {
                 r#"
 <Test>"#
             ],
+        )
+    }
+
+    #[test]
+    fn resolve_imported_fn() {
+        check(
+            r#"
+#- test.gleam
+pub fn testfn() {}
+
+#- test2.gleam
+import test.{$0testfn}
+"#,
+            expect![
+                r#"
+                pub fn <testfn>() {}"#
+            ],
+        )
+    }
+
+    #[test]
+    fn resolve_pattern_label() {
+        check(
+            r#"
+#- test.gleam
+pub type Sheep {
+    Dolly(age: Int)
+    Dodo(age: Int)
+}
+
+#- test2.gleam
+import test.{Dolly, Dodo}
+
+fn get_age(d: Dolly) {
+    case a {
+        Dolly(age: a) -> a
+        Dodo($0age: a) -> a
+    }
+}
+"#,
+            expect![
+                r#"
+                Dolly(<age: Int>)"#
+            ],
+        )
+    }
+
+    #[test]
+    fn resovle_constr_field() {
+        check(
+            r#"
+    type Reader =
+  fn(Int) -> Result(Read, Nil)
+
+type Read {
+  Chunk(a: Int, next: Reader)
+  ReadingFinished
+}
+
+fn bla(a: read, b: next) {
+  Chunk($0next: b, a: a)
+}"#,
+            expect!["Chunk(a: Int, <next: Reader>)"],
         )
     }
 }

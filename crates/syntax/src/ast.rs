@@ -229,6 +229,7 @@ enums! {
         Name,
         TypeName,
         NameRef,
+        Label,
     },
 }
 
@@ -256,6 +257,7 @@ impl TypeNameOrName {
             TypeNameOrName::Name(name) => name.token(),
             TypeNameOrName::TypeName(type_name) => type_name.token(),
             TypeNameOrName::NameRef(it) => it.token(),
+            TypeNameOrName::Label(it) => it.token(),
         }
     }
 
@@ -335,6 +337,10 @@ asts! {
             self.0.children_with_tokens().find_map(NodeOrToken::into_token)
         }
 
+        pub fn text(&self) -> Option<SmolStr>{
+            self.token().map(|t| t.text().into())
+        }
+
         pub fn kind(&self) -> Option<LiteralKind> {
             Some(match self.token()?.kind() {
                 INTEGER => LiteralKind::Int,
@@ -348,6 +354,10 @@ asts! {
         name: TypeName,
         constructors: [Variant],
         generic_params: GenericParamList,
+
+        pub fn is_public(&self) -> bool {
+            self.syntax().children_with_tokens().any(|it| it.kind() == T!["pub"])
+        }
     },
     GENERIC_PARAM_LIST = GenericParamList {
         params: [TypeExpr],
@@ -365,7 +375,7 @@ asts! {
             self.0.children_with_tokens().any(|t| t.kind() == T!["opaque"])
         }
     },
-    VARIANT = Variant {
+    VARIANT = Variant [HasDocParts] {
         name: Name,
         field_list: VariantFieldList,
     },
@@ -389,6 +399,10 @@ asts! {
         param_list: ParamList,
         return_type: TypeExpr,
         body: Block,
+
+        pub fn is_public(&self) -> bool {
+            self.syntax().children_with_tokens().any(|it| it.kind() == T!["pub"])
+        }
     },
     EXPR_CALL = ExprCall {
         func: Expr,
@@ -409,8 +423,8 @@ asts! {
         fields: [Expr],
     },
     TUPLE_INDEX = TupleIndex {
-        index: Literal,
         base: Expr,
+        index: Literal,
     },
     IMPORT = Import {
         module_path: ModulePath,
@@ -702,7 +716,7 @@ mod tests {
 
     #[test]
     fn assert() {
-        let e = crate::parse_module("fn pat(a) { let Pat(name: name, age: age) = a \n name }");
+        let e = crate::parse_module("pub fn pat(a) { let Pat(name: name, age: age) = a \n name }");
         for error in e.errors() {
             println!("{}", error);
         }
@@ -1161,6 +1175,26 @@ mod tests {
         let alias = parse::<TypeAlias>(r#"type Alias = String"#);
         alias.name().unwrap().syntax().should_eq("Alias");
         alias.type_().unwrap().syntax().should_eq("String");
+    }
+
+    #[test]
+    fn allow_discard_argument() {
+        let _ = parse::<Function>(
+            r#"
+            fn main(asdf _: a, age age: b) -> Result(a, b) {
+                accepted()
+            }"#,
+        );
+    }
+
+    #[test]
+    fn panic_as() {
+        let _ = parse::<Function>(
+            r#"
+            fn main(b) -> Result(a, b) {
+                panic as { "abc" <> "123" }
+            }"#,
+        );
     }
 
     // https://github.com/maurobalbi/glas/issues/10

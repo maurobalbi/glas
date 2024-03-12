@@ -119,11 +119,12 @@ pub struct Clause {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Statement {
     Let {
-        pattern: PatternId, // Should be pattern
+        pattern: PatternId, // Should be (PatternId, Option<TypeRef>)
         // type_ann: Type
         body: ExprId,
     },
     Use {
+        // Should be (PatternId, Option<TypeRef>)
         patterns: Vec<PatternId>,
         expr: ExprId,
     },
@@ -138,6 +139,7 @@ pub enum Expr {
     Missing,
     Hole,
     Literal(LiteralKind),
+    BitArray,
     Block {
         stmts: Vec<Statement>,
     },
@@ -148,6 +150,11 @@ pub enum Expr {
     },
     Tuple {
         fields: Vec<ExprId>,
+    },
+    TupleIndex {
+        base: ExprId,
+        base_string: SmolStr,
+        index: usize,
     },
     FieldAccess {
         base_string: SmolStr,
@@ -171,6 +178,7 @@ pub enum Expr {
     },
     Lambda {
         body: ExprId,
+        // ToDo: this should be (PatternId, Option<TypeRef>)
         params: IdxRange<Pattern>,
     },
     Spread {

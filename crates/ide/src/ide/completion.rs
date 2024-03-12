@@ -12,6 +12,7 @@ use crate::{
         find_container,
         hir::{Adt, Module, Package},
         hir_def::ModuleDefId,
+        module::Visibility,
         resolver::{resolver_for_toplevel, ResolveResult},
         resolver_for_expr, Semantics,
     },
@@ -112,7 +113,6 @@ pub struct CompletionContext<'db> {
     db: &'db dyn TyDatabase,
     sema: Semantics<'db>,
     package: Package,
-    module: Module,
     is_top_level: bool,
     source_range: TextRange,
     expr_ptr: Option<InFile<SyntaxNode>>,
@@ -140,7 +140,6 @@ impl<'db> CompletionContext<'db> {
             sema,
             is_top_level: false,
             source_range: TextRange::default(),
-            module: module,
             package: module.package(db.upcast()),
             expr_ptr: None,
             tok,
@@ -294,7 +293,7 @@ fn complete_dot(acc: &mut Vec<CompletionItem>, ctx: CompletionContext<'_>) -> Op
 
                 let module_items = ctx.db.module_scope(file);
 
-                for (def, _) in module_items.declarations().flatten() {
+                for (def, _) in module_items.declarations().flatten().filter(|item| item.1 != Visibility::Private) {
                     match def {
                         ModuleDefId::FunctionId(it) => {
                             acc.push(render::render_fn(&ctx, it));
@@ -484,18 +483,6 @@ mod tests {
     }
 
     #[track_caller]
-    fn check_all(fixture: &str, trigger_char: Option<char>, expect: Expect) {
-        let (db, f) = TestDB::from_fixture(fixture).unwrap();
-        let compes = super::completions(&db, f[0], trigger_char)
-            .expect("No completion")
-            .iter()
-            .map(|c| format!("({:?}) {}", c.kind, c.label))
-            .collect::<Vec<_>>()
-            .join(";");
-        expect.assert_eq(&compes);
-    }
-
-    #[track_caller]
     fn check(fixture: &str, label: &str, expect: Expect) {
         check_trigger(fixture, None, label, expect);
     }
@@ -507,6 +494,10 @@ mod tests {
 
     #[test]
     fn scope() {
-        check_all("fn main() { a$0 }", None, expect!["(Function) main()"]);
+        check(
+            "fn main() { a$0 }",
+            "main()",
+            expect!["(Function) fn main() { main() }"],
+        );
     }
 }

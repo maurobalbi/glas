@@ -2,6 +2,7 @@ mod base;
 mod def;
 mod diagnostic;
 mod ide;
+mod text_edit;
 mod ty;
 
 #[cfg(test)]
@@ -20,6 +21,7 @@ pub use base::{
 };
 pub use def::DefDatabase;
 pub use diagnostic::{Diagnostic, DiagnosticKind, Severity};
+pub use text_edit::{TextEdit, WorkspaceEdit};
 // pub use ty::{InferenceResult, TyDatabase};
 
 /// Generates `From` impls for `Enum E { Foo(Foo), Bar(Bar) }` enums

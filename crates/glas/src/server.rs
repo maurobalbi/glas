@@ -1,7 +1,7 @@
 use crate::capabilities::{negotiate_capabilities, NegotiatedCapabilities};
 use crate::config::{Config, CONFIG_KEY};
 use crate::{convert, handler, lsp_ext, UrlExt, Vfs, MAX_FILE_LEN};
-use anyhow::{bail, ensure, Context, Result, Error};
+use anyhow::{bail, ensure, Context, Result};
 use async_lsp::concurrency::ConcurrencyLayer;
 use async_lsp::panic::CatchUnwindLayer;
 use async_lsp::router::Router;
@@ -25,12 +25,11 @@ use lsp_types::{
     FileEvent, FileSystemWatcher, GlobPattern, InitializeParams, InitializeResult,
     InitializedParams, MessageType, NumberOrString, OneOf, Position, ProgressParams,
     ProgressParamsValue, PublishDiagnosticsParams, Range, Registration, RegistrationParams,
-    RelativePattern, ServerInfo, ShowMessageParams, TextDocumentContentChangeEvent, TextEdit, Url,
-    WindowClientCapabilities, WorkDoneProgress, WorkDoneProgressBegin,
-    WorkDoneProgressCreateParams, WorkDoneProgressEnd, WorkDoneProgressReport,
+    RelativePattern, ServerInfo, ShowMessageParams, TextEdit, Url, WindowClientCapabilities,
+    WorkDoneProgress, WorkDoneProgressBegin, WorkDoneProgressCreateParams, WorkDoneProgressEnd,
+    WorkDoneProgressReport,
 };
 use smol_str::SmolStr;
-use tokio::io::AsyncWriteExt;
 
 use tokio::sync::oneshot;
 use tower::ServiceBuilder;
@@ -81,8 +80,6 @@ pub const MANIFEST_TOML: &str = "manifest.toml";
 const LOAD_WORKSPACE_PROGRESS_TOKEN: &str = "glas/loadWorkspaceProgress";
 
 const LOAD_GLEAM_WORKSPACE_DEBOUNCE_DURATION: Duration = Duration::from_millis(100);
-
-struct ClientState {}
 
 pub struct Server {
     // States.
@@ -162,11 +159,13 @@ impl Server {
             .request_snap::<req::HoverRequest>(handler::hover)
             .request_snap::<req::DocumentHighlightRequest>(handler::document_highlight)
             .request_snap::<req::References>(handler::references)
+            .request_snap::<req::PrepareRenameRequest>(handler::prepare_rename)
+            .request_snap::<req::Rename>(handler::rename)
             .request_snap::<lsp_ext::SyntaxTree>(handler::syntax_tree)
             .request_snap::<req::SemanticTokensFullRequest>(handler::semantic_token_full)
             .request_snap::<req::SemanticTokensRangeRequest>(handler::semantic_token_range)
             //// Events ////
-            .event(Self::on_set_package_info)
+            .event(Self::on_set_package_graph)
             .event(Self::on_update_config)
             .event(Self::on_update_diagnostics)
             // Loopback event.
@@ -593,7 +592,7 @@ impl Server {
         graph: &mut PackageGraph,
         roots: &mut IndexSet<PackageRoot>,
         seen: &mut HashMap<SmolStr, PackageId>,
-        is_local: bool,
+        is_relative: bool,
     ) -> Result<PackageId> {
         roots.insert(PackageRoot {
             path: root_path.to_path_buf(),
@@ -628,7 +627,16 @@ impl Server {
 
         let package = match seen.get(name.as_str()) {
             Some(idx) => idx.clone(),
-            None => graph.add_package(name.clone(), gleam_file),
+            None => {
+                let parent = root_path.parent();
+                let is_parent_packages = parent.map(|p| p.ends_with("packages")).unwrap_or(false);
+                let grand_parent = parent.and_then(|p| p.parent());
+
+                let is_grand_parent_build =
+                    grand_parent.map(|p| p.ends_with("build")).unwrap_or(false);
+                let is_not_local = is_parent_packages && is_grand_parent_build;
+                graph.add_package(name.clone(), gleam_file, !is_not_local)
+            }
         };
 
         seen.insert(name, package);
@@ -642,7 +650,7 @@ impl Server {
                 graph.add_dep(package, dependency);
                 continue;
             }
-            let path = if is_local {
+            let path = if is_relative {
                 package_dir.join(name)
             } else {
                 root_path.parent().unwrap().join(name)
@@ -652,8 +660,8 @@ impl Server {
                 .and_then(|t| t.get("path"))
                 .and_then(|v| v.as_str())
             {
-                Some(local_path) => {
-                    let local_path = root_path.join(local_path);
+                Some(relative_path) => {
+                    let local_path = root_path.join(relative_path);
                     let Ok(dep_id) =
                         Self::assemble_graph(vfs, &local_path, graph, roots, seen, true)
                     else {
@@ -713,7 +721,7 @@ impl Server {
         }
     }
 
-    fn on_set_package_info(&mut self, info: SetPackageGraphEvent) -> NotifyResult {
+    fn on_set_package_graph(&mut self, info: SetPackageGraphEvent) -> NotifyResult {
         tracing::debug!("Set package info: {:#?}", info.0);
         let mut vfs = self.vfs.write().unwrap();
 

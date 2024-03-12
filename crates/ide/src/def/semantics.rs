@@ -195,6 +195,7 @@ pub fn classify_node(sema: &Semantics, node: &SyntaxNode) -> Option<Definition> 
             ast::NameRef(name_ref) => classify_name_ref(sema, &name_ref),
             ast::Name(name) => classify_name(sema, &name),
             ast::TypeName(type_name) => classify_type_name(sema, &type_name),
+            ast::Label(label) => classify_label(sema, &label),
             // ast::PatternVariable(type_name) => classify_pattern_variable(sema, &type_name),
             _ => None,
         }
@@ -274,6 +275,66 @@ fn classify_type_name(sema: &Semantics, type_name: &ast::TypeName) -> Option<Def
         .map(Into::into)
 }
 
+fn classify_label(sema: &Semantics, label: &ast::Label) -> Option<Definition> {
+    let label_text = SmolStr::from(label.text()?);
+
+    let parent = label.syntax().parent()?;
+
+    let Definition::Variant(variant) = match_ast! {
+        match parent {
+            ast::VariantRefField(ref_field) => {
+                classify_ref_field(sema, &ref_field)
+            },
+            ast::Arg(arg) => {
+                classify_arg(sema, &arg)
+            },
+            _ => return None
+        }
+    }?
+    else {
+        return None;
+    };
+
+    let adt = variant.parent();
+
+    // This is a bit of a hack to get renaming to work with common fields and pattern matching!
+    if let Some(field) = adt.common_fields(sema.db.upcast()).get(&label_text) {
+        return Some(Definition::Field(*field));
+    }
+
+    for field in variant.fields(sema.db.upcast()).iter() {
+        if let Some(field_label) = field.label(sema.db.upcast()) {
+            if field_label == *label_text {
+                return Some(Definition::Field(*field));
+            }
+        }
+    }
+
+    None
+}
+
+fn classify_ref_field(sema: &Semantics, ref_field: &ast::VariantRefField) -> Option<Definition> {
+    let field_list = ast::VariantRefFieldList::cast(ref_field.syntax().parent()?)?;
+    let variant_ref = ast::VariantRef::cast(field_list.syntax().parent()?)?;
+    let variant_name = variant_ref.variant()?;
+
+    classify_name_ref(sema, &variant_name)
+}
+
+fn classify_arg(sema: &Semantics, arg: &ast::Arg) -> Option<Definition> {
+    let arg_list = ast::ArgList::cast(arg.syntax().parent()?)?;
+    let constructor = arg_list.syntax().prev_sibling()?;
+    if let Some(constr) = ast::VariantConstructor::cast(constructor.clone()) {
+        return classify_name_ref(sema, &constr.name()?);
+    };
+
+    if let Some(constr) = ast::FieldAccessExpr::cast(constructor) {
+        return classify_name_ref(sema, &constr.label()?);
+    };
+
+    None
+}
+
 pub struct Semantics<'db> {
     pub db: &'db dyn TyDatabase,
     cache: RefCell<HashMap<SyntaxNode, FileId>>,
@@ -317,9 +378,12 @@ impl<'db> Semantics<'db> {
             .parent()
             .and_then(ast::VariantRef::cast)
             .and_then(|p| {
-                Some((analyzer
-                    .resolver
-                    .resolve_module(&p.module()?.name()?.text()?)?, p.variant()?.text()?))
+                Some((
+                    analyzer
+                        .resolver
+                        .resolve_module(&p.module()?.name()?.text()?)?,
+                    p.variant()?.text()?,
+                ))
             })
         {
             let result = resolver_for_toplevel(self.db.upcast(), module).resolve_name(&name)?;
@@ -433,13 +497,28 @@ impl ToDef for ast::VariantField {
         let syntax = src.value.syntax();
         let container = find_container(sema.db.upcast(), src.with_value(syntax))?;
 
-        if let ModuleDefId::AdtId(it) = container {
+        if let ModuleDefId::VariantId(it) = container {
             let text = src.value.label()?.text()?;
-            return Adt { id: it }
-                .common_fields(sema.db.upcast())
-                .get(&text)
-                .cloned();
+
+            let variant = Variant {
+                id: it.local_id,
+                parent: it.parent,
+            };
+            let adt = variant.parent();
+
+            if let Some(field) = adt.common_fields(sema.db.upcast()).get(&text) {
+                return Some(*field);
+            }
+
+            for field in variant.fields(sema.db.upcast()) {
+                if let Some(label) = field.label(sema.db.upcast()) {
+                    if label == text {
+                        return Some(field);
+                    }
+                }
+            }
         }
+
         None
     }
 }
@@ -474,9 +553,14 @@ pub fn find_container(db: &dyn DefDatabase, node: InFile<&SyntaxNode>) -> Option
             return fn_id.map(From::from);
         }
 
-        if let Some(it) = ast::Adt::cast(node.value) {
+        if let Some(it) = ast::Adt::cast(node.value.clone()) {
             let adt_id = map.node_to_adt(&it);
             return adt_id.map(From::from);
+        }
+
+        if let Some(it) = ast::Variant::cast(node.value) {
+            let variant_id = map.node_to_variant(&it);
+            return variant_id.map(From::from);
         }
     }
     None

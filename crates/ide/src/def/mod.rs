@@ -18,7 +18,6 @@ use crate::FileId;
 use syntax::{AstPtr, Parse};
 
 pub use semantics::{classify_node, find_container, Semantics};
-pub use syntax::ast::{AstNode, BinaryOpKind as BinaryOp, Expr, UnaryOpKind as UnaryOp};
 
 use self::body::{Body, BodySourceMap};
 use self::hir_def::{

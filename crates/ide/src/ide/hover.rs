@@ -1,3 +1,4 @@
+use crate::def::hir::Function;
 use crate::ty;
 
 use syntax::ast::{self, AstNode};
@@ -21,6 +22,21 @@ pub(crate) fn hover(db: &dyn TyDatabase, FilePos { file_id, pos }: FilePos) -> O
     let tok = best_token_at_offset(parse.syntax(), pos)?;
     if let Some(it) = tok.parent()?.parent().and_then(ast::FieldAccessExpr::cast) {
         let analyzer = sema.analyze(it.base()?.syntax())?;
+        if let Some(resolved) = sema.resolve_field(it.clone()) {
+            match resolved {
+                ty::FieldResolution::Field(_) => {}
+                ty::FieldResolution::ModuleDef(def) => match def {
+                    crate::def::hir::ModuleDef::Function(it) => {
+                        return render_function(db, tok, it)
+                    }
+                    crate::def::hir::ModuleDef::Variant(it) => return render_variant(db, tok, it),
+                    crate::def::hir::ModuleDef::Adt(it) => return render_adt(db, tok, it),
+                    crate::def::hir::ModuleDef::TypeAlias(it) => {
+                        return render_type_alias(db, tok, it)
+                    }
+                },
+            }
+        };
         let ty = analyzer.type_of_expr(&ast::Expr::from(it))?;
         return Some(HoverResult {
             range: tok.text_range(),
@@ -29,40 +45,9 @@ pub(crate) fn hover(db: &dyn TyDatabase, FilePos { file_id, pos }: FilePos) -> O
     };
 
     match semantics::classify_node(&sema, &tok.parent()?)? {
-        semantics::Definition::Adt(it) => {
-            let docs = it.docs(db.upcast());
-            Some(HoverResult {
-                range: tok.text_range(),
-                markup: format!("```gleam\ntype {}\n```\n___\n{docs}", it.name(db.upcast())),
-            })
-        }
-        semantics::Definition::Function(it) => {
-            let name = it.name(db.upcast());
-            let docs = it.docs(db.upcast());
-            match it.ty(db) {
-                ty::Ty::Function { params, return_ } => {
-                    let params = params
-                        .iter()
-                        .map(|(_, ty)| format!("{}", ty.display(db)))
-                        .collect::<Vec<_>>()
-                        .join(", ");
-                    Some(HoverResult {
-                        range: tok.text_range(),
-                        markup: format!(
-                            "```gleam\nfn {}({}) -> {}\n```\n___\n{docs}",
-                            name,
-                            params,
-                            return_.display(db)
-                        ),
-                    })
-                }
-                _ => None,
-            }
-        }
-        semantics::Definition::Variant(it) => Some(HoverResult {
-            range: tok.text_range(),
-            markup: format!("```gleam\n{}\n```", it.name(db.upcast())),
-        }),
+        semantics::Definition::Adt(it) => return render_adt(db, tok, it),
+        semantics::Definition::Function(it) => return render_function(db, tok, it),
+        semantics::Definition::Variant(it) => return render_variant(db, tok, it),
         semantics::Definition::Field(it) => {
             let ty = it.ty(db.upcast());
             Some(HoverResult {
@@ -91,10 +76,70 @@ pub(crate) fn hover(db: &dyn TyDatabase, FilePos { file_id, pos }: FilePos) -> O
             range: tok.text_range(),
             markup: format!("```gleam\n{:?}\n```", it),
         }),
-        semantics::Definition::TypeAlias(it) => Some(HoverResult {
-            range: tok.text_range(),
-            markup: format!("```gleam\ntype {}\n```", it.name(db.upcast())),
-        }),
+        semantics::Definition::TypeAlias(it) => return render_type_alias(db, tok, it),
+    }
+}
+
+fn render_adt(
+    db: &dyn TyDatabase,
+    tok: syntax::rowan::SyntaxToken<syntax::GleamLanguage>,
+    it: crate::def::hir::Adt,
+) -> Option<HoverResult> {
+    let docs = it.docs(db.upcast());
+    Some(HoverResult {
+        range: tok.text_range(),
+        markup: format!("```gleam\ntype {}\n```\n___\n{docs}", it.name(db.upcast())),
+    })
+}
+
+fn render_type_alias(
+    db: &dyn TyDatabase,
+    tok: syntax::rowan::SyntaxToken<syntax::GleamLanguage>,
+    it: crate::def::hir::TypeAlias,
+) -> Option<HoverResult> {
+    Some(HoverResult {
+        range: tok.text_range(),
+        markup: format!("```gleam\ntype {}\n```", it.name(db.upcast())),
+    })
+}
+
+fn render_variant(
+    db: &dyn TyDatabase,
+    tok: syntax::rowan::SyntaxToken<syntax::GleamLanguage>,
+    it: crate::def::hir::Variant,
+) -> Option<HoverResult> {
+    let docs = it.docs(db.upcast());
+    Some(HoverResult {
+        range: tok.text_range(),
+        markup: format!("```gleam\n{}\n```\n___\n{docs}", it.name(db.upcast())),
+    })
+}
+
+fn render_function(
+    db: &dyn TyDatabase,
+    tok: syntax::SyntaxToken,
+    it: Function,
+) -> Option<HoverResult> {
+    let name = it.name(db.upcast());
+    let docs = it.docs(db.upcast());
+    match it.ty(db) {
+        ty::Ty::Function { params, return_ } => {
+            let params = params
+                .iter()
+                .map(|(_, ty)| format!("{}", ty.display(db)))
+                .collect::<Vec<_>>()
+                .join(", ");
+            Some(HoverResult {
+                range: tok.text_range(),
+                markup: format!(
+                    "```gleam\nfn {}({}) -> {}\n```\n___\n{docs}",
+                    name,
+                    params,
+                    return_.display(db)
+                ),
+            })
+        }
+        _ => None,
     }
 }
 

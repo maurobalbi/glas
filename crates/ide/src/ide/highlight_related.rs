@@ -38,15 +38,6 @@ pub(crate) fn highlight_related(db: &dyn TyDatabase, fpos: FilePos) -> Option<Ve
         })
     }
 
-    if let Some(nav) = def.to_nav(db) {
-        if fpos.file_id == nav.file_id {
-            res.insert(HlRelated {
-                range: nav.focus_range,
-                is_definition: true,
-            });
-        }
-    };
-
     Some(res.into_iter().collect())
 }
 
@@ -81,11 +72,11 @@ mod tests {
     fn definition() {
         check(
             "fn case_hl() { case 1 { a -> $0a } }",
-            expect!["fn case_hl() { case 1 { <<a>> -> <a> } }"],
+            expect!["fn case_hl() { case 1 { <a> -> <a> } }"],
         );
         check(
             "fn highlight(a) { $0a }",
-            expect!["fn highlight(<<a>>) { <a> }"],
+            expect!["fn highlight(<a>) { <a> }"],
         );
     }
 
@@ -93,7 +84,7 @@ mod tests {
     fn hl_field() {
         check(
             "type Wobblie { Variant1(name: Int) Variant2(name: Int) } fn hl(a: Wobblie) { a.$0name }",
-            expect!["type Wobblie { Variant1(<<name: Int>>) Variant2(name: Int) } fn hl(a: Wobblie) { a.<name> }"],
+            expect!["type Wobblie { Variant1(<name>: Int) Variant2(<name>: Int) } fn hl(a: Wobblie) { a.<name> }"],
         );
     }
 }

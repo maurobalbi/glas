@@ -15,6 +15,7 @@ pub(crate) fn references(db: &dyn TyDatabase, fpos: FilePos) -> Option<Vec<FileR
     let mut res = HashSet::new();
 
     let def = semantics::classify_node(&sema, &tok.parent()?)?;
+
     def.clone()
         .usages(&sema)
         .in_scope(&SearchScope::package_graph(db.upcast()))
@@ -26,43 +27,54 @@ pub(crate) fn references(db: &dyn TyDatabase, fpos: FilePos) -> Option<Vec<FileR
             })
         });
 
-    def.to_nav(db).map(|nav| {
-        res.insert(FileRange {
-            file_id: nav.file_id,
-            range: nav.focus_range,
-        })
-    });
-
     Some(res.into_iter().unique().collect())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::base::SourceDatabase;
     use crate::tests::TestDB;
+    use crate::{base::SourceDatabase, FileId};
     use expect_test::{expect, Expect};
+    use indexmap::IndexMap;
+    use syntax::TextRange;
 
     fn check(fixture: &str, expect: Expect) {
         let (db, f) = TestDB::from_fixture(fixture).unwrap();
         assert_eq!(f.markers().len(), 1, "Missing markers");
         let refs = references(&db, f[0]).expect("No definition");
 
+        let mut file_set: IndexMap<FileId, Vec<TextRange>> = IndexMap::new();
+
+        for refs in refs.into_iter() {
+            file_set
+                .entry(refs.file_id)
+                .and_modify(|src| {
+                    src.push(refs.range);
+                })
+                .or_insert_with(|| vec![refs.range]);
+        }
+
         let mut actual = String::new();
-        for refs in refs {
+        for (id, mut ranges) in file_set.into_iter().sorted_by(|a, b| a.0.cmp(&b.0)) {
+            ranges.sort_by(|a, b| b.start().cmp(&a.start()));
+            let mut content = db.file_content(id).to_string();
+            for range in ranges {
+                content.insert_str(usize::from(range.end()), ">");
+                content.insert_str(usize::from(range.start()), "<");
+            }
+
+            actual += &format!("--- {:?}", id);
             actual += "\n\n";
 
-            let src = db.file_content(refs.file_id);
-            let full = src[refs.range].to_owned();
+            actual += &content;
 
-            let file = format!("{:?} {:?} ", refs.file_id, refs.range);
-            actual += &full;
-            actual += &file;
+            actual += "\n";
         }
+
         expect.assert_eq(actual.trim_start())
     }
 
-    
     #[test]
     fn module_field_access() {
         check(
@@ -76,12 +88,41 @@ fn $0print() {
 import test
 
 fn test() { test.print }
-fn test2() { test.print }"#,
+fn test2() { test.print }
+"#,
             expect![
-                r#"
+                r#"--- FileId(0)
+
 fn <print>() {
     1
 }
+--- FileId(1)
+
+import test
+
+fn test() { test.<print> }
+fn test2() { test.<print> }
+"#
+            ],
+        );
+    }
+
+    #[test]
+    fn import_ref() {
+        check(
+            r#"
+#- test.gleam
+pub fn $0testfn() {}
+
+#- test2.gleam
+import test.{testfn}"#,
+            expect![
+                r#"--- FileId(0)
+
+pub fn <testfn>() {}
+--- FileId(1)
+
+import test.{<testfn>}
 "#
             ],
         );

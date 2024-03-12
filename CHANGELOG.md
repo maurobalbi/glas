@@ -1,5 +1,31 @@
 # Changelog
 
+## v0.1.9
+
+### Fixed
+- Fix qualified imported Constructors inference
+- Fix labelled field resolution
+- Add tuple indexing inference
+
+## v0.1.6
+
+### Fixed
+- Restrict renaming to local definitions
+- Properly parse panic as expressions and labelled discard parameters
+- Correctly reference labels
+- Restrict nonsensical  renames
+
+## v0.1.0
+
+### New Features
+
+- Renaming
+
+### Improved
+
+- Improve Reference for Variants, add better and more tests
+- Render Documentation for Custom Types
+
 ## v0.0.9
 
 ### Added

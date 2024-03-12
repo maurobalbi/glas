@@ -25,6 +25,7 @@ For other platforms binaries have to be built from source.
 - Syntax-Errors
 - Semantic highlighting
 - Show syntax-tree
+- Rename
 
 ### What is the motivation to develop this even though an LSP already exists integrated in the gleam compiler?
 

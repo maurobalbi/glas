@@ -245,11 +245,17 @@ impl PackageGraph {
         self.target = target;
     }
 
-    pub fn add_package(&mut self, display_name: SmolStr, gleam_toml: FileId) -> PackageId {
+    pub fn add_package(
+        &mut self,
+        display_name: SmolStr,
+        gleam_toml: FileId,
+        is_local: bool,
+    ) -> PackageId {
         let info = PackageInfo {
             gleam_toml,
             display_name,
             dependencies: Vec::new(),
+            is_local,
         };
         self.arena.alloc(info)
     }
@@ -278,6 +284,7 @@ pub struct PackageInfo {
     // pub version: Option<String>,
     pub display_name: SmolStr,
     pub dependencies: Vec<Dependency>,
+    pub is_local: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -399,14 +406,11 @@ pub trait SourceDatabase {
 
 fn source_root_package(db: &dyn SourceDatabase, id: SourceRootId) -> Arc<PackageId> {
     let graph = db.package_graph();
-    tracing::info!("Graph {:#?}", graph);
     let mut iter = graph.iter().filter(|&package| {
         let root_file = graph[package].gleam_toml;
         db.file_source_root(root_file) == id
     });
     let res = iter.next().expect("should always find a package!");
-    tracing::info!("iter lengtch {:?}", res);
-    tracing::info!("iter lengtch {:?}", iter.collect::<Vec<_>>());
     Arc::new(res)
 }
 
@@ -458,7 +462,6 @@ impl Change {
                         module_map.insert(fid, module_name); // Todo: Report error if insert returns an fileid
                     }
                 }
-                tracing::info!("MM {:#?}", module_map);
                 db.set_module_map_with_durability(sid, Arc::new(module_map), Durability::HIGH);
                 db.set_source_root_with_durability(sid, Arc::new(root), Durability::HIGH);
             }
