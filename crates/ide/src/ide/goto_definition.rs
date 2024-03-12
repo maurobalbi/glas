@@ -377,7 +377,7 @@ import test.{$0testfn}
         check(
             r#"
 #- test.gleam
-type Sheep {
+pub type Sheep {
     Dolly(age: Int)
     Dodo(age: Int)
 }

@@ -318,7 +318,7 @@ fn main(a: Alias) {
         check(
             r#"
 #- test.gleam
-type Bobele {
+pub type Bobele {
     Bobobo(name: String)
     Second(name: String)
     Dudu(name: String)
@@ -343,7 +343,7 @@ fn name(a: Bobele) {
             expect![
                 r#"--- FileId(0)
 
-type Bobele {
+pub type Bobele {
     Bobobo(new_name: String)
     Second(new_name: String)
     Dudu(new_name: String)

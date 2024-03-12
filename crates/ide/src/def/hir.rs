@@ -241,6 +241,13 @@ impl Variant {
         Module { id: loc.file_id }
     }
 
+    pub fn docs(&self, db: &dyn DefDatabase) -> String {
+        self.source(db)
+            .expect("This should not happen")
+            .value
+            .doc_text()
+    }
+
     fn data(&self, db: &dyn DefDatabase) -> VariantData {
         let adt = db.lookup_intern_adt(self.parent);
         let module_items = db.module_items(adt.file_id);

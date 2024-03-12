@@ -111,11 +111,12 @@ pub struct Clause {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Statement {
     Let {
-        pattern: PatternId, // Should be pattern
+        pattern: PatternId, // Should be (PatternId, Option<TypeRef>)
         // type_ann: Type
         body: ExprId,
     },
     Use {
+        // Should be (PatternId, Option<TypeRef>)
         patterns: Vec<PatternId>,
         expr: ExprId,
     },
@@ -169,6 +170,7 @@ pub enum Expr {
     },
     Lambda {
         body: ExprId,
+        // ToDo: this should be (PatternId, Option<TypeRef>)
         params: IdxRange<Pattern>,
     },
     Spread {

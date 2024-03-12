@@ -255,10 +255,16 @@ impl LowerCtx {
             }
         };
 
+        let visibility = if fun.is_public() {
+            Visibility::Public
+        } else {
+            Visibility::Private
+        };
+
         Some(self.alloc_function(FunctionData {
             name: fun.name()?.text()?,
             params,
-            visibility: Visibility::Public,
+            visibility,
             ast_ptr,
         }))
     }
@@ -273,7 +279,11 @@ impl LowerCtx {
             }
         }
 
-        let visibility = Visibility::Public;
+        let visibility = if ct.is_public() {
+            Visibility::Public
+        } else {
+            Visibility::Private
+        };
 
         let mut fields = Vec::new();
         let constructors = self.lower_constructors(ct.constructors(), &mut fields);
@@ -308,7 +318,11 @@ impl LowerCtx {
             }
         }
 
-        let visibility = Visibility::Public;
+        let visibility = if alias.is_public() {
+            Visibility::Public
+        } else {
+            Visibility::Private
+        };
 
         let body = module::typeref_from_ast_opt(alias.type_());
         Some(self.alloc_type_alias(TypeAliasData {

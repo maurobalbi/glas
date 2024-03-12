@@ -167,7 +167,7 @@ impl<'i> Parser<'i> {
                         let n_ws = n_tokens!(is_module_doc);
                         eat_token(n_ws, &mut builder, &mut pos);
                     }
-                    FUNCTION | MODULE_CONSTANT | ADT => {
+                    FUNCTION | MODULE_CONSTANT | ADT | VARIANT => {
                         let n_ws = n_tokens!(is_whitespace);
                         eat_token(n_ws, &mut builder, &mut pos);
 

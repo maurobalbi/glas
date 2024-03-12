@@ -76,6 +76,7 @@ pub fn render_variant(ctx: &CompletionContext<'_>, id: &VariantId) -> Completion
         format!("{}", name)
     };
 
+    let docs = it.docs(ctx.db.upcast());
     CompletionItem {
         label: label.into(),
         source_range: ctx.source_range,
@@ -84,7 +85,7 @@ pub fn render_variant(ctx: &CompletionContext<'_>, id: &VariantId) -> Completion
         signature: Some(Adt { id: it.parent }.name(ctx.db.upcast()).into()),
         relevance: CompletionRelevance::default(),
         description: None,
-        documentation: None,
+        documentation: Some(docs),
         is_snippet: false,
     }
 }

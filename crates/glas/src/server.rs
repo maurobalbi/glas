@@ -629,11 +629,9 @@ impl Server {
             Some(idx) => idx.clone(),
             None => {
                 let parent = root_path.parent();
-                tracing::info!("PARENT PATH {:?}", parent);
                 let is_parent_packages = parent.map(|p| p.ends_with("packages")).unwrap_or(false);
                 let grand_parent = parent.and_then(|p| p.parent());
 
-                tracing::info!("GPARENT PATH {:?}", grand_parent);
                 let is_grand_parent_build =
                     grand_parent.map(|p| p.ends_with("build")).unwrap_or(false);
                 let is_not_local = is_parent_packages && is_grand_parent_build;

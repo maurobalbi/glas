@@ -354,6 +354,10 @@ asts! {
         name: TypeName,
         constructors: [Variant],
         generic_params: GenericParamList,
+
+        pub fn is_public(&self) -> bool {
+            self.syntax().children_with_tokens().any(|it| it.kind() == T!["pub"])
+        }
     },
     GENERIC_PARAM_LIST = GenericParamList {
         params: [TypeExpr],
@@ -371,7 +375,7 @@ asts! {
             self.0.children_with_tokens().any(|t| t.kind() == T!["opaque"])
         }
     },
-    VARIANT = Variant {
+    VARIANT = Variant [HasDocParts] {
         name: Name,
         field_list: VariantFieldList,
     },
@@ -395,6 +399,10 @@ asts! {
         param_list: ParamList,
         return_type: TypeExpr,
         body: Block,
+
+        pub fn is_public(&self) -> bool {
+            self.syntax().children_with_tokens().any(|it| it.kind() == T!["pub"])
+        }
     },
     EXPR_CALL = ExprCall {
         func: Expr,
@@ -708,7 +716,7 @@ mod tests {
 
     #[test]
     fn assert() {
-        let e = crate::parse_module("fn pat(a) { let Pat(name: name, age: age) = a \n name }");
+        let e = crate::parse_module("pub fn pat(a) { let Pat(name: name, age: age) = a \n name }");
         for error in e.errors() {
             println!("{}", error);
         }
