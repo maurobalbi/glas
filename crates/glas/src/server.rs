@@ -47,7 +47,7 @@ use std::panic::UnwindSafe;
 use std::path::{Path, PathBuf};
 use std::process::{self, Stdio};
 
-use std::sync::{Arc, Once, RwLock};
+use std::sync::{Arc, Mutex, Once, RwLock};
 use std::time::Duration;
 use std::{fmt, panic};
 use tokio::task;
@@ -92,7 +92,7 @@ pub struct Server {
     opened_files: HashMap<Url, FileData>,
     config: Arc<Config>,
 
-    gleam_interop_client: Option<ServerSocket>,
+    gleam_interop_client: Arc<Mutex<Option<ServerSocket>>>,
     diagnostics: DiagnosticCollector,
     // Ongoing tasks.
     source_roots: IndexSet<PackageRoot>,
@@ -100,7 +100,7 @@ pub struct Server {
     client: ClientSocket,
     capabilities: NegotiatedCapabilities,
     /// Messages to show once initialized.
-    init_messages: Vec<ShowMessageParams>,
+    init_messages: Arc<Mutex<Vec<ShowMessageParams>>>,
 }
 
 struct InteropClient {
@@ -186,7 +186,7 @@ impl Server {
             #[cfg(windows)]
             config: Arc::new(Config::new("c://non-existing-path".into())),
 
-            gleam_interop_client: None,
+            gleam_interop_client: Arc::new(Mutex::new(None)),
             source_roots: IndexSet::new(),
             diagnostics: DiagnosticCollector {
                 // client,
@@ -194,7 +194,7 @@ impl Server {
                 internal: HashMap::new(),
             },
             client,
-            init_messages,
+            init_messages: Arc::new(Mutex::new(init_messages)),
             capabilities: NegotiatedCapabilities::default(),
         }
     }
@@ -312,55 +312,70 @@ impl Server {
         }
         *Arc::get_mut(&mut self.config).expect("No concurrent access yet") = cfg;
 
-        let (mainloop, mut server) = async_lsp::MainLoop::new_client(|_server| {
-            let client = self.client.clone();
-            let router = InteropClient::new_router(client);
-
-            ServiceBuilder::new()
-                .layer(TracingLayer::default())
-                .layer(CatchUnwindLayer::default())
-                .layer(ConcurrencyLayer::default())
-                .service(router)
-        });
-
-        let child = async_process::Command::new("gleam")
-            .arg("lsp")
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::inherit())
-            .kill_on_drop(false)
-            .spawn()
-            .expect("Failed to run gleam lsp");
-        let stdout = child.stdout.unwrap();
-        let stdin = child.stdin.unwrap();
-
-        let mut client = self.client.clone();
-
-        tokio::spawn(async move {
-            match mainloop.run_buffered(stdout, stdin).await {
-                Ok(_) => {}
-                Err(e) => client.show_message_ext(MessageType::ERROR, e.to_string()),
-            };
-        });
-        self.gleam_interop_client = Some(server.clone());
-
+        let interop_clinet = self.gleam_interop_client.clone();
+        let moveable_client = self.client.clone();
+        let init_messages = self.init_messages.clone();
         // Initialize.
         async move {
-            let _params = server
-                .initialize(InitializeParams {
-                    root_uri: Some(params.root_uri.unwrap()),
-                    capabilities: ClientCapabilities {
-                        window: Some(WindowClientCapabilities {
-                            work_done_progress: Some(true),
-                            ..WindowClientCapabilities::default()
-                        }),
-                        ..ClientCapabilities::default()
-                    },
-                    ..InitializeParams::default()
-                })
-                .await
-                .unwrap();
-            server.initialized(InitializedParams {}).unwrap();
+            let child = async_process::Command::new("gleam")
+                .arg("lsp")
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::inherit())
+                .kill_on_drop(false)
+                .spawn();
+
+            match child {
+                Ok(child) => {
+                    let (mainloop, mut server) = async_lsp::MainLoop::new_client(|_server| {
+                        let client = moveable_client.clone();
+                        let router = InteropClient::new_router(client);
+
+                        ServiceBuilder::new()
+                            .layer(TracingLayer::default())
+                            .layer(CatchUnwindLayer::default())
+                            .layer(ConcurrencyLayer::default())
+                            .service(router)
+                    });
+
+                    let stdout = child.stdout.unwrap();
+                    let stdin = child.stdin.unwrap();
+
+                    let mut client = moveable_client;
+
+                    tokio::spawn(async move {
+                        match mainloop.run_buffered(stdout, stdin).await {
+                            Ok(_) => {}
+                            Err(e) => client.show_message_ext(MessageType::ERROR, e.to_string()),
+                        };
+                    });
+                    {
+                        let mut gleam_interop = interop_clinet.lock().unwrap();
+                        *gleam_interop = Some(server.clone());
+                    }
+                    let _params = server
+                        .initialize(InitializeParams {
+                            root_uri: Some(params.root_uri.unwrap()),
+                            capabilities: ClientCapabilities {
+                                window: Some(WindowClientCapabilities {
+                                    work_done_progress: Some(true),
+                                    ..WindowClientCapabilities::default()
+                                }),
+                                ..ClientCapabilities::default()
+                            },
+                            ..InitializeParams::default()
+                        })
+                        .await
+                        .unwrap();
+                    server.initialized(InitializedParams {}).unwrap();
+                }
+                Err(_) => init_messages.lock().unwrap().push(ShowMessageParams {
+                    typ: MessageType::INFO,
+                    message: String::from(
+                        "Gleam was not detected in the path, and some features may be missing",
+                    ),
+                }),
+            }
 
             Ok(InitializeResult {
                 capabilities: server_caps,
@@ -373,7 +388,7 @@ impl Server {
     }
 
     fn on_initialized(&mut self, _params: InitializedParams) -> NotifyResult {
-        for msg in std::mem::take(&mut self.init_messages) {
+        for msg in std::mem::take(&mut *self.init_messages.lock().unwrap())  {
             tracing::warn!("Init message ({:?}): {}", msg.typ, msg.message);
 
             let _: Result<_, _> = self.client.show_message(msg);
@@ -440,7 +455,10 @@ impl Server {
         self.opened_files.insert(uri.clone(), FileData::default());
         self.set_vfs_file_content(&uri, params.text_document.text.clone());
 
-        let _ = self.gleam_interop_client.as_ref().unwrap().did_open(params);
+        match *self.gleam_interop_client.lock().unwrap() {
+            Some(ref mut client) => client.did_open(params),
+            None => Ok(()),
+        };
         self.spawn_update_diagnostics(uri);
 
         ControlFlow::Continue(())
@@ -503,7 +521,10 @@ impl Server {
 
     fn on_did_save(&mut self, params: DidSaveTextDocumentParams) -> NotifyResult {
         tracing::info!("Received save notification");
-        let _ = self.gleam_interop_client.as_ref().unwrap().did_save(params);
+        match *self.gleam_interop_client.lock().unwrap() {
+            Some(ref mut client) => client.did_save(params),
+            None => Ok(()),
+        };
         ControlFlow::Continue(())
     }
 
