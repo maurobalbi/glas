@@ -1,5 +1,5 @@
 ### Disclaimer
-Glas is a pet-project of mine and expected to be eventually surpassed in terms of scope and features by the official Gleam-LSP. Bug reports are very welcome, but for feature-requests and other contributions please refer to the official [gleam-repo](https://github.com/gleam-lang/gleam) instead.
+Glas is a pet project of mine and is expected to be surpassed in terms of scope and features by the official Gleam-LSP in due time. Bug reports are much appreciated, but for feature requests and contributions please refer to the official [Gleam reposository](https://github.com/gleam-lang/gleam) instead.
 
 # glas: Gleam Language Server 
 
@@ -11,15 +11,15 @@ Install the extension from [VisualStudio Marketplace](https://marketplace.visual
 
 ## Features
 
-- Resilient parsing
+- Resilient Parsing and Type Checking
 - Completions
-- Goto-Definition
+- Goto Definition
 - Find References
-- Highlight-Related
-- Hover-Info
-- Syntax-Errors
-- Semantic highlighting
-- Show syntax-tree
+- Highlight Related
+- Hover Info
+- Syntax Errors
+- Semantic Highlighting
+- Show Syntax Tree
 - Rename
 
 ![](https://raw.githubusercontent.com/maurobalbi/glas/main/editor/code/images/renaming.gif)

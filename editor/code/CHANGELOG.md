@@ -6,6 +6,7 @@
 - Support for module constants
 - Hover-documentation for qualified definitions
 - Don't show private definitions in completions
+- Add Info Message if 'gleam' is not in PATH
 
 ## v0.1.9
 

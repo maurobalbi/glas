@@ -455,7 +455,7 @@ impl Server {
         self.opened_files.insert(uri.clone(), FileData::default());
         self.set_vfs_file_content(&uri, params.text_document.text.clone());
 
-        match *self.gleam_interop_client.lock().unwrap() {
+        let _ = match *self.gleam_interop_client.lock().unwrap() {
             Some(ref mut client) => client.did_open(params),
             None => Ok(()),
         };
@@ -521,7 +521,7 @@ impl Server {
 
     fn on_did_save(&mut self, params: DidSaveTextDocumentParams) -> NotifyResult {
         tracing::info!("Received save notification");
-        match *self.gleam_interop_client.lock().unwrap() {
+        let _ = match *self.gleam_interop_client.lock().unwrap() {
             Some(ref mut client) => client.did_save(params),
             None => Ok(()),
         };
