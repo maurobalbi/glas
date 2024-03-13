@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.2.0
+
+### Fixed
+- Support for module constants
+- Hover-documentation for qualified definitions
+- Don't show private definitions in completions
+
 ## v0.1.9
 
 ### Fixed

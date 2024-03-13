@@ -1,4 +1,5 @@
-:warning: This is still in early development!
+### Disclaimer
+Glas is a pet-project of mine and expected to be eventually surpassed in scope and features by the official Gleam-LSP. Bug reports are very welcome, but for feature-requests and other contributions please refer to the official [gleam-repo](https://github.com/gleam-lang/gleam) instead.
 
 # glas: Gleam Language Server 
 
@@ -6,9 +7,19 @@ A language server for the [Gleam](https://gleam.run/) programming language.
 
 ## Installation
 
-### MacOS (arm64, x86), Linux (x86), Windows (x86) 
+Currently MacOS (arm64, x86), Linux (x86), Windows (x86) are supported. Other targets have to be compiled from source.
 
-Install the extension from [VisualStudio Marketplace](https://marketplace.visualstudio.com/items?itemName=maurobalbi.glas-vscode)
+### VSCode
+
+Install the extension from [VisualStudio Marketplace](https://marketplace.visualstudio.com/items?itemName=maurobalbi.glas-vscode). Binaries are included in the extension archive.
+
+### NeoVim lspconfig
+
+```lua
+require'lspconfig'.gleam.setup{
+  cmd = { "glas", "--stdio" }
+}
+```
 
 ### Others
 
@@ -27,21 +38,22 @@ For other platforms binaries have to be built from source.
 - Show syntax-tree
 - Rename
 
-### What is the motivation to develop this even though an LSP already exists integrated in the gleam compiler?
+### Motivation?
 
-Originally, this project was primarily motivated by my personal learning about how language servers, in general, and rust-analyzer, in particular, work. I wanted to create something that could potentially benefit others as well, so instead of inventing my own language I targeted one that's already somewhat established. Gleam caught my interest due to it's lovely and active community and the interesting niche (functional, statically typed, simple) it's trying to fill. In the longterm, I believe there are advantages of a specialized language server over one that uses the traditional compiler pipeline.
+This project was primarily motivated by my personal learning about how language servers, in general, and rust-analyzer, in particular, work. Gleam caught my interest due to it's lovely and active community and the interesting niche (functional, statically typed, simple) it's trying to fill. 
 
-Since the code in an actual file during development is usually in a `broken` state, having a specialized IDE architecture, helps making sense of the code on a best-effort basis.
+### Architecture
 
-In a broad sense, the architecture of glas can be thought of as going from chained steps of ```IR -> Result<IRn, Err>``` to  ```IR -> (IRn, Vec<Err>)```
+Since the code in an actual file during development is usually in a `broken` state, having a specialized IDE architecture helps making sense of the code on a best-effort basis.
+
+In a broad sense, the architecture of glas can be thought of as going from chained steps of ```fn(IR) -> Result(IRn, Err)``` to  ```fn(IR) -> (IRn, List(Err))```
 
 Where this is particularly evident is in the parser. Instead of aborting at the first error, the parser always produces a concrete syntax tree and collects errors as it goes. [This blog post by matklad](https://matklad.github.io/2023/05/21/resilient-ll-parsing-tutorial.html) provides an excellent explanation of this concept, and the parser in this project is based on the ideas presented there. To visualize the syntax tree of a file, the VSCode extension implements the "show syntax tree" command, allowing you to explore the tree as you type.
 
-
 ### Goals
-- Deliver first class ux
+- Learning
+- Good UX
 - Provide only correct refactorings (if it compiles before it should compile after)
-- Prioritize performance
 - Emphasize resilience
 
 ### Non goals

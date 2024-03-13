@@ -1,9 +1,50 @@
-# Change Log
+# Changelog
 
-All notable changes to the "glas-vscode" extension will be documented in this file.
+## v0.2.0
 
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
+### Fixed
+- Support for module constants
+- Hover-documentation for qualified definitions
+- Don't show private definitions in completions
 
-## [Unreleased]
+## v0.1.9
 
-- Initial release
+### Fixed
+- Fix qualified imported Constructors inference
+- Fix labelled field resolution
+- Add tuple indexing inference
+
+## v0.1.6
+
+### Fixed
+- Restrict renaming to local definitions
+- Properly parse panic as expressions and labelled discard parameters
+- Correctly reference labels
+- Restrict nonsensical  renames
+
+## v0.1.0
+
+### New Features
+
+- Renaming
+
+### Improved
+
+- Improve Reference for Variants, add better and more tests
+- Render Documentation for Custom Types
+
+## v0.0.9
+
+### Added
+
+- Added auto-format feature (uses gleam-binary)
+
+### Changed
+
+- Persist gleam diagnostics while typing
+
+### Fixed
+
+- Correctly infer Labelled arguments and fields.
+- Correctly complete and hover field access expressions.
+- Instantiate generic parameters.
