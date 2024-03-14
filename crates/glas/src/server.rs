@@ -388,7 +388,7 @@ impl Server {
     }
 
     fn on_initialized(&mut self, _params: InitializedParams) -> NotifyResult {
-        for msg in std::mem::take(&mut *self.init_messages.lock().unwrap())  {
+        for msg in std::mem::take(&mut *self.init_messages.lock().unwrap()) {
             tracing::warn!("Init message ({:?}): {}", msg.typ, msg.message);
 
             let _: Result<_, _> = self.client.show_message(msg);
@@ -632,7 +632,7 @@ impl Server {
             let src = vfs.content_for_file(gleam_file);
             (gleam_file, src)
         };
-        let gleam_toml = gleam_src.parse::<Table>().unwrap();
+        let gleam_toml = gleam_src.parse::<Table>().context("Could not parse toml")?;
         let name: SmolStr = gleam_toml
             .get("name")
             .and_then(|n| n.as_str())
@@ -933,6 +933,10 @@ impl Server {
                 tracing::info!("Setting new sourceroot {:?}", path);
                 package_roots.insert(PackageRoot { path });
                 source_root_changed = true;
+            } else {
+                package_roots.insert(PackageRoot {
+                    path: vpath.as_path().unwrap().to_path_buf(),
+                });
             }
         }
 

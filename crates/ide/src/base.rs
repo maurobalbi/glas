@@ -395,7 +395,7 @@ pub trait SourceDatabase {
     #[salsa::input]
     fn file_source_root(&self, file_id: FileId) -> SourceRootId;
 
-    fn source_root_package(&self, source_root_id: SourceRootId) -> Arc<PackageId>;
+    fn source_root_package(&self, source_root_id: SourceRootId) -> Arc<Option<PackageId>>;
 
     #[salsa::input]
     fn package_graph(&self) -> Arc<PackageGraph>;
@@ -404,13 +404,13 @@ pub trait SourceDatabase {
     fn module_map(&self, source: SourceRootId) -> Arc<ModuleMap>;
 }
 
-fn source_root_package(db: &dyn SourceDatabase, id: SourceRootId) -> Arc<PackageId> {
+fn source_root_package(db: &dyn SourceDatabase, id: SourceRootId) -> Arc<Option<PackageId>> {
     let graph = db.package_graph();
     let mut iter = graph.iter().filter(|&package| {
         let root_file = graph[package].gleam_toml;
         db.file_source_root(root_file) == id
     });
-    let res = iter.next().expect("should always find a package!");
+    let res = iter.next();
     Arc::new(res)
 }
 
