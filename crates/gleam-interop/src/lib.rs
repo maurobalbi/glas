@@ -1,16 +1,14 @@
 //! Wrapper for `gleam`.
 use anyhow::{anyhow, Context, Result};
-use std::process::Stdio;
-use tokio::process::Command;
+use std::{path::PathBuf, process::{Command, Stdio}};
 
-pub async fn load_package_info() -> Result<()> {
+pub fn load_package_info(p: &PathBuf) -> Result<()> {
     let output = Command::new("gleam")
-        .kill_on_drop(true)
+        .current_dir(p.parent().context("No parent")?)
         .args(["deps", "download"])
         .stdin(Stdio::null())
         // Configures stdout/stderr automatically.
         .output()
-        .await
         .with_context(|| "Failed to download dependencies".to_string())
         .unwrap();
 

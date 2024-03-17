@@ -453,7 +453,6 @@ impl Change {
             for (sid, root) in (0u32..).map(SourceRootId).zip(roots) {
                 let mut module_map = ModuleMap::default();
                 for (fid, vpath) in root.files() {
-                    tracing::info!("Setting source root for: {:?} {:?}", fid, vpath);
                     db.set_file_source_root_with_durability(fid, sid, Durability::HIGH);
                     if let Some(module_name) = vpath
                         .as_path()

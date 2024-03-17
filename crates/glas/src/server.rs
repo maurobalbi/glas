@@ -9,6 +9,7 @@ use async_lsp::tracing::TracingLayer;
 use async_lsp::{
     ClientSocket, ErrorCode, LanguageClient, LanguageServer, ResponseError, ServerSocket,
 };
+use gleam_interop::load_package_info;
 use ide::{
     Analysis, AnalysisHost, Cancelled, Dependency, FileSet, PackageGraph, PackageId, PackageRoot,
     SourceRoot, Target, VfsPath,
@@ -452,6 +453,7 @@ impl Server {
         }
 
         let uri = params.text_document.uri.clone();
+
         self.opened_files.insert(uri.clone(), FileData::default());
         self.set_vfs_file_content(&uri, params.text_document.text.clone());
 
@@ -485,6 +487,7 @@ impl Server {
     fn on_did_change(&mut self, params: DidChangeTextDocumentParams) -> NotifyResult {
         let mut vfs = self.vfs.write().unwrap();
         let uri = params.text_document.uri;
+
         // Ignore files not maintained in Vfs.
         let Ok(file) = vfs.file_for_uri(&uri) else {
             return ControlFlow::Continue(());
@@ -660,11 +663,11 @@ impl Server {
                 let is_grand_parent_build =
                     grand_parent.map(|p| p.ends_with("build")).unwrap_or(false);
                 let is_not_local = is_parent_packages && is_grand_parent_build;
-                graph.add_package(name.clone(), gleam_file, !is_not_local)
+                let pid = graph.add_package(name.clone(), gleam_file, !is_not_local);
+                seen.insert(name, pid);
+                pid
             }
         };
-
-        seen.insert(name, package);
 
         let package_dir = root_path.join("build/packages");
 
@@ -702,8 +705,6 @@ impl Server {
                     dep_id
                 }
             };
-
-            seen.insert(name.into(), dep_id);
 
             let dependency = Dependency { package: dep_id };
             graph.add_dep(package, dependency);
@@ -930,6 +931,7 @@ impl Server {
         // if file is not loaded yet, insert package source root
         if let Err(_) = vfs.file_for_path(&vpath) {
             if let Some(path) = vpath.as_path().and_then(find_gleam_project_parent) {
+                let _ = load_package_info(&path);
                 tracing::info!("Setting new sourceroot {:?}", path);
                 package_roots.insert(PackageRoot { path });
                 source_root_changed = true;
@@ -951,8 +953,8 @@ impl Server {
         {
             let mut graph = PackageGraph::default();
             for source_root in package_roots.clone().iter() {
-                tracing::info!("LOADING: {:?}", vfs);
                 let mut seen = HashMap::new();
+                tracing::info!("LOADING: {:?}", vfs);
                 let _ = Self::assemble_graph(
                     &mut vfs,
                     &source_root.path,
@@ -965,6 +967,7 @@ impl Server {
             tracing::info!("setting graph {:#?}", graph);
             vfs.set_package_graph(Some(graph));
         }
+
 
         for package in &package_roots {
             let source_changed = self.source_roots.insert(package.clone());
