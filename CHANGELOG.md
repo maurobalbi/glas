@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.2.1
+
+### Fixed
+- Free-standing files now provide hover and completions instead of crashing the server
+- Fixed an ordering problem, where files were sometimes loaded into the LSP before all dependencies were downloaded
+
 ## v0.2.0
 
 ### Fixed
