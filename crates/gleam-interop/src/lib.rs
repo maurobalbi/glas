@@ -3,14 +3,13 @@ use anyhow::{anyhow, Context, Result};
 use std::{path::PathBuf, process::{Command, Stdio}};
 
 pub fn load_package_info(p: &PathBuf) -> Result<()> {
-    let output = Command::new("gleam")
+    let output = Command::new("go")
         .current_dir(p.parent().context("No parent")?)
-        .args(["deps", "download"])
+        .args(["version"])
         .stdin(Stdio::null())
         // Configures stdout/stderr automatically.
         .output()
-        .with_context(|| "Failed to download dependencies".to_string())
-        .unwrap();
+        .with_context(|| "Failed to download dependencies".to_string())?;
 
     if !output.status.success() {
         let err_msg = String::from_utf8(output.stderr)?.to_owned();
