@@ -120,8 +120,8 @@ function createLanguageClient(context: vscode.ExtensionContext): LanguageClient 
   };
 
   return new LanguageClient(
-    "gleam_language_server",
-    "Gleam Language Server",
+    "glas",
+    "glas",
     serverOptions,
     clientOptions
   );
