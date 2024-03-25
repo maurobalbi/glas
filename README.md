@@ -3,7 +3,7 @@ Glas is a pet project of mine and is expected to be surpassed in terms of scope 
 
 # glas: Gleam Language Server 
 
-A language server for the [Gleam](https://gleam.run/) programming language.
+A language server for the [Gleam](https://gleam.run/) programming language. Glas tries it's best supporting the user writing gleam, even in the presence of parsing and typechecking errors!
 
 ## Installation
 

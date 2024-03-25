@@ -1,9 +1,9 @@
 ### Disclaimer
 Glas is a pet project of mine and is expected to be surpassed in terms of scope and features by the official Gleam-LSP in due time. Bug reports are much appreciated, but for feature requests and contributions please refer to the official [Gleam reposository](https://github.com/gleam-lang/gleam) instead.
 
-# glas: Gleam Language Server 
-
-A language server for the [Gleam](https://gleam.run/) programming language.
+# glas: Gleam Language Server
+ 
+A language server for the [Gleam](https://gleam.run/) programming language. Glas tries it's best supporting the user writing gleam, even in the presence of parsing and typechecking errors!
 
 ## Installation
 
