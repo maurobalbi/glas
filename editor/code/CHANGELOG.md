@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.2.2
+- Fixed a crash downloading deps when gleam was not in PATH
+
+## v0.2.1
+
+### Fixed
+- Free-standing files now provide hover and completions instead of crashing the server
+- Fixed an ordering problem, where files were sometimes loaded into the LSP before all depend
+
 ## v0.2.0
 
 ### Fixed
