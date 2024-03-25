@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.2.2
+- Fixed a crash downloading deps when gleam was not in PATH
+
 ## v0.2.1
 
 ### Fixed

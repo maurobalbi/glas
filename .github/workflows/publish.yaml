@@ -103,3 +103,7 @@ jobs:
       - run: npx vsce publish --packagePath $(find . -iname *.vsix)
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      - run: npx ovsx publish --packagePath $(find . -iname *.vsix)
+        timeout-minutes: 2
+        env:
+          OVSX_PAT: ${{ secrets.OPENVSX_PAT}}
