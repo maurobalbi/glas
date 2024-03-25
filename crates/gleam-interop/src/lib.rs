@@ -3,9 +3,9 @@ use anyhow::{anyhow, Context, Result};
 use std::{path::PathBuf, process::{Command, Stdio}};
 
 pub fn load_package_info(p: &PathBuf) -> Result<()> {
-    let output = Command::new("go")
+    let output = Command::new("gleam")
         .current_dir(p.parent().context("No parent")?)
-        .args(["version"])
+        .args(["deps", "download"])
         .stdin(Stdio::null())
         // Configures stdout/stderr automatically.
         .output()

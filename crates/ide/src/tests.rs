@@ -3,14 +3,14 @@ use crate::def::{DefDatabaseStorage, InternDatabaseStorage};
 use crate::ide::Upcast;
 use crate::ty::TyDatabaseStorage;
 use crate::{
-    Change, DefDatabase, FileId, FilePos, FileSet, PackageGraph, PackageInfo, SourceRoot, VfsPath,
+    Change, DefDatabase, FileId, FilePos, FileRange, FileSet, PackageGraph, PackageInfo, SourceRoot, VfsPath
 };
 use anyhow::{bail, ensure, Context, Result};
 use indexmap::IndexMap;
 use smol_str::SmolStr;
 
 use std::{mem, ops};
-use syntax::TextSize;
+use syntax::{TextRange, TextSize};
 
 pub const MARKER_INDICATOR: char = '$';
 
@@ -198,5 +198,20 @@ impl Fixture {
 
     pub fn markers(&self) -> &[FilePos] {
         &self.markers
+    }
+
+    #[track_caller]
+    pub fn unwrap_single_range_marker(&self) -> FileRange {
+        match *self.markers() {
+            [fpos] => FileRange::empty(fpos),
+            [start, end] => {
+                assert_eq!(
+                    start.file_id, end.file_id,
+                    "Start and end markers must be in the same file"
+                );
+                FileRange::new(start.file_id, TextRange::new(start.pos, end.pos))
+            }
+            _ => panic!("Must have either 1 or 2 markers"),
+        }
     }
 }

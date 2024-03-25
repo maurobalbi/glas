@@ -1,11 +1,11 @@
 use crate::FileId;
 use smol_str::SmolStr;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use syntax::TextRange;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WorkspaceEdit {
-    pub content_edits: HashMap<FileId, HashSet<TextEdit>>,
+    pub content_edits: HashMap<FileId, Vec<TextEdit>>,
     // Filesystem edit is not implemented yet.
 }
 

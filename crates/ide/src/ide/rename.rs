@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use itertools::Either;
 use smol_str::SmolStr;
@@ -84,7 +84,7 @@ pub(crate) fn rename(
         _ => {}
     };
 
-    let mut edits: HashMap<FileId, HashSet<TextEdit>> = HashMap::new();
+    let mut edits: HashMap<FileId, Vec<TextEdit>> = HashMap::new();
 
     def.clone()
         .usages(&sema)
@@ -100,9 +100,9 @@ pub(crate) fn rename(
                 edits
                     .entry(file_id)
                     .and_modify(|set| {
-                        set.insert(text_edit.clone());
+                        set.push(text_edit.clone());
                     })
-                    .or_insert_with(|| HashSet::from([text_edit]));
+                    .or_insert_with(|| Vec::from([text_edit]));
             })
         });
 

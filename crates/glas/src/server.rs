@@ -373,7 +373,7 @@ impl Server {
                 Err(_) => init_messages.lock().unwrap().push(ShowMessageParams {
                     typ: MessageType::INFO,
                     message: String::from(
-                        "Gleam was not detected in the path, and some features may be missing",
+                        "Gleam was not found in PATH. Some features may be disabled",
                     ),
                 }),
             }

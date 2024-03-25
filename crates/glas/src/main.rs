@@ -13,7 +13,6 @@ const LOG_PATH_ENV: &str = "GLEAM_LOG_PATH";
 const BACKTRACE_ENV: &str = "RUST_BACKTRACE";
 
 #[derive(Debug, FromArgs)]
-/// LSP server for Nix Expression Language.
 /// Run without arguments to start the language server on stdin/stdout.
 struct Args {
     /// print the version and exit
