@@ -326,16 +326,16 @@ fn complete_dot(acc: &mut Vec<CompletionItem>, ctx: CompletionContext<'_>) -> Op
 }
 
 fn complete_import(acc: &mut Vec<CompletionItem>, ctx: &CompletionContext<'_>) -> Option<()> {
-    if ctx
+    if let Some(module_path) = ctx
         .tok
         .parent_ancestors()
-        .any(|t| ast::ModulePath::can_cast(t.kind()))
+        .find_map(|t| ast::ModulePath::cast(t))
     {
         // ToDo: get all visible modules
         for (_, name) in ctx.package.visible_modules(ctx.db.upcast()).iter() {
             acc.push(CompletionItem {
                 label: name.clone(),
-                source_range: ctx.source_range,
+                source_range: module_path.syntax().text_range(),
                 replace: name.clone(),
                 kind: CompletionItemKind::Module,
                 relevance: CompletionRelevance::default(),
@@ -345,7 +345,7 @@ fn complete_import(acc: &mut Vec<CompletionItem>, ctx: &CompletionContext<'_>) -
                 is_snippet: false,
             })
         }
-    }
+    };
     Some(())
 }
 
