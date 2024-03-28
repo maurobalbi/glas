@@ -51,11 +51,16 @@ impl SearchScope {
 
 impl Definition {
     fn search_scope(&self, db: &dyn DefDatabase) -> SearchScope {
-        // ToDo: This is a hack to get started
-        match self.module(db) {
-            Some(_) => SearchScope::package_graph(db),
-            None => SearchScope::empty(),
+        let module =   match self.module(db) {
+            Some(it) => it,
+            None => return SearchScope::empty(),
+        };
+
+        if let Definition::Local(_) = self {
+            return SearchScope::single_file(module.id)
         }
+        
+        SearchScope::package_graph(db)
     }
 
     pub fn usages<'a>(self, sema: &'a Semantics<'_>) -> FindUsages<'a> {
