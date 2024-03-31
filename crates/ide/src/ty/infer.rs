@@ -1033,6 +1033,11 @@ impl<'db> InferCtx<'db> {
         &mut self,
         variant: hir::Variant,
     ) -> (TyVar, Vec<(Option<SmolStr>, TyVar)>) {
+        let adt = self.db.lookup_intern_adt(variant.parent);
+        let resolver = std::mem::replace(
+            &mut self.resolver,
+            resolver_for_toplevel(self.db.upcast(), adt.file_id),
+        );
         let mut ty_env = HashMap::new();
         let params = variant
             .fields(self.db.upcast())
@@ -1056,6 +1061,7 @@ impl<'db> InferCtx<'db> {
             generic_params,
         }
         .intern(self);
+        let _ = std::mem::replace(&mut self.resolver, resolver);
         (ty, params)
     }
 
