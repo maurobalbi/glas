@@ -1,9 +1,10 @@
 use smol_str::SmolStr;
+use syntax::{ast, match_ast};
 
 use crate::{
     def::{
         hir::{Adt, Function, Module, Variant},
-        hir_def::{ FunctionId, VariantId},
+        hir_def::{FunctionId, VariantId},
     },
     ty::display::TyDisplay,
     CompletionItem, CompletionItemKind, CompletionRelevance, FileId,
@@ -13,28 +14,49 @@ use super::CompletionContext;
 
 pub fn render_fn(ctx: &CompletionContext<'_>, id: &FunctionId) -> CompletionItem {
     let it = Function { id: *id };
-    let params = it.params(ctx.db.upcast());
-    let params = params
-        .iter()
-        .enumerate()
-        .map(|(i, p)| match p.label.clone() {
-            Some(label) => {
-                format!("{}: ${{{}:{}}}", label, i + 1, p.name)
+    let mut params_len = it.params(ctx.db.upcast()).len();
+    let mut is_pipe_or_use = false;
+
+    // In use or pipe add one less argument
+    if let Some(ptr) = ctx.expr_ptr.clone().and_then(|ptr| ptr.value.parent()) {
+        match_ast! {
+           match ptr {
+                ast::Pipe(_) => {
+                    is_pipe_or_use = true;
+                },
+                ast::StmtUse(_) => {
+                    is_pipe_or_use = true;
+                },
+                _ => {},
             }
-            None => {
-                format!("${{{}:{}}}", i + 1, p.name)
-            }
-        })
+        };
+    }
+
+    if is_pipe_or_use {
+        params_len = params_len.checked_sub(1).unwrap_or(0);
+    };
+
+    let params = (1..=params_len)
+        .map(|i| format!("${{{}:_}}", i))
         .collect::<Vec<_>>()
         .join(", ");
+
     let name = it.name(ctx.db.upcast());
-    let label = if !params.is_empty() {
+    let label = if params_len > 0 {
         format!("{}(…)", name)
+    } else if is_pipe_or_use {
+        format!("{}", name)
     } else {
         format!("{}()", name)
     };
 
-    let replace = format!("{}({})", name, params);
+    let replace_params = if is_pipe_or_use && params_len == 0 {
+        format!("")
+    } else {
+        format!("({params})")
+    };
+
+    let replace = format!("{}{}", name, replace_params);
 
     let docs = it.docs(ctx.db.upcast());
 
