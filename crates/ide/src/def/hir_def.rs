@@ -42,6 +42,15 @@ impl From<VariantId> for Variant {
     }
 }
 
+impl From<Variant> for VariantId {
+    fn from(value: Variant) -> Self {
+        VariantId {
+            parent: value.parent,
+            local_id: value.id,
+        }
+    }
+}
+
 impl From<FieldId> for Field {
     fn from(value: FieldId) -> Self {
         Field {

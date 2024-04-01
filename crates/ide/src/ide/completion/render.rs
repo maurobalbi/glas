@@ -14,49 +14,11 @@ use super::CompletionContext;
 
 pub fn render_fn(ctx: &CompletionContext<'_>, id: &FunctionId) -> CompletionItem {
     let it = Function { id: *id };
-    let mut params_len = it.params(ctx.db.upcast()).len();
-    let mut is_pipe_or_use = false;
-
-    // In use or pipe add one less argument
-    if let Some(ptr) = ctx.expr_ptr.clone().and_then(|ptr| ptr.value.parent()) {
-        match_ast! {
-           match ptr {
-                ast::Pipe(_) => {
-                    is_pipe_or_use = true;
-                },
-                ast::StmtUse(_) => {
-                    is_pipe_or_use = true;
-                },
-                _ => {},
-            }
-        };
-    }
-
-    if is_pipe_or_use {
-        params_len = params_len.checked_sub(1).unwrap_or(0);
-    };
-
-    let params = (1..=params_len)
-        .map(|i| format!("${{{}:_}}", i))
-        .collect::<Vec<_>>()
-        .join(", ");
+    let params_len = it.params(ctx.db.upcast()).len();
 
     let name = it.name(ctx.db.upcast());
-    let label = if params_len > 0 {
-        format!("{}(…)", name)
-    } else if is_pipe_or_use {
-        format!("{}", name)
-    } else {
-        format!("{}()", name)
-    };
 
-    let replace_params = if is_pipe_or_use && params_len == 0 {
-        format!("")
-    } else {
-        format!("({params})")
-    };
-
-    let replace = format!("{}{}", name, replace_params);
+    let (label, replace) = render_fn_args(&ctx, name, params_len);
 
     let docs = it.docs(ctx.db.upcast());
 
@@ -79,30 +41,16 @@ pub fn render_variant(ctx: &CompletionContext<'_>, id: &VariantId) -> Completion
         id: id.local_id,
     };
     let fields = it.fields(ctx.db.upcast());
-    let _fields_str = fields
-        .iter()
-        .enumerate()
-        .map(|(i, p)| {
-            format!(
-                "${{{}:{}}}",
-                i + 1,
-                p.label(ctx.db.upcast()).clone().unwrap_or("()".into())
-            )
-        })
-        .collect::<Vec<_>>()
-        .join(", ");
+
     let name = it.name(ctx.db.upcast());
-    let label = if !fields.is_empty() {
-        format!("{}(…)", name)
-    } else {
-        format!("{}", name)
-    };
+    let (label, replace) = render_fn_args(ctx, name, fields.len());
 
     let docs = it.docs(ctx.db.upcast());
+
     CompletionItem {
         label: label.into(),
         source_range: ctx.source_range,
-        replace: name.into(),
+        replace: replace.into(),
         kind: CompletionItemKind::Function,
         signature: Some(Adt { id: it.parent }.name(ctx.db.upcast()).into()),
         relevance: CompletionRelevance::default(),
@@ -133,4 +81,48 @@ pub fn render_module(
         documentation: Some(docs),
         is_snippet: false,
     }
+}
+
+fn render_fn_args(ctx: &CompletionContext<'_>, name: SmolStr,  mut args_len: usize) -> (String, String) {
+    let mut is_pipe_or_use = false;
+
+    // In use or pipe add one less argument
+    if let Some(ptr) = ctx.expr_ptr.clone().and_then(|ptr| ptr.value.parent()) {
+        match_ast! {
+           match ptr {
+                ast::Pipe(_) => {
+                    is_pipe_or_use = true;
+                },
+                ast::StmtUse(_) => {
+                    is_pipe_or_use = true;
+                },
+                _ => {},
+            }
+        };
+    }
+
+    if is_pipe_or_use {
+        args_len = args_len.checked_sub(1).unwrap_or(0);
+    };
+
+    let params = (1..=args_len)
+        .map(|i| format!("${}", i))
+        .collect::<Vec<_>>()
+        .join(", ");
+
+    let label = if args_len > 0 {
+        format!("{name}(…)")
+    } else if is_pipe_or_use {
+        format!("{name}")
+    } else {
+        format!("{name}()")
+    };
+    
+    let replace_params = if is_pipe_or_use && args_len == 0 {
+        format!("{name}")
+    } else {
+        format!("{name}({params})")
+    };
+
+    (label, replace_params)
 }
