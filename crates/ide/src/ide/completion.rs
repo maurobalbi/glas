@@ -380,9 +380,7 @@ fn complete_expr(acc: &mut Vec<CompletionItem>, ctx: &CompletionContext<'_>) -> 
             ResolveResult::Function(it) => {
                 acc.push(render::render_fn(ctx, &it.id));
             }
-            ResolveResult::Variant(it) => {
-                acc.push(render::render_variant(ctx, &it.into()))
-            }
+            ResolveResult::Variant(it) => acc.push(render::render_variant(ctx, &it.into())),
             ResolveResult::Local(it) => {
                 let mut relevance = CompletionRelevance::default();
                 relevance.is_local = true;
@@ -501,7 +499,7 @@ mod tests {
         check(
             "fn main() { a$0 }",
             "main()",
-            expect!["(Function) fn main() { main() }"],
+            expect!["(Function) fn main() { main($1) }"],
         );
     }
 }

@@ -38,7 +38,7 @@ impl Package {
 
     pub fn dependencies(self, db: &dyn DefDatabase) -> Vec<Package> {
         let Some(package_id) = *db.source_root_package(self.id) else {
-            return vec![]
+            return vec![];
         };
         let graph = db.package_graph();
         let package = graph[package_id].clone();

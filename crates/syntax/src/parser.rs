@@ -1137,10 +1137,11 @@ fn arg(p: &mut Parser) {
     }
     expr(p);
 
+    p.finish_node(m, ARG);
+
     if !p.at(T![")"]) {
         p.expect(T![","]);
     }
-    p.finish_node(m, ARG);
 }
 
 fn import(p: &mut Parser, m: MarkOpened) {

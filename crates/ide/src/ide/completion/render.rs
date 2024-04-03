@@ -83,7 +83,11 @@ pub fn render_module(
     }
 }
 
-fn render_fn_args(ctx: &CompletionContext<'_>, name: SmolStr,  mut args_len: usize) -> (String, String) {
+fn render_fn_args(
+    ctx: &CompletionContext<'_>,
+    name: SmolStr,
+    mut args_len: usize,
+) -> (String, String) {
     let mut is_pipe_or_use = false;
 
     // In use or pipe add one less argument
@@ -105,23 +109,10 @@ fn render_fn_args(ctx: &CompletionContext<'_>, name: SmolStr,  mut args_len: usi
         args_len = args_len.checked_sub(1).unwrap_or(0);
     };
 
-    let params = (1..=args_len)
-        .map(|i| format!("${}", i))
-        .collect::<Vec<_>>()
-        .join(", ");
-
-    let label = if args_len > 0 {
-        format!("{name}(…)")
-    } else if is_pipe_or_use {
-        format!("{name}")
+    let (label, replace_params) = if is_pipe_or_use && args_len == 0 {
+        (format!("{name}"), format!("{name}"))
     } else {
-        format!("{name}()")
-    };
-    
-    let replace_params = if is_pipe_or_use && args_len == 0 {
-        format!("{name}")
-    } else {
-        format!("{name}({params})")
+        (format!("{name}()"), format!("{name}($1)"))
     };
 
     (label, replace_params)

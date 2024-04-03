@@ -5,8 +5,8 @@ use lsp_types::{
     CompletionParams, CompletionResponse, Diagnostic, DocumentHighlight, DocumentHighlightParams,
     GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverParams, Location,
     PrepareRenameResponse, ReferenceParams, RenameParams, SemanticTokens, SemanticTokensParams,
-    SemanticTokensRangeParams, SemanticTokensRangeResult, SemanticTokensResult,
-    TextDocumentPositionParams, Url, WorkspaceEdit,
+    SemanticTokensRangeParams, SemanticTokensRangeResult, SemanticTokensResult, SignatureHelp,
+    SignatureHelpParams, TextDocumentPositionParams, Url, WorkspaceEdit,
 };
 
 const MAX_DIAGNOSTICS_CNT: usize = 128;
@@ -118,6 +118,19 @@ pub(crate) fn rename(snap: StateSnapshot, params: RenameParams) -> Result<Option
         .rename(fpos, &params.new_name)?
         .map_err(convert::to_rename_error)?;
     let resp = convert::to_workspace_edit(&snap.vfs(), ws_edit);
+    Ok(Some(resp))
+}
+
+pub(crate) fn signature_help(
+    snap: StateSnapshot,
+    params: SignatureHelpParams,
+) -> Result<Option<SignatureHelp>> {
+    let (fpos, _) = convert::from_file_pos(&snap.vfs(), &params.text_document_position_params)?;
+    let help = match snap.analysis.signature_help(fpos)? {
+        Some(it) => it,
+        None => return Ok(None),
+    };
+    let resp = convert::to_signature_help(help);
     Ok(Some(resp))
 }
 

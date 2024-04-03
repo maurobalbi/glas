@@ -1,8 +1,8 @@
 use lsp_types::{
     CompletionOptions, HoverProviderCapability, InitializeParams, OneOf, RenameOptions,
     SemanticTokensLegend, SemanticTokensOptions, SemanticTokensServerCapabilities,
-    ServerCapabilities, TextDocumentSyncCapability, TextDocumentSyncKind, TextDocumentSyncOptions,
-    WorkDoneProgressOptions,
+    ServerCapabilities, SignatureHelpOptions, TextDocumentSyncCapability, TextDocumentSyncKind,
+    TextDocumentSyncOptions, WorkDoneProgressOptions,
 };
 
 use crate::semantic_tokens::{SEMANTIC_TOKEN_MODIFIERS, SEMANTIC_TOKEN_TYPES};
@@ -87,6 +87,13 @@ pub(crate) fn negotiate_capabilities(
         document_on_type_formatting_provider: None,
         hover_provider: Some(HoverProviderCapability::Simple(true)),
         definition_provider: Some(OneOf::Left(true)),
+        signature_help_provider: Some(SignatureHelpOptions {
+            trigger_characters: Some(vec!["(".to_owned(), ",".to_owned()]),
+            retrigger_characters: None,
+            work_done_progress_options: WorkDoneProgressOptions {
+                work_done_progress: None,
+            },
+        }),
         ..Default::default()
     };
 

@@ -13,7 +13,7 @@ use core::fmt;
 mod tests;
 
 use itertools::Itertools;
-use rowan::TokenAtOffset;
+use rowan::{Direction, TokenAtOffset};
 
 use rowan::ast::AstNode;
 pub use rowan::{self, NodeOrToken, TextRange, TextSize};
@@ -172,6 +172,18 @@ pub fn find_node_at_range<N: AstNode<Language = GleamLanguage>>(
 ) -> Option<N> {
     syntax.covering_element(range).ancestors().find_map(N::cast)
 }
+
+/// Skip to next non `trivia` token
+pub fn skip_trivia_token(mut token: SyntaxToken, direction: Direction) -> Option<SyntaxToken> {
+    while token.kind().is_trivia() {
+        token = match direction {
+            Direction::Next => token.next_token()?,
+            Direction::Prev => token.prev_token()?,
+        }
+    }
+    Some(token)
+}
+
 /// Pick the most meaningful token at given cursor offset.
 pub fn best_token_at_offset(node: &SyntaxNode, offset: TextSize) -> Option<SyntaxToken> {
     fn score(tok: SyntaxKind) -> u8 {

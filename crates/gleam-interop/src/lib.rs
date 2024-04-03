@@ -1,6 +1,9 @@
 //! Wrapper for `gleam`.
 use anyhow::{anyhow, Context, Result};
-use std::{path::PathBuf, process::{Command, Stdio}};
+use std::{
+    path::PathBuf,
+    process::{Command, Stdio},
+};
 
 pub fn load_package_info(p: &PathBuf) -> Result<()> {
     let output = Command::new("gleam")

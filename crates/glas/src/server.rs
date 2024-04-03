@@ -165,6 +165,7 @@ impl Server {
             .request_snap::<req::References>(handler::references)
             .request_snap::<req::PrepareRenameRequest>(handler::prepare_rename)
             .request_snap::<req::Rename>(handler::rename)
+            .request_snap::<req::SignatureHelpRequest>(handler::signature_help)
             .request_snap::<lsp_ext::SyntaxTree>(handler::syntax_tree)
             .request_snap::<req::SemanticTokensFullRequest>(handler::semantic_token_full)
             .request_snap::<req::SemanticTokensRangeRequest>(handler::semantic_token_range)
@@ -967,7 +968,6 @@ impl Server {
             tracing::info!("setting graph {:#?}", graph);
             vfs.set_package_graph(Some(graph));
         }
-
 
         for package in &package_roots {
             let source_changed = self.source_roots.insert(package.clone());

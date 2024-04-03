@@ -2,11 +2,12 @@ use crate::{semantic_tokens, LineMap, Result, Vfs};
 use async_lsp::{ErrorCode, ResponseError};
 use ide::{
     CompletionItem, CompletionItemKind, CompletionRelevance, Diagnostic, DiagnosticKind, FileId,
-    FilePos, FileRange, HlRange, HlRelated, HoverResult, Severity, TextEdit, WorkspaceEdit,
+    FilePos, FileRange, HlRange, HlRelated, HoverResult, Severity, SignatureHelp, TextEdit,
+    WorkspaceEdit,
 };
 use lsp::{
     DiagnosticTag, DocumentHighlight, DocumentHighlightKind, Documentation, Hover, MarkupContent,
-    MarkupKind, PrepareRenameResponse, SemanticToken,
+    MarkupKind, PrepareRenameResponse, SemanticToken, SignatureInformation,
 };
 use lsp_types::{
     self as lsp, DiagnosticRelatedInformation, DiagnosticSeverity, Location, NumberOrString,
@@ -119,6 +120,11 @@ pub(crate) fn to_completion_item(
         label_details: Some(lsp::CompletionItemLabelDetails {
             detail: None,
             description: item.signature,
+        }),
+        command: Some(lsp::Command {
+            title: String::from("triggerParams"),
+            command: String::from("editor.action.triggerParameterHints"),
+            arguments: None,
         }),
         ..lsp::CompletionItem::default()
     };
@@ -256,6 +262,30 @@ pub(crate) fn to_text_edit(line_map: &LineMap, edit: TextEdit) -> lsp::TextEdit 
     lsp::TextEdit {
         range: to_range(line_map, edit.delete),
         new_text: edit.insert.into(),
+    }
+}
+
+pub(crate) fn to_signature_help(sh: SignatureHelp) -> lsp::SignatureHelp {
+    let params = sh
+        .parameter_ranges()
+        .iter()
+        .map(|label| lsp_types::ParameterInformation {
+            label: lsp_types::ParameterLabel::LabelOffsets([
+                label.start().into(),
+                label.end().into(),
+            ]),
+            documentation: None,
+        })
+        .collect::<Vec<_>>();
+    lsp::SignatureHelp {
+        signatures: vec![SignatureInformation {
+            label: sh.signature,
+            documentation: None,
+            parameters: Some(params),
+            active_parameter: sh.active_parameter.map(|u| u as u32),
+        }],
+        active_signature: Some(0),
+        active_parameter: sh.active_parameter.map(|it| it as u32),
     }
 }
 

@@ -6,6 +6,7 @@ mod hover;
 mod references;
 mod rename;
 mod semantic_highlighting;
+mod signature_help;
 mod syntax_tree;
 
 use crate::base::SourceDatabaseStorage;
@@ -26,6 +27,7 @@ pub use goto_definition::GotoDefinitionResult;
 pub use highlight_related::HlRelated;
 pub use hover::HoverResult;
 pub use semantic_highlighting::{HlRange, HlTag};
+pub use signature_help::SignatureHelp;
 
 pub const DEFAULT_LRU_CAP: usize = 128;
 
@@ -207,5 +209,9 @@ impl Analysis {
         range: Option<TextRange>,
     ) -> Cancellable<Vec<HlRange>> {
         self.with_db(|db| semantic_highlighting::highlight(db, file, range))
+    }
+
+    pub fn signature_help(&self, fpos: FilePos) -> Cancellable<Option<SignatureHelp>> {
+        self.with_db(|db| signature_help::signature_help(db, fpos))
     }
 }

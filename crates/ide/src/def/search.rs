@@ -51,15 +51,15 @@ impl SearchScope {
 
 impl Definition {
     fn search_scope(&self, db: &dyn DefDatabase) -> SearchScope {
-        let module =   match self.module(db) {
+        let module = match self.module(db) {
             Some(it) => it,
             None => return SearchScope::empty(),
         };
 
         if let Definition::Local(_) = self {
-            return SearchScope::single_file(module.id)
+            return SearchScope::single_file(module.id);
         }
-        
+
         SearchScope::package_graph(db)
     }
 

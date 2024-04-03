@@ -3,7 +3,8 @@ use crate::def::{DefDatabaseStorage, InternDatabaseStorage};
 use crate::ide::Upcast;
 use crate::ty::TyDatabaseStorage;
 use crate::{
-    Change, DefDatabase, FileId, FilePos, FileRange, FileSet, PackageGraph, PackageInfo, SourceRoot, VfsPath
+    Change, DefDatabase, FileId, FilePos, FileRange, FileSet, PackageGraph, PackageInfo,
+    SourceRoot, VfsPath,
 };
 use anyhow::{bail, ensure, Context, Result};
 use indexmap::IndexMap;

@@ -410,6 +410,12 @@ asts! {
     },
     ARG_LIST = ArgList {
         args: [Arg],
+        pub fn l_paren_token(&self) -> Option<SyntaxToken> {
+            self.syntax().children_with_tokens().filter_map(|it| it.into_token()).find(|it| it.kind() == T!["{"])
+        }
+        pub fn r_paren_token(&self) -> Option<SyntaxToken> {
+            self.syntax().children_with_tokens().filter_map(|it| it.into_token()).find(|it| it.kind() == T!["}"])
+        }
     },
     ARG = Arg {
         label: Label,
