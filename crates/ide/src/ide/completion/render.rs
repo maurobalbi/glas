@@ -36,7 +36,7 @@ pub fn render_variant(ctx: &CompletionContext<'_>, id: &VariantId) -> Completion
         parent: id.parent,
         id: id.local_id,
     };
-    
+
     let name = it.name(ctx.db.upcast());
 
     let docs = it.docs(ctx.db.upcast());
@@ -76,4 +76,3 @@ pub fn render_module(
         is_snippet: false,
     }
 }
-

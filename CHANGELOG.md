@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.2.3
+
+### Added
+- Signature help in function calls
+- Label completion in function calls
+
+### Changed
+- Removed function completions which included all labels
+
+### Fixed
+- Text gets correctly replaced when completing imports
+- Improved performance for References / Highlight Related for local definitions
+
 ## v0.2.2
 - Fixed a crash downloading deps when gleam was not in PATH
 

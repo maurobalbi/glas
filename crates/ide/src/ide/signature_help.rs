@@ -1,6 +1,6 @@
 use itertools::Itertools;
 use syntax::{ast, match_ast, rowan::Direction, NodeOrToken, SyntaxToken, TextRange, TextSize, T};
-use tracing_subscriber::fmt::format;
+
 
 use crate::{
     def::Semantics,
@@ -158,12 +158,6 @@ fn signature_help_for_call(
 
     let ret = format!(") -> {}", return_.display(sema.db));
     res.signature.push_str(ret.as_str());
-    tracing::info!(
-        "sh para{:?} {:?} {:?}",
-        params2_mut,
-        res.parameters,
-        active_parameter
-    );
 
     Some(res)
 }
@@ -189,7 +183,7 @@ fn move_element<T>(vec: &mut Vec<T>, from_index: usize, to_index: usize) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::base::SourceDatabase;
+    
     use crate::tests::TestDB;
     use expect_test::{expect, Expect};
 
@@ -213,7 +207,7 @@ mod tests {
             .get(help.active_parameter.expect("No active parameter"))
             .expect("Parameter idx not in range");
 
-        got.insert(active_range.end().into(),'>');
+        got.insert(active_range.end().into(), '>');
         got.insert(active_range.start().into(), '<');
 
         expect.assert_eq(&got);
@@ -221,40 +215,43 @@ mod tests {
 
     #[test]
     fn pipe_signature() {
-        check(r#"
+        check(
+            r#"
         fn labelled(label1 arg1: Int, label2 arg2: String) { 
             arg2
         }
 
         fn main() {
             1 |> labelled($0)
-        }"#, expect![
-            r#"(|> label1: Int, <label2: String>) -> String"#
-        ]);
+        }"#,
+            expect![r#"(|> label1: Int, <label2: String>) -> String"#],
+        );
 
-        check(r#"
+        check(
+            r#"
         fn labelled(label1 arg1: Int, label2 arg2: String) { 
             arg2
         }
 
         fn main() {
             1 |> labelled(label1: $0)
-        }"#, expect![
-            r#"(|> label2: String, <label1: Int>) -> String"#
-        ])
+        }"#,
+            expect![r#"(|> label2: String, <label1: Int>) -> String"#],
+        )
     }
 
     #[test]
     fn fn_signature() {
-        check(r#"
+        check(
+            r#"
         fn labelled(label1 arg1: Int, label2 arg2: String) { 
             arg2
         }
 
         fn main() {
             labelled(label2: "123", $0)
-        }"#, expect![
-            r#"(label2: String, <label1: Int>) -> String"#
-        ])
+        }"#,
+            expect![r#"(label2: String, <label1: Int>) -> String"#],
+        )
     }
 }

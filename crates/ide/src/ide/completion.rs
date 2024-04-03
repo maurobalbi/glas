@@ -1,12 +1,5 @@
 mod render;
 
-use smol_str::SmolStr;
-use syntax::{
-    ast::{self, AstNode, SourceFile},
-    best_token_at_offset, find_node_at_offset, match_ast, SyntaxKind, SyntaxNode, SyntaxToken,
-    TextRange, TextSize, T,
-};
-
 use crate::{
     def::{
         find_container,
@@ -18,6 +11,14 @@ use crate::{
     },
     ty::{display::TyDisplay, Ty, TyDatabase},
     FilePos, InFile,
+};
+use smol_str::SmolStr;
+use std::ops::Deref;
+use syntax::{
+    ast::{self, AstNode, SourceFile},
+    best_token_at_offset, find_node_at_offset, match_ast,
+    rowan::Direction,
+    SyntaxKind, SyntaxNode, SyntaxToken, TextRange, TextSize, T,
 };
 
 /// A single completion variant in the editor pop-up.
@@ -135,6 +136,7 @@ impl<'db> CompletionContext<'db> {
             id: position.file_id,
         };
 
+        // Reuse facility from signature help to calculate expected type
         let mut ctx = CompletionContext {
             db,
             sema,
@@ -213,8 +215,52 @@ pub(crate) fn completions(
     complete_snippet(&mut acc, &ctx);
     complete_expr(&mut acc, &ctx);
     complete_import(&mut acc, &ctx);
+    complete_labels(&mut acc, &ctx);
 
     Some(acc)
+}
+
+fn complete_labels(acc: &mut Vec<CompletionItem>, ctx: &CompletionContext<'_>) -> Option<()> {
+    let grand_grand_grand_grand_parent =
+        ctx.tok.parent()?.parent()?.parent()?.parent()?.parent()?;
+
+    let prev_tok = syntax::skip_trivia_token(ctx.tok.prev_token()?, Direction::Prev)?;
+
+    if prev_tok.kind() == T![":"] {
+        return None;
+    };
+
+    let expr_call = ast::ExprCall::cast(grand_grand_grand_grand_parent)?;
+
+    let ty = ctx
+        .sema
+        .analyze(&ctx.tok.parent()?)?
+        .type_of_expr(&expr_call.func()?)?;
+
+    if let Ty::Function { params, return_: _ } = ty {
+        for param in params.deref().iter() {
+            if let Some(label) = param.0.clone() {
+                let replace = format!("{label}: $1");
+                let mut item = CompletionItem {
+                    label: label.clone(),
+                    source_range: ctx.source_range,
+                    replace: replace.into(),
+                    relevance: CompletionRelevance::default(),
+                    kind: CompletionItemKind::Keyword,
+                    signature: Some(String::from("labelled argument")),
+                    description: None,
+                    documentation: None,
+                    is_snippet: true,
+                };
+
+                item.relevance.is_local = true;
+
+                acc.push(item)
+            }
+        }
+    }
+
+    Some(())
 }
 
 fn complete_at(acc: &mut Vec<CompletionItem>, ctx: CompletionContext<'_>) {
@@ -500,6 +546,20 @@ mod tests {
             "fn main() { a$0 }",
             "main",
             expect!["(Function) fn main() { main }"],
+        );
+    }
+
+    #[test]
+    fn labelled_args() {
+        check(
+            r#"fn main() { boobo(l$0) }
+            fn boobo(labelled arg: Int) {}
+            "#,
+            "labelled",
+            expect![
+                r#"(Keyword) fn main() { boobo(labelled: $1) }
+            fn boobo(labelled arg: Int) {}"#
+            ],
         );
     }
 }

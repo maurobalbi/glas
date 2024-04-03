@@ -121,11 +121,6 @@ pub(crate) fn to_completion_item(
             detail: None,
             description: item.signature,
         }),
-        command: Some(lsp::Command {
-            title: String::from("triggerParams"),
-            command: String::from("editor.action.triggerParameterHints"),
-            arguments: None,
-        }),
         ..lsp::CompletionItem::default()
     };
 
