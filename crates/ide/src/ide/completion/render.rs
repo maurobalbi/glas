@@ -1,5 +1,4 @@
 use smol_str::SmolStr;
-use syntax::{ast, match_ast};
 
 use crate::{
     def::{
@@ -14,18 +13,15 @@ use super::CompletionContext;
 
 pub fn render_fn(ctx: &CompletionContext<'_>, id: &FunctionId) -> CompletionItem {
     let it = Function { id: *id };
-    let params_len = it.params(ctx.db.upcast()).len();
 
     let name = it.name(ctx.db.upcast());
-
-    let (label, replace) = render_fn_args(&ctx, name, params_len);
 
     let docs = it.docs(ctx.db.upcast());
 
     CompletionItem {
-        label: label.into(),
+        label: name.clone().into(),
         source_range: ctx.source_range,
-        replace: replace.into(),
+        replace: name.into(),
         kind: CompletionItemKind::Function,
         signature: Some(it.ty(ctx.db).display(ctx.db).to_string()),
         relevance: CompletionRelevance::default(),
@@ -40,17 +36,15 @@ pub fn render_variant(ctx: &CompletionContext<'_>, id: &VariantId) -> Completion
         parent: id.parent,
         id: id.local_id,
     };
-    let fields = it.fields(ctx.db.upcast());
-
+    
     let name = it.name(ctx.db.upcast());
-    let (label, replace) = render_fn_args(ctx, name, fields.len());
 
     let docs = it.docs(ctx.db.upcast());
 
     CompletionItem {
-        label: label.into(),
+        label: name.clone().into(),
         source_range: ctx.source_range,
-        replace: replace.into(),
+        replace: name.into(),
         kind: CompletionItemKind::Function,
         signature: Some(Adt { id: it.parent }.name(ctx.db.upcast()).into()),
         relevance: CompletionRelevance::default(),
@@ -83,37 +77,3 @@ pub fn render_module(
     }
 }
 
-fn render_fn_args(
-    ctx: &CompletionContext<'_>,
-    name: SmolStr,
-    mut args_len: usize,
-) -> (String, String) {
-    let mut is_pipe_or_use = false;
-
-    // In use or pipe add one less argument
-    if let Some(ptr) = ctx.expr_ptr.clone().and_then(|ptr| ptr.value.parent()) {
-        match_ast! {
-           match ptr {
-                ast::Pipe(_) => {
-                    is_pipe_or_use = true;
-                },
-                ast::StmtUse(_) => {
-                    is_pipe_or_use = true;
-                },
-                _ => {},
-            }
-        };
-    }
-
-    if is_pipe_or_use {
-        args_len = args_len.checked_sub(1).unwrap_or(0);
-    };
-
-    let (label, replace_params) = if is_pipe_or_use && args_len == 0 {
-        (format!("{name}"), format!("{name}"))
-    } else {
-        (format!("{name}()"), format!("{name}($1)"))
-    };
-
-    (label, replace_params)
-}

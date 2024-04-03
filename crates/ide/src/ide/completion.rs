@@ -498,8 +498,8 @@ mod tests {
     fn scope() {
         check(
             "fn main() { a$0 }",
-            "main()",
-            expect!["(Function) fn main() { main($1) }"],
+            "main",
+            expect!["(Function) fn main() { main }"],
         );
     }
 }
