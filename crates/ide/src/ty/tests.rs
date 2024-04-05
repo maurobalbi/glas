@@ -836,3 +836,51 @@ fn index() {
         expect!["index: fn() -> BitArray"],
     )
 }
+
+#[test]
+fn infer_labelled_pipe() {
+    check_fn(
+        r#"
+        fn bobo(a) {
+            a
+            |> booobo(something: fn(_) { True })
+        }
+        
+        pub fn booobo(something a: fn(Int) -> Int, name name: Bool) -> String {
+            todo
+        }
+  "#,
+        expect![
+            r#"
+        bobo: fn(Bool) -> String
+        booobo: fn(fn(Int) -> Int, Bool) -> String"#
+        ],
+    )
+}
+
+#[test]
+fn infer_annotated_lambda() {
+    check_fn(
+        r#"
+        fn bobo() {
+            fn(a: Int, b: String) {
+              b
+            }
+        }
+        "#,
+        expect![r#"bobo: fn() -> fn(Int, String) -> String"#],
+    )
+}
+
+#[test]
+fn infer_annotated_let() {
+    check_fn(
+        r#"
+        fn bobo(a) {
+            let b: String = a
+            b
+        }
+        "#,
+        expect![r#"bobo: fn(String) -> String"#],
+    )
+}
