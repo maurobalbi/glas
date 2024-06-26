@@ -56,6 +56,8 @@ use tokio::task::{AbortHandle, JoinHandle};
 use toml::Table;
 use walkdir::WalkDir;
 
+const GLEAM_PATH_ENV: &str = "GLEAM_PATH";
+
 type NotifyResult = ControlFlow<async_lsp::Result<()>>;
 
 struct UpdateConfigEvent(serde_json::Value);
@@ -319,7 +321,8 @@ impl Server {
         let init_messages = self.init_messages.clone();
         // Initialize.
         async move {
-            let child = async_process::Command::new("gleam")
+            let gleam_path = std::env::var(GLEAM_PATH_ENV).ok();
+            let child = async_process::Command::new(gleam_path.as_deref().unwrap_or("gleam"))
                 .arg("lsp")
                 .stdin(Stdio::piped())
                 .stdout(Stdio::piped())

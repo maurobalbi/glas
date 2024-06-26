@@ -42,6 +42,17 @@
         "editor.formatOnSave": true
       }
     },
+    "configuration": {
+      "title": "glas",
+      "properties": {
+        "gleam.path": {
+          "type": "string",
+          "default": null,
+          "description": "Path to the gleam executable",
+          "scope": "machine"
+        }
+      }
+    },
     "commands": [
       {
         "command": "glas.syntaxTree",

@@ -119,6 +119,9 @@ function createLanguageClient(context: vscode.ExtensionContext): LanguageClient 
     },
   };
 
+  const gleam = vscode.workspace.getConfiguration("gleam").get<string>("path");
+  if (gleam) serverOptions.options!.env!.GLEAM_PATH = gleam;
+
   return new LanguageClient(
     "glas",
     "glas",
